@@ -1,0 +1,26 @@
+do_blind		1
+filenamelist		"$UNION/SDSS_v1.txt"
+
+weird_sn_list		"$UNION/../weird_sn_list.txt"
+mag_cut			"$UNITY/paramfiles/mag_cuts.txt"
+stan_code		"$UNITY/scripts/stan_code_simple.txt"
+
+
+min_redshift		0.01
+max_redshift		3.0
+max_firstphase		6.
+min_lastphase		0.
+max_color_uncertainty	0.2
+
+
+# Units of c:
+pec_vel_disp		0.001
+# Units of magnitudes per redshift
+lensing_disp		0.055
+outl_frac		0.02
+calib_errs		
+
+
+iter			2000
+n_jobs			4
+chains			4
