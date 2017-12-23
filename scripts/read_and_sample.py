@@ -3,14 +3,12 @@ use("PDF")
 import pickle
 from numpy import *
 import pystan
-import triangle
 import sys
 import os
 from string import strip
 import matplotlib.pyplot as plt
 from scipy.stats import scoreatpercentile
-from helper_functions import *
-from instrument_covariance import band_to_zps, get_efflamb
+import helper_functions
 from scipy.interpolate import interp1d
 
 
@@ -24,18 +22,18 @@ def read_data(params):
                 "c_list": array([], dtype=float64),
                 "mBx1c_cov_list": zeros([0,3,3], dtype=float64),
                 "z_CMB_list": array([], dtype=float64),
-                "sample_list": array([], dtype=int32),
+                "z_helio_list": array([], dtype=float64),
+                "sample_list": array([], dtype=int32), # SN sample, from 0 to N_samples - 1
+                "sample_names": [], # For storing sample names
                 "mag_cut_list": array([], dtype=float64),
-                "mag_cut_disp_list": array([], dtype=float64),
-                "sample_names": [],
-                "calib_names": [],
-                "mass": [],
-                "mass_err": [],
-                "snpaths": [],
-                "efflambs": {},
-                "d_mBx1c_dcalib_list": zeros([3000,3,500], dtype=float64), # This is an inefficient way to do this...
+                "mag_cut_disp_list": array([], dtype=float64), # Dispersion on magnitude cut
+                "calib_names": [], # Name of each systematic uncertainty
+                "mass": [], # Host mass
+                "mass_err": [], # Host-mass uncertainty
+                "snpaths": [], # Paths to LC fits. Stored for future reference.
+                "efflambs": {}, # Filter wavelengths
+                "d_mBx1c_dcalib_list": zeros([3000,3,500], dtype=float64), # This is an inefficient way to do this, but this is initialized to fixed size, then trimmed later.
             }
-
 
 
     current_sn_ind = 0
@@ -44,7 +42,7 @@ def read_data(params):
     assert len(filenamelist) > 1, "This code requires > 1 input file!"
 
     f_read = open("sn_input.txt", 'w')
-    f_read.write("#SN\tRA\tDEC\tZHEL\tZCMB\tPASS\n")
+    f_read.write("#SN\tRA\tDEC\tZHEL\tZCMB\tPASS\n") # List of SNe that pass all cuts
 
     for current_sample, directory in enumerate(filenamelist):
         the_data["sample_names"].append(directory)
@@ -235,33 +233,7 @@ def get_redshifts(redshifts):
     
     return redshifts, redshifts_sort_fill, unsort_inds, len(appended_redshifts)
 
-"""
-def get_redshift_coeffs(sample_list, z_list):
-    redshift_coeffs = [[], [], []]
 
-    for i in range(len(z_list)):
-        inds = where(sample_list == sample_list[i])
-        sample_z = z_list[inds]
-
-        minz = min(sample_z)
-        maxz = max(sample_z)
-        assert maxz > minz, "Only one redshift? " + str(sample)
-
-        zdiffneg2 = (maxz - minz)**(-2.)
-
-        #print "sample ", sample, minz, maxz
-        redshift_coeffs[0].append(zdiffneg2*(maxz + minz - 2*z_list[i])*(maxz - z_list[i]))
-        redshift_coeffs[1].append(zdiffneg2*4.*(maxz - z_list[i])*(z_list[i] - minz))
-        redshift_coeffs[2].append(zdiffneg2*(maxz + minz - 2*z_list[i])*(minz - z_list[i]))
-
-    #for j in range(len(z_list)):
-    #    plt.plot(z_list[j], redshift_coeffs[0][j], '.', color = 'r')
-    #    plt.plot(z_list[j], redshift_coeffs[1][j], '.', color = 'g')
-    #    plt.plot(z_list[j], redshift_coeffs[2][j], '.', color = 'b')
-    #plt.savefig("tmp.pdf")
-    
-    return transpose(array(redshift_coeffs))
-"""
 def get_redshift_coeffs(sample_list, z_list):
     redshift_coeffs = [[], [], [], []]
 
@@ -331,7 +303,7 @@ def init_fn():
 ################################################# Main Program ###################################################
 
 
-params = get_params(sys.argv[1])
+params = helper_functions.get_params(sys.argv[1])
 
 ################################################# And Go! ###################################################
 assert params["iter"] % 4 == 0, "iter should be a multiple of four! "  + str(params["iter"])
@@ -383,9 +355,6 @@ stan_data = {"n_sne": n_sne, "nzadd": nzadd,
 pickle.dump((the_data, stan_data, params), open("inputs_" + samples_txt + ".pickle", "wb"))
 
 
-if stan_data["do_blind"] == 0:
-    #raw_input("do_blind == 0! Control-c if you don't mean it, Return otherwise!")
-    pass
 
 print "nzadd ", stan_data['nzadd']
 # print stan_data['n_sne']
