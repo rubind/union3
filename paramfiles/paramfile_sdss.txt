@@ -1,5 +1,5 @@
-do_blind		1
-filenamelist		"$UNION/SDSS_v1.txt"
+do_blind		0
+filenamelist		["$UNION/SDSS_v1.txt"]
 
 weird_sn_list		"$UNION/../weird_sn_list.txt"
 mag_cut			"$UNITY/paramfiles/mag_cuts.txt"
@@ -19,6 +19,9 @@ pec_vel_disp		0.001
 lensing_disp		0.055
 outl_frac		0.02
 calib_errs		
+
+
+do_twoalphabeta		1
 
 
 iter			2000

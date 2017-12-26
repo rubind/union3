@@ -1,6 +1,8 @@
 from numpy import *
 from scipy.stats import scoreatpercentile
 import os
+import commands
+from string import strip
 
 ################################################# File-Reading Functions ###################################################
 def clean_lines(lines, stringlist = [""]):
@@ -46,6 +48,8 @@ def read_param(flnm, param, default = None, ind = 1):
 
 
 def get_params(paramfl):
+    print "Reading params from ", paramfl
+
     f = open(paramfl)
     lines = f.read().split('\n')
     f.close()
@@ -79,8 +83,20 @@ def get_params(paramfl):
 
     if params["sample_file"] != None:
         params["sample_file"] = os.getcwd() + "/" + params["sample_file"]
+    for key in ["weird_sn_list", "mag_cut", "stan_code"]:
+        if params[key].count("$"):
+            print params[key]
+            params[key] = commands.getoutput("ls " + params[key])
+            print "->", params[key]
+    for i in range(len(params["filenamelist"])):
+        if params["filenamelist"][i].count("$"):
+            print params["filenamelist"][i]
+            params["filenamelist"][i] = commands.getoutput("ls " + params["filenamelist"][i])
+            print "->", params["filenamelist"][i]
+
 
     print "Read params ", params
+    assert isinstance(params["filenamelist"], list), "filenamelist should be a list!"
     return params
 
 
@@ -104,12 +120,16 @@ def get_dparam_dzps(res_der_fl):
 
 
 def get_calib_uncertainties(calib_names, zeropointfl):
+    assert 0, "Deprecated!"
 
     calib_uncertainties = []
 
     f = open(zeropointfl)
     lines = f.read().split('\n')
     f.close()
+
+    print lines
+    lkfjds
 
     
     for calib_name in calib_names:

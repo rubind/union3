@@ -39,7 +39,6 @@ def read_data(params):
     current_sn_ind = 0
     
     filenamelist = params["filenamelist"]
-    assert len(filenamelist) > 1, "This code requires > 1 input file!"
 
     f_read = open("sn_input.txt", 'w')
     f_read.write("#SN\tRA\tDEC\tZHEL\tZCMB\tPASS\n") # List of SNe that pass all cuts
@@ -48,22 +47,25 @@ def read_data(params):
         the_data["sample_names"].append(directory)
 
         f = open(directory)
-        snpaths = clean_lines(f.read().split('\n'))
+        snpaths = f.read().split('\n')
+        snpaths = [item.strip() for item in snpaths]
+        snpaths = [item for item in snpaths if item != ""]
         f.close()
         
+
         for snpath in snpaths:
-            this_redshift = read_param(snpath + "/result_salt2.dat", "Redshift")
-            this_redshift_cmb = read_param(snpath + "/lightfile", "z_cmb")
-            this_redshift_helio = read_param(snpath + "/lightfile", "z_heliocentric")
-            this_RA = read_param(snpath + "/lightfile", "RA")
-            this_DEC = read_param(snpath + "/lightfile", "DEC")
-            this_firstphase = read_param(snpath + "/result_salt2.dat", "FirstPhase")
-            this_lastphase = read_param(snpath + "/result_salt2.dat", "LastPhase")
-            this_colorerr = read_param(snpath + "/result_salt2.dat", "Color", ind = 2)
-            this_x1 = read_param(snpath + "/result_salt2.dat", "X1", ind = 1)
-            this_x1_err = read_param(snpath + "/result_salt2.dat", "X1", ind = 2)
+            this_redshift = helper_functions.read_param(snpath + "/result_salt2.dat", "Redshift")
+            this_redshift_cmb = helper_functions.read_param(snpath + "/lightfile", "z_cmb")
+            this_redshift_helio = helper_functions.read_param(snpath + "/lightfile", "z_heliocentric")
+            this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
+            this_DEC = helper_functions.read_param(snpath + "/lightfile", "DEC")
+            this_firstphase = helper_functions.read_param(snpath + "/result_salt2.dat", "FirstPhase")
+            this_lastphase = helper_functions.read_param(snpath + "/result_salt2.dat", "LastPhase")
+            this_colorerr = helper_functions.read_param(snpath + "/result_salt2.dat", "Color", ind = 2)
+            this_x1 = helper_functions.read_param(snpath + "/result_salt2.dat", "X1", ind = 1)
+            this_x1_err = helper_functions.read_param(snpath + "/result_salt2.dat", "X1", ind = 2)
             try:
-                this_check = read_param(snpath + "/result_deriv.dat", "Check", ind = 4)
+                this_check = helper_functions.read_param(snpath + "/result_deriv.dat", "Check", ind = 4)
             except:
                 this_check = 1000
 
@@ -71,10 +73,10 @@ def read_data(params):
                 this_x1 = 100.
                 this_x1_err = 100.
 
-            weird_sn = read_param(params["weird_sn_list"], snpath.split("/")[-1])
+            weird_sn = helper_functions.read_param(params["weird_sn_list"], snpath.split("/")[-1])
             print "weird_sn ", snpath, weird_sn
             
-            
+
             okay_to_add = [this_redshift >= params["min_redshift"],
                            this_redshift <= params["max_redshift"],
                            this_firstphase <= params["max_firstphase"],
@@ -101,18 +103,18 @@ def read_data(params):
 
 
                 the_data["mB_list"] = append(the_data["mB_list"],
-                                             read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B"))
+                                             helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B"))
                 the_data["c_list"] = append(the_data["c_list"],
-                                            read_param(snpath + "/result_salt2.dat", "Color"))
+                                            helper_functions.read_param(snpath + "/result_salt2.dat", "Color"))
                 the_data["x1_list"] = append(the_data["x1_list"],
-                                             read_param(snpath + "/result_salt2.dat", "X1"))
+                                             helper_functions.read_param(snpath + "/result_salt2.dat", "X1"))
 
 
                 the_data["sample_list"] = append(the_data["sample_list"], current_sample)
 
-                this_mass = read_param(snpath + "/lightfile", "Mass", ind = 1)
+                this_mass = helper_functions.read_param(snpath + "/lightfile", "Mass", ind = 1)
                 this_mass_err = sqrt(abs(
-                    read_param(snpath + "/lightfile", "Mass", ind = 2)*read_param(snpath + "/lightfile", "Mass", ind = 3)
+                    helper_functions.read_param(snpath + "/lightfile", "Mass", ind = 2)*helper_functions.read_param(snpath + "/lightfile", "Mass", ind = 3)
                     ))
 
                 if this_mass == None or this_mass < 1 or this_mass_err == 0. or isinf(this_mass_err):
@@ -128,45 +130,32 @@ def read_data(params):
 
 
                 # First term from SALT, second term from 300 km/s, third term lensing (may be overestimated)
-                mBmB = read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B", ind = 2)**2. + (params["pec_vel_disp"]/the_data["z_CMB_list"][-1]*5./log(10.))**2. + (params["lensing_disp"]*the_data["z_CMB_list"][-1])**2.
-                mBx1 = read_param(snpath + "/result_salt2.dat", "CovRestFrameMag_0_BX1")
-                mBc = read_param(snpath + "/result_salt2.dat", "CovColorRestFrameMag_0_B")
-                x1x1 = read_param(snpath + "/result_salt2.dat", "CovX1X1")
-                x1c = read_param(snpath + "/result_salt2.dat", "CovColorX1")
-                cc = read_param(snpath + "/result_salt2.dat", "CovColorColor")
+                mBmB = helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B", ind = 2)**2. + (params["pec_vel_disp"]/the_data["z_CMB_list"][-1]*5./log(10.))**2. + (params["lensing_disp"]*the_data["z_CMB_list"][-1])**2.
+                mBx1 = helper_functions.read_param(snpath + "/result_salt2.dat", "CovRestFrameMag_0_BX1")
+                mBc = helper_functions.read_param(snpath + "/result_salt2.dat", "CovColorRestFrameMag_0_B")
+                x1x1 = helper_functions.read_param(snpath + "/result_salt2.dat", "CovX1X1")
+                x1c = helper_functions.read_param(snpath + "/result_salt2.dat", "CovColorX1")
+                cc = helper_functions.read_param(snpath + "/result_salt2.dat", "CovColorColor")
 
                 h_resid = (the_data["mB_list"][-1] - - 19.1 + 0.13*the_data["x1_list"][-1] - 3.*the_data["c_list"][-1]) - (5*log10(the_data["z_CMB_list"][-1]*(1. + the_data["z_CMB_list"][-1])) + 42.9)
-                if abs(h_resid) > 1.5 or (the_data["c_list"][-1] > 1) or (the_data["c_list"][-1] < -0.3):
+                if abs(h_resid) > 2 or (the_data["c_list"][-1] > 1) or (the_data["c_list"][-1] < -0.3):
                     print "Weird supernova!", snpath
 
                 the_data["mBx1c_cov_list"] = concatenate((the_data["mBx1c_cov_list"], array([[[mBmB, mBx1, mBc],
                                                                                               [mBx1, x1x1, x1c],
                                                                                               [mBc, x1c, cc]]], dtype=float64)   ), axis = 0)
 
-                dparam_dzps = get_dparam_dzps(snpath + "/result_deriv.dat")
-                
+                dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat")
+
                 for key in dparam_dzps:
                     # key is (Lambda or Zeropoint, Instrument|Band)
                     key_parts = key[1].split("|") #  Instrument, Band
 
-                    if not the_data["efflambs"].has_key(key):
-                        the_data["efflambs"][key] = get_efflamb(key_parts[0], key_parts[1])
-
-                    if key[0] == "Zeropoint":
-                        zps_from_band = band_to_zps(key_parts[0], key_parts[1], the_data["efflambs"][key])
-
-                        for zp_from_band in zps_from_band:
-                            # zp_from_band is band_name, band_d/dzp
-                            
-                            if not the_data["calib_names"].count(("Zeropoint", zp_from_band[0])):
-                                the_data["calib_names"].append(("Zeropoint", zp_from_band[0]))
-                            calib_ind = the_data["calib_names"].index(("Zeropoint", zp_from_band[0]))
-                            the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]*zp_from_band[1]
-                    else:
-                        if not the_data["calib_names"].count(key):
-                            the_data["calib_names"].append(key)
-                        calib_ind = the_data["calib_names"].index(key)
-                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]
+                    
+                    if not the_data["calib_names"].count(key):
+                        the_data["calib_names"].append(key)
+                    calib_ind = the_data["calib_names"].index(key)
+                    the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]
 
                 current_sn_ind += 1
             else:
@@ -176,10 +165,9 @@ def read_data(params):
                         print okay_names[j],
                 print
 
-    the_data["calib_unceratainties"] = get_calib_uncertainties(the_data["calib_names"], params["calib_errs"])
+    the_data["calib_uncertainties"] = [0.01]*len(the_data["calib_names"])
     for i in range(len(the_data["calib_names"])):
-        print the_data["calib_names"][i], the_data["calib_unceratainties"][i]
-
+        print the_data["calib_names"][i], the_data["calib_uncertainties"][i]
 
     the_data["d_mBx1c_dcalib_list"] = the_data["d_mBx1c_dcalib_list"][:len(the_data["mB_list"]), :, :len(the_data["calib_names"])]
     print 'the_data["d_mBx1c_dcalib_list"].shape ', the_data["d_mBx1c_dcalib_list"].shape
@@ -234,23 +222,25 @@ def get_redshifts(redshifts):
     return redshifts, redshifts_sort_fill, unsort_inds, len(appended_redshifts)
 
 
-def get_redshift_coeffs(sample_list, z_list):
-    redshift_coeffs = [[], [], [], []]
+def get_redshift_coeffs(sample_list, z_list, n_x1c_star):
+    redshift_coeffs = [[] for i in range(n_x1c_star)]
 
     for i in range(len(z_list)):
         inds = where(sample_list == sample_list[i])
         sample_z = z_list[inds]
 
-        minz = min(sample_z)
-        maxz = max(sample_z)
-        assert maxz > minz, "Only one redshift? " + str(sample)
+        if n_x1c_star > 1:
+            minz = min(sample_z)*0.99999
+            maxz = max(sample_z)*1.00001
+            assert maxz > minz, "Only one redshift? " + str(sample)
 
-        for j in range(4):
-            coeffs = zeros(4.)
-            coeffs[j] = 1
-            ifn = interp1d([minz, minz*2./3. + maxz/3., minz/3. + maxz*2./3., maxz], coeffs, kind = 'linear')
-            redshift_coeffs[j].append(ifn(z_list[i]))
-
+            for j in range(n_x1c_star):
+                coeffs = zeros(n_x1c_star, dtype=float64)
+                coeffs[j] = 1
+                ifn = interp1d(linspace(minz, maxz, n_x1c_star), coeffs, kind = 'linear')
+                redshift_coeffs[j].append(ifn(z_list[i]))
+        else:
+            redshift_coeffs[0].append(1.)
     #plt.figure(2)
     #for i in range(len(z_list)):
     #    for j in range(4):
@@ -270,32 +260,29 @@ def init_fn():
             
     return {"MB": random.random()*0.2 - 19.1,
             "Om": random.random()*0.4 + 0.1,
-            "alpha_angle_low": arctan(random.random()*0.2),
-            "alpha_angle_high": arctan(random.random()*0.2),
+            "alpha_angle": arctan(random.random()*0.2),
             "beta_angle_blue": arctan(random.random()*0.5 + 2.5),
             "beta_angle_red": arctan(random.random()*0.5 + 2.5),
             "log10_sigma_int": log10(random.random(size = n_samples)*0.1 + 0.1),
             "mBx1c_int_variance": [0.9, 0.05, 0.05],
-            "Lmat": [[1.0, 0.0, 0.0],
-                     [random.random()*0.1 - 0.05, random.random()*0.1 + 0.7, 0.0],
-                     [random.random()*0.1 - 0.05, random.random()*0.1 - 0.05, random.random()*0.1 + 0.7]],
             #"mass_0": 10,
             "delta_0": random.random()*0.05,
             "delta_h": 0.5,
             "calibs": random.normal(size = len(the_data["calib_names"]))*0.01,
             "blind_values": [0.]*n_samples,
             
-            "true_c": random.random(size = n_sne)*0.02 - 0.01 + clip(the_data["c_list"], -0.2, 1.0),
+            "true_cB": random.random(size = n_sne)*0.02 - 0.01 + clip(the_data["c_list"]/2., -0.2, 1.0),
+            "true_cR": random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0),
             "true_x1": random.random(size = n_sne)*0.2 - 0.1 + the_data["x1_list"],
             
             "x1_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
             "c_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
-            #"alpha_c": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*2. - 1.,
-            "delta_c": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.2 - 0.1,
             "log10_R_x1": random.random(size = n_samples)*0.5 - 0.25,
-            "log10_R_c": random.random(size = n_samples)*0.4 - 1.2,
+            "log10_R_c": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.4 - 1.2,
+            "log10_tau_c": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.4 - 1.2,
 
             "outl_frac": random.random()*0.02 + 0.01,
+            "mB_cuts": [22.]*n_samples, "mB_cut_vars": [0.25]*n_samples
         }
             
             
@@ -304,6 +291,7 @@ def init_fn():
 
 
 params = helper_functions.get_params(sys.argv[1])
+n_x1c_star = 2
 
 ################################################# And Go! ###################################################
 assert params["iter"] % 4 == 0, "iter should be a multiple of four! "  + str(params["iter"])
@@ -330,11 +318,11 @@ redshifts, redshifts_sort_fill, unsort_inds, nzadd = get_redshifts(the_data["z_C
 
 stan_data = {"n_sne": n_sne, "nzadd": nzadd,
              "n_samples": len(the_data["sample_names"]),
-             "redshift_coeffs": get_redshift_coeffs(the_data["sample_list"], the_data["z_CMB_list"]),
+             "redshift_coeffs": get_redshift_coeffs(the_data["sample_list"], the_data["z_CMB_list"], n_x1c_star),
              "n_calib": len(the_data["calib_names"]),
              "d_mBx1c_d_calib": the_data["d_mBx1c_dcalib_list"],
-             "calib_uncertainties": the_data["calib_unceratainties"],
-             "n_x1c_star": 4, # 3 = quadratic in redshift with old approach
+             "calib_uncertainties": the_data["calib_uncertainties"],
+             "n_x1c_star": n_x1c_star, # 3 = quadratic in redshift with old approach
              "mass": the_data["mass"],
              "mass_err": the_data["mass_err"],
              # The +1 here is for Stan's indexing, which is from 1 not 0
@@ -409,7 +397,7 @@ try:
 except:
     print "Couldn't filter bad chains! One or more chains may be bad!"
 
-summarize_parameters(fit_params)
+#summarize_parameters(fit_params)
 
 pickle.dump(fit_params, open("samples_" + samples_txt + ".pickle", "wb"))
 
