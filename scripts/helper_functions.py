@@ -1,5 +1,6 @@
 from numpy import *
 from scipy.stats import scoreatpercentile
+from scipy.interpolate import interp1d
 import os
 import commands
 from string import strip
@@ -241,6 +242,11 @@ def samples_txt_to_pickle(flname, samples_to_burn, skip = 6):
     return samples
 
 
+def get_kcorrect_ifns(magcut_k_correction_fl):
+    from FileRead import readcol
+
+    [z, c2, c3] = readcol(magcut_k_correction_fl, 'fff')
+    return interp1d(z, c2, kind = 'linear'), interp1d(z, c3, kind = 'linear')
 
 
 ################################################# Chain Functions ###################################################

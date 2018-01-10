@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import scoreatpercentile
 import helper_functions
 from scipy.interpolate import interp1d
+import gzip
+from FileRead import readcol
 
 
 ################################################# Get the SALT data ###################################################
@@ -31,8 +33,21 @@ def read_data(params):
                 "mass": [], # Host mass
                 "mass_err": [], # Host-mass uncertainty
                 "snpaths": [], # Paths to LC fits. Stored for future reference.
+                
+                "mobs_cut0": [],
+                "mobs_cut1": [],
+                "est_mobs_cuts": [],
+                "est_mobs_sigmas": [],
+                
                 "efflambs": {}, # Filter wavelengths
                 "d_mBx1c_dcalib_list": zeros([3000,3,500], dtype=float64), # This is an inefficient way to do this, but this is initialized to fixed size, then trimmed later.
+
+                "photoz_inds": [],
+                "d_mBx1c_dz_list": [],
+                "photo_z0": [],
+                "photo_dz": [],
+                "n_photoz": 0, # Number of SNe with photo-z's
+                "photo_spikez": []
             }
 
 
@@ -43,6 +58,9 @@ def read_data(params):
     f_read = open("sn_input.txt", 'w')
     f_read.write("#SN\tRA\tDEC\tZHEL\tZCMB\tPASS\n") # List of SNe that pass all cuts
 
+    [magcut_input_fls, magcut_k_correction_fls, magcut_est_cuts, magcut_est_sigmas] = readcol(params["mag_cut"], 'aaff')
+    magcut_k_correction_fls = [item.replace("$UNITY", os.environ["UNITY"]) for item in magcut_k_correction_fls]
+    
     for current_sample, directory in enumerate(filenamelist):
         the_data["sample_names"].append(directory)
 
@@ -50,13 +68,32 @@ def read_data(params):
         snpaths = f.read().split('\n')
         snpaths = [item.strip() for item in snpaths]
         snpaths = [item for item in snpaths if item != ""]
+
         f.close()
+
+        print "current_sample, directory", current_sample, directory
+        magcut_ind = magcut_input_fls.index(directory.split("/")[-1])
+        print "magcut_ind ", magcut_ind
+
+        the_data["est_mobs_cuts"].append(magcut_est_cuts[magcut_ind])
+        the_data["est_mobs_sigmas"].append(magcut_est_sigmas[magcut_ind])
         
+        kc_ifn0, kc_ifn1 = helper_functions.get_kcorrect_ifns(magcut_k_correction_fls[magcut_ind])
 
         for snpath in snpaths:
             this_redshift = helper_functions.read_param(snpath + "/result_salt2.dat", "Redshift")
             this_redshift_cmb = helper_functions.read_param(snpath + "/lightfile", "z_cmb")
+            if this_redshift_cmb == None:
+                this_redshift_cmb = helper_functions.read_param(snpath + "/lightfile", "z_CMB")
+
             this_redshift_helio = helper_functions.read_param(snpath + "/lightfile", "z_heliocentric")
+            if this_redshift_cmb == None and this_redshift > 0.1:
+                this_redshift_cmb = this_redshift
+                print "Couldn't find redshift for ", snpath
+            if this_redshift_helio == None and this_redshift > 0.1:
+                this_redshift_helio = this_redshift
+                print "Couldn't find redshift for ", snpath
+                
             this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
             this_DEC = helper_functions.read_param(snpath + "/lightfile", "DEC")
             this_firstphase = helper_functions.read_param(snpath + "/result_salt2.dat", "FirstPhase")
@@ -98,9 +135,30 @@ def read_data(params):
             if all(okay_to_add):
 
                 the_data["snpaths"].append(snpath)
-                the_data["z_CMB_list"] = append(the_data["z_CMB_list"], this_redshift
+
+                if helper_functions.read_param(snpath + "/lightfile", "Photoz") != None:
+                    print "Photoz found!", snpath
+                    the_data["n_photoz"] += 1
+                    
+                    the_data["photoz_inds"].append(the_data["n_photoz"]) # That's right, after incrementing the counter
+                    the_data["d_mBx1c_dz_list"].append([helper_functions.read_param(snpath + "/result_deriv.dat", "Redshift", ind = 5),
+                                                        helper_functions.read_param(snpath + "/result_deriv.dat", "Redshift", ind = 6),
+                                                        helper_functions.read_param(snpath + "/result_deriv.dat", "Redshift", ind = 7)])
+
+                    the_data["photo_z0"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz", ind = 1))
+                    the_data["photo_dz"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz", ind = 2))
+                    the_data["photo_spikez"].append(this_redshift_helio)
+                    
+                else:
+                    the_data["photoz_inds"].append(0)
+
+
+                the_data["z_CMB_list"] = append(the_data["z_CMB_list"], this_redshift_cmb
                                                 )
 
+                the_data["mobs_cut0"].append(kc_ifn0(this_redshift_helio))
+                the_data["mobs_cut1"].append(kc_ifn1(this_redshift_helio))
+                
 
                 the_data["mB_list"] = append(the_data["mB_list"],
                                              helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B"))
@@ -187,24 +245,12 @@ def read_data(params):
     plt.savefig("c_vs_z.pdf")
     f_read.close()
 
-    f = open(params["mag_cut"])
-    lines = f.read().split('\n')
-    f.close()
-
-    for filename in filenamelist:
-        found = 0
-        for line in lines:
-            parsed = line.split(None)
-            if len(parsed) == 3:
-                if parsed[0] == filename.split("/")[-1]:
-                    found += 1
-                    the_data["mag_cut_list"] = append(the_data["mag_cut_list"], float(parsed[1]))
-                    the_data["mag_cut_disp_list"] = append(the_data["mag_cut_disp_list"], float(parsed[2]))
-        assert found == 1, "Check mag_cut.txt! " + filename
-
-
+    if the_data["d_mBx1c_dz_list"] == []:
+        the_data["d_mBx1c_dz_list"] = zeros([0,3], dtype=float64)
 
     return the_data
+
+
 
 
 ################################################# Redshifts for Integration ###################################################
@@ -249,6 +295,59 @@ def get_redshift_coeffs(sample_list, z_list, n_x1c_star):
     
     return transpose(array(redshift_coeffs))
 
+def zcount(z, zmin, zmax):
+    return sum((array(z) >= zmin)*(array(z) < zmax))
+
+def add_zbins(stan_data, cosmo_model):
+    if cosmo_model == 1: # Flat LCDM
+        stan_data["cosmo_model"] = 1
+        stan_data["n_zbins"] = 0
+        stan_data["zbins"] = zeros(0, dtype=float64)
+        stan_data["dmu_dbin"] = zeros([stan_data["n_sne"], 0], dtype=float64)
+    elif cosmo_model == 2:
+         # Binned mu
+        stan_data["cosmo_model"] = 2
+        stan_data["zbins"] = [0.99999*stan_data["redshifts"].min()]
+
+        while max(stan_data["zbins"]) < max(stan_data["redshifts"]):
+            zstep = 0.125
+            while (zcount(stan_data["redshifts"], stan_data["zbins"][-1], stan_data["zbins"][-1]*exp(zstep)) < 10.) and (stan_data["zbins"][-1]*exp(zstep) < stan_data["redshifts"].max()):
+                zstep *= 1.5
+            
+            stan_data["zbins"].append(stan_data["zbins"][-1]*exp(zstep))
+
+
+
+        stan_data["n_zbins"] = len(stan_data["zbins"])
+
+        plt.figure()
+        plt.hist(stan_data["redshifts"])
+        plt.plot(stan_data["zbins"], [100]*stan_data["n_zbins"], '.', color = 'k')
+        plt.savefig("redshift_binning.pdf")
+        plt.close()
+
+        stan_data["dmu_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
+        stan_data["dmudz_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
+
+        for j in range(stan_data["n_zbins"]):
+            nodes = zeros(stan_data["n_zbins"], dtype=float64)
+            nodes[j] = 1.
+
+            ifn = interp1d(stan_data["zbins"], nodes, kind = 'quadratic')
+            for i in range(stan_data["n_sne"]):
+                stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i])
+                stan_data["dmudz_dbin"][i, j] = (ifn(stan_data["redshifts"][i] + 0.001) - ifn(stan_data["redshifts"][i]))/0.001
+
+    else:
+        assert 0
+
+    plt.figure()
+    plt.imshow(stan_data["dmu_dbin"])
+    plt.savefig("dmu_dbin.pdf")
+    plt.close()
+        
+    return stan_data
+
 
 ################################################# Init FN ###################################################
 
@@ -282,67 +381,93 @@ def init_fn():
             "log10_tau_c": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.4 - 1.2,
 
             "outl_frac": random.random()*0.02 + 0.01,
-            "mB_cuts": [22.]*n_samples, "mB_cut_vars": [0.25]*n_samples
+            "mobs_cuts": stan_data["est_mobs_cuts"] + random.normal(size = n_samples)*0.1, "mobs_cut_sigmas": [0.5]*n_samples,
+
+            "dz": random.normal(size = stan_data["n_photoz"])*0.01
         }
             
             
 
 ################################################# Main Program ###################################################
 
-
-params = helper_functions.get_params(sys.argv[1])
-n_x1c_star = 2
-
-################################################# And Go! ###################################################
-assert params["iter"] % 4 == 0, "iter should be a multiple of four! "  + str(params["iter"])
-
-the_data = read_data(params)
-samples_txt = "_".join([item.split(".")[0].split("/")[-1] for item in params["filenamelist"]])
-
-for i, sample in enumerate(the_data["sample_names"]):
-    print sample, sum(the_data["sample_list"] == i)
+inputfl = sys.argv[1]
+cosmo_model = int(sys.argv[2])
 
 
-n_sne = len(the_data["c_list"])
+if inputfl.count("pickle"):
+    (the_data, stan_data, params) = pickle.load(gzip.open(inputfl, "rb"))
+else:
+    params = helper_functions.get_params(inputfl)
+    n_x1c_star = 2
 
-obs_mBx1c = []
-obs_mBx1c_cov = zeros((3*n_sne, 3*n_sne), dtype=float64)
+    ################################################# And Go! ###################################################
+    assert params["iter"] % 4 == 0, "iter should be a multiple of four! "  + str(params["iter"])
 
-for i in range(n_sne):
-    obs_mBx1c.append([the_data["mB_list"][i], the_data["x1_list"][i], the_data["c_list"][i]])
+    the_data = read_data(params)
+    samples_txt = "_".join([item.split(".")[0].split("/")[-1] for item in params["filenamelist"]])
 
-obs_mBx1c_cov = the_data["mBx1c_cov_list"]
-
-redshifts, redshifts_sort_fill, unsort_inds, nzadd = get_redshifts(the_data["z_CMB_list"])
-
-
-stan_data = {"n_sne": n_sne, "nzadd": nzadd,
-             "n_samples": len(the_data["sample_names"]),
-             "redshift_coeffs": get_redshift_coeffs(the_data["sample_list"], the_data["z_CMB_list"], n_x1c_star),
-             "n_calib": len(the_data["calib_names"]),
-             "d_mBx1c_d_calib": the_data["d_mBx1c_dcalib_list"],
-             "calib_uncertainties": the_data["calib_uncertainties"],
-             "n_x1c_star": n_x1c_star, # 3 = quadratic in redshift with old approach
-             "mass": the_data["mass"],
-             "mass_err": the_data["mass_err"],
-             # The +1 here is for Stan's indexing, which is from 1 not 0
-             "sample_list": the_data["sample_list"] + 1, "redshifts": redshifts, "redshifts_sort_fill": redshifts_sort_fill, "unsort_inds": unsort_inds,
-             "obs_mBx1c": obs_mBx1c,
-             "obs_mBx1c_cov": obs_mBx1c_cov,
-             "do_blind": params["do_blind"],
-             "do_twoalphabeta": params["do_twoalphabeta"],
-
-             "outl_mBx1c_uncertainties": [1.]*3,
-             "outl_frac_prior_lnmean": log(params["outl_frac"]),
-             "outl_frac_prior_lnwidth": 0.5,
-
-             "mB_cuts": the_data["mag_cut_list"],
-             "mB_cut_vars": the_data["mag_cut_disp_list"]**2.
-         }
-
-pickle.dump((the_data, stan_data, params), open("inputs_" + samples_txt + ".pickle", "wb"))
+    for i, sample in enumerate(the_data["sample_names"]):
+        print sample, sum(the_data["sample_list"] == i)
 
 
+    n_sne = len(the_data["c_list"])
+
+    obs_mBx1c = []
+    obs_mBx1c_cov = zeros((3*n_sne, 3*n_sne), dtype=float64)
+
+    for i in range(n_sne):
+        obs_mBx1c.append([the_data["mB_list"][i], the_data["x1_list"][i], the_data["c_list"][i]])
+
+    obs_mBx1c_cov = the_data["mBx1c_cov_list"]
+
+    redshifts, redshifts_sort_fill, unsort_inds, nzadd = get_redshifts(the_data["z_CMB_list"])
+
+
+
+    stan_data = {"n_sne": n_sne, "nzadd": nzadd,
+                 "n_samples": len(the_data["sample_names"]),
+                 "redshift_coeffs": get_redshift_coeffs(the_data["sample_list"], the_data["z_CMB_list"], n_x1c_star),
+                 "n_calib": len(the_data["calib_names"]),
+                 "d_mBx1c_d_calib": the_data["d_mBx1c_dcalib_list"],
+                 "calib_uncertainties": the_data["calib_uncertainties"],
+                 "n_x1c_star": n_x1c_star, # 3 = quadratic in redshift with old approach
+                 "mass": the_data["mass"],
+                 "mass_err": the_data["mass_err"],
+                 # The +1 here is for Stan's indexing, which is from 1 not 0
+                 "sample_list": the_data["sample_list"] + 1, "redshifts": redshifts, "redshifts_sort_fill": redshifts_sort_fill, "unsort_inds": unsort_inds,
+                 "obs_mBx1c": array(obs_mBx1c),
+                 "obs_mBx1c_cov": array(obs_mBx1c_cov),
+                 "do_blind": params["do_blind"],
+                 "do_twoalphabeta": params["do_twoalphabeta"],
+
+                 "outl_mBx1c_uncertainties": [1.]*3,
+                 "outl_frac_prior_lnmean": log(params["outl_frac"]),
+                 "outl_frac_prior_lnwidth": 0.5,
+
+                 "n_photoz": the_data["n_photoz"],
+                 "d_mBx1c_dz_list": the_data["d_mBx1c_dz_list"],
+                 "photo_z0": the_data["photo_z0"],
+                 "photo_dz": the_data["photo_dz"],
+                 "spike_redshift_prob": [0.8]*the_data["n_photoz"],
+                 "photoz_inds": the_data["photoz_inds"],
+                 "photo_spikez": the_data["photo_spikez"],
+
+
+                 "est_mobs_cuts": the_data["est_mobs_cuts"],
+                 "est_mobs_sigmas": the_data["est_mobs_sigmas"],
+                 "mobs_cut0": the_data["mobs_cut0"], "mobs_cut1": the_data["mobs_cut1"]
+             }
+
+    plt.figure()
+    plt.plot(stan_data["redshifts"], stan_data["mobs_cut0"], '.')
+    plt.plot(stan_data["redshifts"], stan_data["mobs_cut1"], '.')
+    plt.savefig("k_corr_check.pdf")
+    plt.close()
+
+    pickle.dump((the_data, stan_data, params), gzip.open("inputs_" + samples_txt + ".pickle", "wb"))
+
+
+stan_data = add_zbins(stan_data, cosmo_model)
 
 print "nzadd ", stan_data['nzadd']
 # print stan_data['n_sne']
@@ -352,43 +477,47 @@ print "nzadd ", stan_data['nzadd']
 # print stan_data['obs_mBx1c']
 # print stan_data['obs_mBx1c_cov'].shape
 
-for blind_iter in range(1*stan_data["do_blind"]):
-    print "Iter: ", blind_iter
+if stan_data["do_blind"]:
+    print "Blinding!"
+    # There are two phases of blinding:
+    # -Making the best-fit Om = 0.3
+    # -Bringing all samples into alignment with -19.1 given Om = 0.3 (eventually!)
 
-    fit = pystan.stan(file=params["stan_code"], data=stan_data,
-                      iter=params["iter"]/2, chains=params["chains"], n_jobs = params["n_jobs"], refresh = 5, init = init_fn)#, pars = ["beta", "dbeta", "alpha", "dalpha", "MB", "Om", "blind_values"])#, sample_file = "/Users/rubind/Dropbox/samples.txt")
-    fit_params = fit.extract(permuted = True)
-    fit_params = filter_fit_params(fit_params, "MB", params["chains"], params["iter"]/4) # burns the first half of the chain, so iter/4
-    
-    print "Doing the blinding..."
-    
-    assert len(fit_params["blind_values"][0]) == stan_data["n_samples"], "Transpose!"
-    
-    if stan_data["do_blind"]:
-        for i in range(stan_data["n_sne"]):
-            stan_data["obs_mBx1c"][i][0] += median(fit_params["blind_values"][:, stan_data["sample_list"][i] - 1])
-    else:
+    [zblind, mublind, dmublinddOm] = readcol(os.environ["UNITY"] + "/paramfiles/z_mu_dmudOm.txt", 'fff')
+    mublindfn = interp1d(zblind, mublind, kind = 'linear')
+    dmublinddOmfn = interp1d(zblind, dmublinddOm, kind = 'linear')
 
-        for i, sample_name in enumerate(the_data["sample_names"]): # Printing this violates the blind!
-            print sample_name, fit_params["blind_values"][:, i]
-            print sample_name, median(fit_params["blind_values"][:, i]), std(fit_params["blind_values"][:, i]), 1.4826*median(abs(fit_params["blind_values"][:, i] - median(fit_params["blind_values"][:, i])))
+    for i in range(2):
+        muobs = stan_data["obs_mBx1c"][:,0] + 0.14*stan_data["obs_mBx1c"][:,1] - 3.1*stan_data["obs_mBx1c"][:,2] - -  19.1
+        dmuobs = sqrt(0.15**2. + stan_data["obs_mBx1c_cov"][:,0,0] + 0.14**2. * stan_data["obs_mBx1c_cov"][:, 1,1] + 3.1**2. * stan_data["obs_mBx1c_cov"][:, 2,2]) # Doesn't have to be exact
 
-    summarize_parameters(fit_params, thekeys = ["beta", "dbeta", "alpha", "dalpha", "MB", "Om", "delta_h", "delta_0"])
+        jmat = zeros([stan_data["n_sne"], 2], dtype=float64)
+        jmat[:,0] = 1.
+        jmat[:,1] = dmublinddOmfn(stan_data["redshifts"])
+        wmat = diag(dmuobs**-2.)
 
-stan_data["do_blind"] = 0
+        bestvals = dot(
+            linalg.inv(dot(transpose(jmat), dot(wmat, jmat))),
+            dot(transpose(jmat), dot(wmat, muobs - mublindfn(stan_data["redshifts"])))
+            )
 
-print "Rerunning..."
+        stan_data["obs_mBx1c"][:,0] -= bestvals[0] + bestvals[1]*dmublinddOmfn(stan_data["redshifts"])
+        the_data["mB_list"] = array(the_data["mB_list"]) - bestvals[0] - bestvals[1]*dmublinddOmfn(stan_data["redshifts"])
+
+        if i > 0:
+            print bestvals
+            assert all(abs(bestvals) < 1e-3)
+            print "Blinding passed!"
+
+        
+        
+
+print "Running..."
 fit = pystan.stan(file=params["stan_code"], data=stan_data,
                   iter=params["iter"], chains=params["chains"], n_jobs = params["n_jobs"], refresh = 10, init = init_fn, sample_file = params["sample_file"]
                   # pars = ["beta", "dbeta", "alpha", "dalpha", "MB", "Om", "sigma_int", "x1_star", "R_x1", "c_star", "R_c", "calibs"]
                       )#, sample_file = "/Users/rubind/Dropbox/samples.txt")
 
-print "I hope you have a log file:"
-
-try:
-    print fit
-except:
-    print "Couldn't print fit! Something is very wrong!"
 
 fit_params = fit.extract(permuted = True)
 
@@ -399,5 +528,13 @@ except:
 
 #summarize_parameters(fit_params)
 
-pickle.dump(fit_params, open("samples_" + samples_txt + ".pickle", "wb"))
 
+pickle.dump(fit_params, gzip.open("samples_" + samples_txt + ".pickle", "wb"))
+
+
+print "I hope you have a log file:"
+
+try:
+    print fit
+except:
+    print "Couldn't print fit! Something is very wrong!"
