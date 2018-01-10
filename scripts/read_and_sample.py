@@ -299,47 +299,38 @@ def zcount(z, zmin, zmax):
     return sum((array(z) >= zmin)*(array(z) < zmax))
 
 def add_zbins(stan_data, cosmo_model):
-    if cosmo_model == 1: # Flat LCDM
-        stan_data["cosmo_model"] = 1
-        stan_data["n_zbins"] = 0
-        stan_data["zbins"] = zeros(0, dtype=float64)
-        stan_data["dmu_dbin"] = zeros([stan_data["n_sne"], 0], dtype=float64)
-    elif cosmo_model == 2:
-         # Binned mu
-        stan_data["cosmo_model"] = 2
-        stan_data["zbins"] = [0.99999*stan_data["redshifts"].min()]
+    # For inned mu
+    stan_data["zbins"] = [0.99999*stan_data["redshifts"].min()]
 
-        while max(stan_data["zbins"]) < max(stan_data["redshifts"]):
-            zstep = 0.125
-            while (zcount(stan_data["redshifts"], stan_data["zbins"][-1], stan_data["zbins"][-1]*exp(zstep)) < 10.) and (stan_data["zbins"][-1]*exp(zstep) < stan_data["redshifts"].max()):
-                zstep *= 1.5
-            
-            stan_data["zbins"].append(stan_data["zbins"][-1]*exp(zstep))
+    while max(stan_data["zbins"]) < max(stan_data["redshifts"]):
+        zstep = 0.125
+        while (zcount(stan_data["redshifts"], stan_data["zbins"][-1], stan_data["zbins"][-1]*exp(zstep)) < 10.) and (stan_data["zbins"][-1]*exp(zstep) < stan_data["redshifts"].max()):
+            zstep *= 1.5
+
+        stan_data["zbins"].append(stan_data["zbins"][-1]*exp(zstep))
 
 
 
-        stan_data["n_zbins"] = len(stan_data["zbins"])
+    stan_data["n_zbins"] = len(stan_data["zbins"])
 
-        plt.figure()
-        plt.hist(stan_data["redshifts"])
-        plt.plot(stan_data["zbins"], [100]*stan_data["n_zbins"], '.', color = 'k')
-        plt.savefig("redshift_binning.pdf")
-        plt.close()
+    plt.figure()
+    plt.hist(stan_data["redshifts"])
+    plt.plot(stan_data["zbins"], [100]*stan_data["n_zbins"], '.', color = 'k')
+    plt.savefig("redshift_binning.pdf")
+    plt.close()
 
-        stan_data["dmu_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
-        stan_data["dmudz_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
+    stan_data["dmu_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
+    stan_data["dmudz_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
 
-        for j in range(stan_data["n_zbins"]):
-            nodes = zeros(stan_data["n_zbins"], dtype=float64)
-            nodes[j] = 1.
+    for j in range(stan_data["n_zbins"]):
+        nodes = zeros(stan_data["n_zbins"], dtype=float64)
+        nodes[j] = 1.
 
-            ifn = interp1d(stan_data["zbins"], nodes, kind = 'quadratic')
-            for i in range(stan_data["n_sne"]):
-                stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i])
-                stan_data["dmudz_dbin"][i, j] = (ifn(stan_data["redshifts"][i] + 0.001) - ifn(stan_data["redshifts"][i]))/0.001
+        ifn = interp1d(stan_data["zbins"], nodes, kind = 'quadratic')
+        for i in range(stan_data["n_sne"]):
+            stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i])
+            stan_data["dmudz_dbin"][i, j] = (ifn(stan_data["redshifts"][i] + 0.001) - ifn(stan_data["redshifts"][i]))/0.001
 
-    else:
-        assert 0
 
     plt.figure()
     plt.imshow(stan_data["dmu_dbin"])
