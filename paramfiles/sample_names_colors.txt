@@ -3,6 +3,7 @@ Krisciunas_v1.txt		Krisciunas+ (2005)					(0.5, 1., 1.)
 NB99_v1.txt			Kowalski+ (2008)					(0., 0.5, 1.)
 CSP_v1.txt			Contreras+ (2010) and Stritzinger+ (2011)		(1., 0.5, 0)
 LSQ_v1.txt			Walker+ (2015)	      		   			(1., 0.5, 0)
+LOSS_v1.txt			Ganeshalingam+ (2010)					(0.5, 0.5, 0.5)
 
 CfA1_v1.txt			Riess+ (1999)						(0., 0.5, 0.)
 CfA2_v1.txt			Jha+ (2006)						(0.5, 1., 0.)

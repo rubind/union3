@@ -313,6 +313,11 @@ def add_zbins(stan_data, cosmo_model):
 
     stan_data["n_zbins"] = len(stan_data["zbins"])
 
+    f = open("zbins.txt", 'w')
+    for zbin in stan_data["zbins"]:
+        f.write(str(zbin) + '\n')
+    f.close()
+
     plt.figure()
     plt.hist(stan_data["redshifts"])
     plt.plot(stan_data["zbins"], [100]*stan_data["n_zbins"], '.', color = 'k')
@@ -337,6 +342,8 @@ def add_zbins(stan_data, cosmo_model):
     plt.savefig("dmu_dbin.pdf")
     plt.close()
         
+    stan_data["cosmo_model"] = cosmo_model
+
     return stan_data
 
 

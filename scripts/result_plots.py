@@ -251,6 +251,7 @@ def count_outliers():
             if isoutl[ind] > 0:
                 print the_data["snpaths"][ind].split("/")[-1],
         print
+
         
         
     
