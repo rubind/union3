@@ -11,6 +11,8 @@ import gzip
 from FileRead import readcol
 import time
 import os
+from DavidsNM import miniNM_new
+
 plt.rcParams["font.family"] = "serif"
 
 
@@ -92,10 +94,33 @@ def show_color_pop():
     plt.close()
 
 
-def make_Hubble_diagram():
-    color_term = median(fit_params["true_cB"], axis = 0)*median(fit_params["beta_B"]) + median(fit_params["true_cR"], axis = 0)*median(fit_params["beta_R"])
-    #color_term *= stan_data["obs_mBx1c"][:,2]/(median(fit_params["true_cB"], axis = 0) + median(fit_params["true_cR"], axis = 0))
-    
+def cluster_chi2(P, passdata):
+    orig_redshifts = passdata[0]
+    assert len(orig_redshifts) > 1
+
+    dz = 0.001
+    chi2 = sum(  ((P - orig_redshifts)/dz)**2.  )
+    for i in range(len(orig_redshifts)):
+        for j in range(i+1, len(orig_redshifts)):
+            chi2 += 1./abs(P[i] - P[j] + 0.000000001)
+    return chi2
+
+
+def spread_cluster_SNe(orig_redshifts):
+    if orig_redshifts.max() > 2 and len(orig_redshifts) > 1:
+        [P, NA, NA] = miniNM_new(ministart = orig_redshifts, miniscale = [0.001]*len(orig_redshifts), chi2fn = cluster_chi2, passdata = orig_redshifts, verbose = False)
+        return P
+    else:
+        return orig_redshifts
+
+
+def make_Hubble_diagram(use_obs_color):
+    if use_obs_color:
+        color_term = stan_data["obs_mBx1c"][:,2]*median(fit_params["beta_B"])*(stan_data["obs_mBx1c"][:,2] < 0)
+        color_term += stan_data["obs_mBx1c"][:,2]*median(fit_params["beta_R"])*(stan_data["obs_mBx1c"][:,2] > 0)
+    else:
+        color_term = median(fit_params["true_cB"], axis = 0)*median(fit_params["beta_B"]) + median(fit_params["true_cR"], axis = 0)*median(fit_params["beta_R"])
+        
     
     mus = (stan_data["obs_mBx1c"][:,0]
            + median(fit_params["alpha"])*stan_data["obs_mBx1c"][:,1]
@@ -103,11 +128,21 @@ def make_Hubble_diagram():
            - median(fit_params["MB"])
            )
 
-    zlabels = array([0.1, 0.3, 0.6, 1.5])
-    mulabels = 5*log10((1. + zlabels)*(1.00875*zlabels - 0.271648*zlabels**2. + 0.0340072*zlabels**3. + 0.000441432*zlabels**4.)) + 41.
-    mustep = 0.55
-    
+    zlabels = array([0.1, 0.4, 0.9, 1.5])
+    mulabels = 5*log10((1. + zlabels)*(1.00875*zlabels - 0.271648*zlabels**2. + 0.0340072*zlabels**3. + 0.000441432*zlabels**4.)) + 42.
+    mustep = 0.5
 
+    print "Hacking mu_plot!!!!"*20
+
+    z_plot = exp(linspace(log(0.01), log(2.25), 200))
+    assert max(stan_data["redshifts"] < 2.25)
+
+    mu_plot = 5*log10((1. + z_plot)*(1.00875*z_plot - 0.271648*z_plot**2. + 0.0340072*z_plot**3. + 0.000441432*z_plot**4.))
+
+    Moffset = median(mus - 5*log10((1. + stan_data["redshifts"])*(1.00875*stan_data["redshifts"] - 0.271648*stan_data["redshifts"]**2. + 0.0340072*stan_data["redshifts"]**3. + 0.000441432*stan_data["redshifts"]**4.)))
+    mu_plot += Moffset
+
+    
     print fit_params["model_mBx1c_cov"].shape
     med_model_mBx1c_cov = median(fit_params["model_mBx1c_cov"], axis = 0)
     
@@ -139,24 +174,37 @@ def make_Hubble_diagram():
                 print "Skipping ", lines[i]
             del lines[i]
 
+
+    f = open(resdir + "HR_" + "obs_color"*use_obs_color + "true_color"*(1 - use_obs_color) + ".txt", 'w')
+    f.write("#Sample\tHR\tdmu\tIsOutl\n")
+
     for i in range(stan_data["n_samples"]):
         inds = where((stan_data["sample_list"] == i + 1)&(isoutl < 0))
-        zmean = mean(stan_data["redshifts"][inds])
+        zmean = max(stan_data["redshifts"][inds])
         samp_cat = argmin(abs(zmean - zlabels))
 
         ind = [item[0] for item in lines].index(the_data["sample_names"][i].split("/")[-1])
 
-        plt.text(zlabels[samp_cat], mulabels[samp_cat], lines[ind][1], color = eval(lines[ind][2]))
-        mulabels[samp_cat] -= mustep
+        plt.text(zlabels[samp_cat], mulabels[samp_cat], lines[ind][1].replace("_", "\n"), color = eval(lines[ind][2]), size = 8, va = 'top')
+        mulabels[samp_cat] -= mustep*(1 + lines[ind][1].count("_"))
 
-        for j in inds[0]:
-            plt.plot([stan_data["redshifts"][j]]*2, [mus[j] - dmus[j], mus[j] + dmus[j]], color = eval(lines[ind][2]))
-            plt.plot(stan_data["redshifts"][j], mus[j], '.', color = eval(lines[ind][2]))
+        plt_redshifts = spread_cluster_SNe(stan_data["redshifts"][inds])
 
+        for j, plt_redshift in zip(inds[0], plt_redshifts):
+            plt.plot([plt_redshift]*2, [mus[j] - dmus[j], mus[j] + dmus[j]], color = eval(lines[ind][2]), linewidth = 0.75)
+            plt.plot(plt_redshift, mus[j], '.', color = eval(lines[ind][2]), markersize = 2.5)
+            f.write(the_data["sample_names"][i].split("/")[-1] + '\t' + str(mus[j] - median(fit_params["model_mu"][:,j])) + '\t' + str(dmus[j]) + '\t' + str(isoutl[j]) + '\n')
+
+    f.close()
+
+    print "z_plot, mu_plot", z_plot, mu_plot
+    plt.plot(z_plot, mu_plot, color = 'k', zorder = 0)
     plt.xlabel("Redshift")
-    plt.xlim(0, plt.xlim()[1])
+    plt.xlim(0, 2.25)
+    assert max(stan_data["redshifts"] < 2.25)
+
     plt.ylabel("Distance Modulus")
-    plt.savefig(resdir + "Hubble_diagram.pdf", bbox_inches = 'tight')
+    plt.savefig(resdir + "Hubble_diagram_" + "obs_color"*use_obs_color + "true_color"*(1 - use_obs_color) + ".pdf", bbox_inches = 'tight')
     plt.close()
 
 
@@ -252,8 +300,28 @@ def count_outliers():
                 print the_data["snpaths"][ind].split("/")[-1],
         print
 
+def diagnositics_plot():
+    plt.figure(figsize = (4, stan_data["n_samples"]*0.5))
+
+    for i in range(stan_data["n_samples"]):
+        sigint = 10.**fit_params["log10_sigma_int"][:,i]
         
+        sigint_cred = scoreatpercentile(sigint, [15.8655, 50., 84.1345])
         
+        plt.plot(sigint_cred[1], i + 0.5, '.', color = 'k')
+        plt.plot(sigint_cred[::2], [i + 0.5]*2, color = 'k')
+        plt.text(sigint_cred[1], i + 0.2, label_dict["mobs_cuts"][i])
+        print "sig_int", label_dict["mobs_cuts"][i], sigint_cred
+    plt.savefig(resdir + "diagnostics.pdf", bbox_inches = 'tight')
+    plt.close()
+
+def plot_dz():
+    plt.figure(figsize = (4, stan_data["n_photoz"]*2))
+    for i in range(stan_data["n_photoz"]):
+        plt.hist(stan_data["dz"][:,i], bins = 20)
+    plt.savefig(resdir + "dzs.pdf", bbox_inches = 'tight')
+    plt.close()
+
     
 input_fl, sample_fl = sys.argv[1:]
 
@@ -276,9 +344,12 @@ for key in ["obs_mBx1c"]:
 label_dict = get_label_dict()
 make_mB_vs_z()
 show_color_pop()
-make_Hubble_diagram()
+make_Hubble_diagram(0)
+make_Hubble_diagram(1)
+
 plot_sample_mag_limits()
 count_outliers()
+diagnositics_plot()
 fff
 
 error_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star"])
