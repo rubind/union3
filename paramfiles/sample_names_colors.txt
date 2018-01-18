@@ -1,7 +1,7 @@
 CalanTololo_v1.txt		Hamuy+ (1996)						(0, 0, 0.5)
 Krisciunas_v1.txt		Krisciunas+ (2005)					(0.5, 1., 1.)
 NB99_v1.txt			Kowalski+ (2008)					(0., 0.5, 1.)
-CSP_v1.txt			Contreras+ (2010) and Stritzinger+ (2011)		(1., 0.5, 0)
+CSP_v1.txt			Contreras+ (2010)_and Stritzinger+ (2011)		(1., 0.5, 0)
 LSQ_v1.txt			Walker+ (2015)	      		   			(1., 0.5, 0)
 LOSS_v1.txt			Ganeshalingam+ (2010)					(0.5, 0.5, 0.5)
 
@@ -15,13 +15,14 @@ tonry03_v1.txt			Tonry+ (2003)						(0., 1., 1.)
 amanullah10_v1.txt		Amanullah+ (2010)					(1., 0.5, 0.)
 Knop03_v1.txt			Knop+ (2003)						(0.5, 0., 1.)
 SNLS_v1.txt			Betoule+ (2014)						(0.5, 0.0, 0.0)
-ESSENCE_v1.txt			Narayan+ (2016)					(0.5, 0.5, 0.5)
+ESSENCE_v1.txt			Narayan+ (2016)						(0.5, 0.5, 0.5)
 Pan-STARRS_v1.txt		Rest+ (2014)						(1., 0.0, 0.0)
 SDSS_v1.txt			Sako+ (2014)						(0.5, 0.5, 1.)
 
-SCP_v1.txt			Suzuki+ (2012)						(0., 0.5, 0.5)
+SCP_v1.txt			Suzuki+ (2012)_and Rubin+ (2013)			(0., 0.5, 0.5)
 riess_fixed_ab_v1.txt		Riess+ (2007)						(0., 1., 0.5)
 See-Change_v1.txt		Hayden+ (in prep.)					(1., 0., 0.)
+Primo_v1.txt			Rodney+ (2012)_and Jones+ (2013)			(0., 0, 1.)
 SUSHI_v1.txt			SUSHI							(0, 1., 1.)
 
 
