@@ -1,0 +1,67 @@
+E-012		Unknown redshift
+SNSCP06E12	Unknown redshift
+Ashley		Unknown redshift
+	
+SN2005bl	1991bg		Contreras10
+SN2005ke	1991bg		Contreras10
+SN2006gt	1991bg		Contreras10
+SN2006mr	1991bg		Contreras10
+SN2005mz	1991bg
+SN2006bd	1991bg		Stritzinger11
+SN2006bz	1991bg
+SN2006cs	1991bg
+SN2006em	1991bg
+SN2006gt	1991bg
+SN2006H		1991bg
+SN2006hb	1991bg
+SN2006je	1991bg
+SN2006ke	1991bg
+SN2007al	1991bg
+SN2007mm	1991bg		Mosher13
+SN2007ax	1991bg		Stritzinger11
+SN2007ba	1991bg		Stritzinger11
+SN2007N		1991bg		Stritzinger11
+SN2006X		Red
+SN2006gz	SuperC/CSM	Hicken07
+SN2009F		1991bg		Stritzinger11
+SN2009dc	SuperC/CSM	Stritzinger11
+SN2007if	SuperC/CSM	Stritzinger11
+SN2004gu	SuperC/CSM	Contreras10
+
+SN1993H		1991bg  	Lower limits on the Hubble Constant from models of Type Ia Supernovae
+SN1992K		1991bg
+	
+SN2002fb	1991bg
+SN2003D		1991bg
+SN2005ke	1991bg
+	
+SN2005hk	Weird
+SN2000cx	Pulsation?
+SN2005cc	2002cx-like	Environment-derived constraints on the progenitors of low-luminosity type I supernovae
+	
+n368	No SN?
+n395	No SN?
+1686	No SN?
+4524	Not Ia
+2005js	1991bg
+7017	Not Ia
+7426	Not Ia
+SN2006eb  Not Ia
+SN2007qd  Not Ia
+SN2006pt  No SN?
+TPS10byn  One phase?
+	
+SN1999gh	1991bg
+SN1998de	1991bg
+SN1998bp	1991bg
+SN1997cn	1991bg
+	
+SN1999da	1991bg		Krisciunas01
+SN1999by	1991bg
+
+SN2014J		Very Red
+
+PS1-11yj	1991bg		Rest14
+
+LSQ12gpw	weak lines 2006gz-like    PESSTO
+
