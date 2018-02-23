@@ -438,7 +438,6 @@ else:
                  "do_blind": params["do_blind"],
                  "do_twoalphabeta": params["do_twoalphabeta"],
 
-                 "outl_mBx1c_uncertainties": [1.]*3,
                  "outl_frac_prior_lnmean": log(params["outl_frac"]),
                  "outl_frac_prior_lnwidth": 0.5,
 
@@ -511,7 +510,7 @@ if stan_data["do_blind"]:
         
 
 print "Running..."
-fit = pystan.stan(file=params["stan_code"].replace("/Users/rubind/Dropbox/Shared", "/home/scpdata06/"), data=stan_data,
+fit = pystan.stan(file=params["stan_code"], data=stan_data,
                   iter=params["iter"], chains=params["chains"], n_jobs = params["n_jobs"], refresh = 10, init = init_fn, sample_file = params["sample_file"]
                   # pars = ["beta", "dbeta", "alpha", "dalpha", "MB", "Om", "sigma_int", "x1_star", "R_x1", "c_star", "R_c", "calibs"]
                       )#, sample_file = "/Users/rubind/Dropbox/samples.txt")

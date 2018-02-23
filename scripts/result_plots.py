@@ -4,7 +4,7 @@ from matplotlib import use
 use("PDF")
 import corner # I know...
 import matplotlib.pyplot as plt
-from scipy.stats import scoreatpercentile
+from scipy.stats import scoreatpercentile, percentileofscore
 import sys
 import commands
 import gzip
@@ -67,30 +67,49 @@ def make_mB_vs_z():
     plt.close()
 
 
-def show_color_pop():
-    plt.figure(figsize = (8,12))
+def show_x1color_pop():
+    plt.figure(figsize = (16,16))
 
     fit_params["mean_c_by_SN"] = fit_params["c_star_by_SN"] + fit_params["tau_c_by_SN"]
 
-    for i, key, label in zip([1,2,3,4], ["mean_c_by_SN", "c_star_by_SN", "R_c_by_SN", "tau_c_by_SN"], ["$<c>$", "$c^*$", "$R_c$", "$\\tau_c$"]):
-        plt.subplot(4,1,i)
-        inds = argsort(stan_data["redshifts"])
-        plt.fill_between(stan_data["redshifts"][inds],
-                         scoreatpercentile(fit_params[key], 15.8655, axis = 0)[inds],
-                         scoreatpercentile(fit_params[key], 84.1345, axis = 0)[inds])
+    for i, x1key, ckey, x1label, clabel in zip(range(1,6),
+                                               ["x1_star_by_SN", "x1_star_by_SN", "x1_star_by_SN", "R_x1_by_SN", None],
+                                               ["mean_c_by_SN", "mean_c_by_SN", "c_star_by_SN", "R_c_by_SN", "tau_c_by_SN"],
+                                               ["$x^{*}_1$", "$x^{*}_1$", "$x^{*}_1$", "$R_{x1}$", ""],
+                                               ["$<c>$", "$<c>$", "$c^*$", "$R_c$", "$\\tau_c$"]):
 
-        if i == 1:
-            zbins = linspace(stan_data["redshifts"].min()*0.999, stan_data["redshifts"].max()*1.001, 12)
-            for j in range(len(zbins) - 1):
-                inds = where((stan_data["redshifts"] >= zbins[j]) & (stan_data["redshifts"] < zbins[j+1]))
-                plt.plot(mean(stan_data["redshifts"][inds]), mean(array(stan_data["obs_mBx1c"])[:,2][inds]), 'o', color = 'k', label = "Binned"*(j == 0))
-            ylim = plt.ylim()
-            plt.plot(stan_data["redshifts"], array(stan_data["obs_mBx1c"])[:,2], '.', color = 'lightgray')
-            plt.legend(loc = 'best')
-            plt.ylim(ylim)
-        plt.ylabel(label)
+        for c_not_x1, key, label in zip([0, 1], [x1key, ckey], [x1label, clabel]):
+            if key != None:
+                plt.subplot(5,2, 2*i - 1 + c_not_x1)
+                inds = argsort(stan_data["redshifts"])
+                plt.fill_between(stan_data["redshifts"][inds],
+                                 scoreatpercentile(fit_params[key], 15.8655, axis = 0)[inds],
+                                 scoreatpercentile(fit_params[key], 84.1345, axis = 0)[inds])
+
+                if i < 3:
+                    zbins = linspace(stan_data["redshifts"].min()*0.999, stan_data["redshifts"].max()*1.001, 12)
+                    for j in range(len(zbins) - 1):
+                        inds = where((stan_data["redshifts"] >= zbins[j]) & (stan_data["redshifts"] < zbins[j+1]) & (isoutl < 0))
+                        plt.plot(mean(stan_data["redshifts"][inds]), mean(array(stan_data["obs_mBx1c"])[:,1+c_not_x1][inds]), 'o', color = 'k', label = "Binned"*(j == 0))
+
+                    ylim = plt.ylim()
+                    plt.plot(stan_data["redshifts"], array(stan_data["obs_mBx1c"])[:,1+c_not_x1], '.', color = 'lightgray')
+                    inds = where(isoutl > 0)
+                    plt.plot(stan_data["redshifts"][inds], array(stan_data["obs_mBx1c"])[:,1+c_not_x1][inds], 'o', color = 'cyan')
+
+
+
+                    plt.legend(loc = 'best')
+                    if i > 1:
+                        plt.ylim(ylim)
+                    else:
+                        inds = where((isoutl < 0)*(array(stan_data["obs_mBx1c"])[:,1+c_not_x1] > c_not_x1*0.3 + (1 - c_not_x1)*2))
+                        for ind in inds[0]:
+                            plt.text(stan_data["redshifts"][ind], stan_data["obs_mBx1c"][ind,1+c_not_x1], the_data["snpaths"][ind].split("/")[-1], size = 4)
+
+                plt.ylabel(label)
     plt.xlabel("Redshift")
-    plt.savefig(resdir + "color_pop_model.pdf", bbox_inches = 'tight')
+    plt.savefig(resdir + "x1color_pop_model.pdf", bbox_inches = 'tight')
     plt.close()
 
 
@@ -153,7 +172,6 @@ def make_Hubble_diagram(use_obs_color):
                   ]))
     print dmus
                   
-    isoutl = median(fit_params["outl_loglike_by_SN"], axis = 0) - median(fit_params["inl_loglike_by_SN"], axis = 0)
 
     print "No host-mass correction!!!"
 
@@ -193,7 +211,9 @@ def make_Hubble_diagram(use_obs_color):
         for j, plt_redshift in zip(inds[0], plt_redshifts):
             plt.plot([plt_redshift]*2, [mus[j] - dmus[j], mus[j] + dmus[j]], color = eval(lines[ind][2]), linewidth = 0.75)
             plt.plot(plt_redshift, mus[j], '.', color = eval(lines[ind][2]), markersize = 2.5)
-            f.write(the_data["sample_names"][i].split("/")[-1] + '\t' + str(mus[j] - median(fit_params["model_mu"][:,j])) + '\t' + str(dmus[j]) + '\t' + str(isoutl[j]) + '\n')
+
+            towrite = [the_data["sample_names"][i].split("/")[-1], the_data["snpaths"][j].split("/")[-1], mus[j] - median(fit_params["model_mu"][:,j]), dmus[j], isoutl[j]]
+            f.write('\t'.join([str(item) for item in towrite]) + '\n')
 
     f.close()
 
@@ -207,8 +227,22 @@ def make_Hubble_diagram(use_obs_color):
     plt.savefig(resdir + "Hubble_diagram_" + "obs_color"*use_obs_color + "true_color"*(1 - use_obs_color) + ".pdf", bbox_inches = 'tight')
     plt.close()
 
+    plt.figure(figsize = (10, 10))
+    HR_x1_c = [mus - median(fit_params["model_mu"], axis = 0), stan_data["obs_mBx1c"][:,1], stan_data["obs_mBx1c"][:,2]]
+    HR_x1_c_names = ["Hubble Residual", "$x_1$", "$c$"]
 
-def error_analysis(explain, keys):
+    for i in range(3):
+        for j in range(i+1, 3):
+            plt.subplot(3, 3, i+j*3+1)
+            plt.scatter(HR_x1_c[i], HR_x1_c[j], c = [percentileofscore(isoutl, item) for item in isoutl], s = array(isoutl > 0, dtype=float64) + 0.5, cmap = 'brg')
+            plt.xlabel(HR_x1_c_names[i])
+            plt.ylabel(HR_x1_c_names[j])
+    
+    plt.savefig(resdir + "outliers_corner_" + "obs_color"*use_obs_color + "true_color"*(1 - use_obs_color) + ".pdf", bbox_inches = 'tight')
+    plt.close()
+
+
+def error_analysis(explain, keys, dobin = 0):
     labels = []
     explained = []
 
@@ -299,6 +333,9 @@ def count_outliers():
             if isoutl[ind] > 0:
                 print the_data["snpaths"][ind].split("/")[-1],
         print
+    return isoutl
+
+    
 
 def diagnositics_plot():
     plt.figure(figsize = (4, stan_data["n_samples"]*0.5))
@@ -342,18 +379,25 @@ for key in ["obs_mBx1c"]:
     stan_data[key] = array(stan_data[key])
 
 label_dict = get_label_dict()
+
+isoutl = count_outliers()
+
 make_mB_vs_z()
-show_color_pop()
+show_x1color_pop()
+
+plot_sample_mag_limits()
+
 make_Hubble_diagram(0)
 make_Hubble_diagram(1)
 
-plot_sample_mag_limits()
-count_outliers()
+
 diagnositics_plot()
-fff
+
 
 error_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star"])
 
+
+fff
 
 make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas"], "Om_mB_cut.pdf")

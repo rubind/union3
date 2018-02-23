@@ -35,7 +35,6 @@ data {
 
     int do_twoalphabeta;
 
-    real outl_mBx1c_uncertainties [3];
     real outl_frac_prior_lnmean;
     real outl_frac_prior_lnwidth;
 
@@ -90,11 +89,15 @@ parameters {
     real <lower = 0.1> mobs_cut_sigmas[n_samples];
 
     vector [n_photoz] dz;
+
+    real <lower = 0.2, upper = 5> outl_mBx1c_uncertainties [3];
+
 }
 
 transformed parameters {
     vector [3] model_mBx1c [n_sne];
     matrix [3,3] model_mBx1c_cov [n_sne];
+    matrix [3,3] model_mBx1c_cov_outl [n_sne];
     vector [n_sne] mean_mB_by_SN;
     vector [n_sne] var_mB_by_SN;
 
@@ -142,6 +145,7 @@ transformed parameters {
     real dz_term;
     real dz_Hinv_term;
 
+    vector [3] tmploglike;
 
     mass_0 <- 10.;
 
@@ -186,7 +190,8 @@ transformed parameters {
 
 
     model_mBx1c_cov <- obs_mBx1c_cov;
-
+    model_mBx1c_cov_outl <- obs_mBx1c_cov;
+    
 
     alpha <- tan(alpha_angle);
     beta_B <- tan(beta_angle_blue);
@@ -209,7 +214,9 @@ transformed parameters {
         for (j in 1:3) {
             model_mBx1c_cov[i][j,j] <- model_mBx1c_cov[i][j,j] + sig_int_vector[sample_list[i]][j]^2;
         }
- 
+	model_mBx1c_cov_outl[i][1,1] <- model_mBx1c_cov_outl[i][1,1] + outl_mBx1c_uncertainties[1]^2;
+
+
         x1_star_by_SN[i] <- dot_product(x1_star[sample_list[i]], redshift_coeffs[i]);
         R_x1_by_SN[i] <- R_x1[sample_list[i]];
 
@@ -234,13 +241,24 @@ transformed parameters {
             dz_deriv_term <- dz[photoz_inds[i]]*d_mBx1c_dz_list[photoz_inds[i]];
         }
 
+
+        tmploglike[1] <- log(0.24410438) + normal_log(true_cR[i], 0.16913558*tau_c_by_SN[i], 0.11070724*tau_c_by_SN[i]);
+        tmploglike[2] <- log(0.43274856) + normal_log(true_cR[i], 0.68695591*tau_c_by_SN[i], 0.330062*tau_c_by_SN[i]);
+        tmploglike[3] <- log(0.32314706) + normal_log(true_cR[i], 1.9434773*tau_c_by_SN[i], 0.96505958*tau_c_by_SN[i]);
+
+
 	outl_loglike_by_SN[i] <- log(outl_frac)
-                                          + normal_log(obs_mBx1c[i][1] + dz_deriv_term[1], model_mBx1c[i][1], outl_mBx1c_uncertainties[1])
-                                          + normal_log(obs_mBx1c[i][2] + dz_deriv_term[2], model_mBx1c[i][2], outl_mBx1c_uncertainties[2])
-                                          + normal_log(obs_mBx1c[i][3] + dz_deriv_term[3], model_mBx1c[i][3], outl_mBx1c_uncertainties[3]);
+                                          + multi_normal_log(obs_mBx1c[i] + dz_deriv_term, model_mBx1c[i], model_mBx1c_cov_outl[i])
+					  + normal_log(true_x1[i], 0, outl_mBx1c_uncertainties[2])
+					  + normal_log(true_cB[i], 0, outl_mBx1c_uncertainties[3])
+					  + normal_log(true_cR[i], 0, outl_mBx1c_uncertainties[3]);
 					  
 	inl_loglike_by_SN[i] <- log(1 - outl_frac)
                                           + multi_normal_log(obs_mBx1c[i] + dz_deriv_term, model_mBx1c[i], model_mBx1c_cov[i])
+					  + normal_log(true_x1[i], x1_star_by_SN[i], R_x1_by_SN[i])
+					  + normal_log(true_cB[i], c_star_by_SN[i], R_c_by_SN[i])
+					  + log_sum_exp(tmploglike)
+
 	                                  + normal_cdf_log(mobs_cuts[sample_list[i]] + d_mBx1c_d_calib[i][1] * calibs, obs_mBx1c[i][1] + mobs_cut0[i] + mobs_cut1[i]*obs_mBx1c[i][3], mobs_cut_sigmas[sample_list[i]])
                                           - log(
                                                 0.24410438*normal_cdf(mobs_cuts[sample_list[i]],
@@ -258,20 +276,8 @@ transformed parameters {
 }
 
 model {
-    vector [3] tmploglike;
-
-
-    true_x1 ~ normal(x1_star_by_SN, R_x1_by_SN);
-    true_cB ~ normal(c_star_by_SN, R_c_by_SN);
 
     for (i in 1:n_sne) {
-        tmploglike[1] <- log(0.24410438) + normal_log(true_cR[i], 0.16913558*tau_c_by_SN[i], 0.11070724*tau_c_by_SN[i]);
-        tmploglike[2] <- log(0.43274856) + normal_log(true_cR[i], 0.68695591*tau_c_by_SN[i], 0.330062*tau_c_by_SN[i]);
-        tmploglike[3] <- log(0.32314706) + normal_log(true_cR[i], 1.9434773*tau_c_by_SN[i], 0.96505958*tau_c_by_SN[i]);
-
-        target += log_sum_exp(tmploglike);
-
-	//print (i, " ", obs_mBx1c[i], " ", model_mBx1c_cov[i]);
         target += log_sum_exp(outl_loglike_by_SN[i], inl_loglike_by_SN[i]);
     }
 
@@ -302,5 +308,8 @@ model {
         0 ~ normal(beta_angle_blue - beta_angle_red, 0.0001);
     }
 
+    outl_mBx1c_uncertainties[1] ~ normal(0.5, 0.5);
+    outl_mBx1c_uncertainties[2] ~ normal(3, 3);
+    outl_mBx1c_uncertainties[3] ~ normal(0.5, 0.5);
     outl_frac ~ lognormal(outl_frac_prior_lnmean, outl_frac_prior_lnwidth);
 }
