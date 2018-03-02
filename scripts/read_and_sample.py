@@ -68,6 +68,7 @@ def read_data(params):
         snpaths = f.read().split('\n')
         snpaths = [item.strip() for item in snpaths]
         snpaths = [item for item in snpaths if item != ""]
+        snpaths = [item.replace("$UNION", os.environ["UNION"]) for item in snpaths]
 
         f.close()
 
