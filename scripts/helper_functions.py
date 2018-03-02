@@ -58,7 +58,7 @@ def get_params(paramfl):
     keys = ["filenamelist", "weird_sn_list", "mag_cut", "calib_errs",
             "iter", "chains", "n_jobs",
             "max_firstphase", "min_lastphase", "max_color_uncertainty",
-            "min_redshift", "max_redshift",
+            "min_redshift", "max_redshift", "n_x1c_star",
             "do_blind", "do_twoalphabeta", "outl_frac",
             "stan_code", "pec_vel_disp", "lensing_disp", "sample_file", "log10_sigma_int_mB"
             ]

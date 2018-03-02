@@ -68,6 +68,7 @@ def read_data(params):
         snpaths = f.read().split('\n')
         snpaths = [item.strip() for item in snpaths]
         snpaths = [item for item in snpaths if item != ""]
+        snpaths = [item.replace("$UNION", os.environ["UNION"]) for item in snpaths]
 
         f.close()
 
@@ -396,7 +397,6 @@ if inputfl.count("pickle"):
     (the_data, stan_data, params) = pickle.load(gzip.open(inputfl, "rb"))
 else:
     params = helper_functions.get_params(inputfl)
-    n_x1c_star = 2
 
     ################################################# And Go! ###################################################
     assert params["iter"] % 4 == 0, "iter should be a multiple of four! "  + str(params["iter"])
@@ -424,11 +424,11 @@ else:
 
     stan_data = {"n_sne": n_sne, "nzadd": nzadd,
                  "n_samples": len(the_data["sample_names"]),
-                 "redshift_coeffs": get_redshift_coeffs(the_data["sample_list"], the_data["z_CMB_list"], n_x1c_star),
+                 "redshift_coeffs": get_redshift_coeffs(the_data["sample_list"], the_data["z_CMB_list"], params["n_x1c_star"]),
                  "n_calib": len(the_data["calib_names"]),
                  "d_mBx1c_d_calib": the_data["d_mBx1c_dcalib_list"],
                  "calib_uncertainties": the_data["calib_uncertainties"],
-                 "n_x1c_star": n_x1c_star, # 3 = quadratic in redshift with old approach
+                 "n_x1c_star": params["n_x1c_star"], # 3 = quadratic in redshift with old approach
                  "mass": the_data["mass"],
                  "mass_err": the_data["mass_err"],
                  # The +1 here is for Stan's indexing, which is from 1 not 0
