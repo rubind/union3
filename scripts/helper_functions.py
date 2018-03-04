@@ -84,7 +84,7 @@ def get_params(paramfl):
 
     if params["sample_file"] != None:
         params["sample_file"] = os.getcwd() + "/" + params["sample_file"]
-    for key in ["weird_sn_list", "mag_cut", "stan_code"]:
+    for key in ["weird_sn_list", "mag_cut"]:
         if params[key].count("$"):
             print params[key]
             params[key] = commands.getoutput("ls " + params[key])

@@ -533,7 +533,7 @@ if stan_data["do_blind"]:
         
 
 print "Running..."
-fit = pystan.stan(file=params["stan_code"], data=stan_data,
+fit = pystan.stan(file=params["stan_code"].replace("$UNITY", os.environ["UNITY"]), data=stan_data,
                   iter=params["iter"], chains=params["chains"], n_jobs = params["n_jobs"], refresh = 10, init = init_fn, sample_file = params["sample_file"]
                   # pars = ["beta", "dbeta", "alpha", "dalpha", "MB", "Om", "sigma_int", "x1_star", "R_x1", "c_star", "R_c", "calibs"]
                       )#, sample_file = "/Users/rubind/Dropbox/samples.txt")
