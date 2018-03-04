@@ -243,6 +243,9 @@ def make_Hubble_diagram(use_obs_color):
 
 
 def error_analysis(explain, keys, dobin = 0):
+    labels_indiv = []
+    explained_indiv = []
+
     labels = []
     explained = []
 
@@ -250,38 +253,49 @@ def error_analysis(explain, keys, dobin = 0):
         if fit_params.has_key(key):
             sh = fit_params[key].shape
 
+            total_explained_squared = 0.
+
             if len(sh) == 2:
                 for j in range(sh[1]):
                     cmat = cov(fit_params[key][:,j], fit_params[explain])
-                    explained.append(cmat[0,1]/sqrt(cmat[0,0]))
-                    labels.append(get_label(key, sh, j=j))
+                    explained_indiv.append(cmat[0,1]/sqrt(cmat[0,0]))
+                    labels_indiv.append(get_label(key, sh, j=j))
+                    total_explained_squared += explained_indiv[-1]**2.
+
 
             elif len(sh) == 3:
                 for j in range(sh[1]):
                     for k in range(sh[2]):
                         cmat = cov(fit_params[key][:,j,k], fit_params[explain])
-                        explained.append(cmat[0,1]/sqrt(cmat[0,0]))
-                        labels.append(get_label(key, sh, j=j,k=k))
+                        explained_indiv.append(cmat[0,1]/sqrt(cmat[0,0]))
+                        labels_indiv.append(get_label(key, sh, j=j,k=k))
+                        total_explained_squared += explained_indiv[-1]**2.
 
             else:
                 cmat = cov(fit_params[key], fit_params[explain])
-                explained.append(cmat[0,1]/sqrt(cmat[0,0]))
-                labels.append(get_label(key, sh))
+                explained_indiv.append(cmat[0,1]/sqrt(cmat[0,0]))
+                labels_indiv.append(get_label(key, sh))
+                total_explained_squared += explained_indiv[-1]**2.
 
-    explained = abs(array(explained))
-    labels = array(labels)
-    inds = argsort(explained)[::-1]
-    
-    explained = explained[inds]
-    labels = labels[inds]
-    
+            labels.append(key)
+            explained.append(sqrt(total_explained_squared))
 
-    for i, item in enumerate(zip(explained, labels[:50])):
-        print "%.3g\t\t%.3g\t\t%.3g\t\t%s" % (item[0]**2./dot(explained, explained),
-                                        dot(explained[:i+1], explained[:i+1])/dot(explained, explained),
-                                        item[0], item[1])
+
+    for expl, lbls in [(explained_indiv, labels_indiv), (explained, labels)]:
+        expl = abs(array(expl))
+        lbls = array(lbls)
+        inds = argsort(expl)[::-1]
         
-    print "Total explained:", sqrt(dot(explained, explained)), "of", std(fit_params[explain])
+        expl = expl[inds]
+        lbls = lbls[inds]
+        
+        
+        for i, item in enumerate(zip(expl, lbls[:50])):
+            print "%.3g\t\t%.3g\t\t%.3g\t\t%s" % (item[0]**2./dot(expl, expl),
+                                                  dot(expl[:i+1], expl[:i+1])/dot(expl, expl),
+                                                  item[0], item[1])
+        
+        print "Total expl:", sqrt(dot(expl, expl)), "of", std(fit_params[explain])
     
 
 def get_label_dict():
@@ -391,18 +405,20 @@ make_Hubble_diagram(0)
 make_Hubble_diagram(1)
 
 
-diagnositics_plot()
 
 
-error_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star"])
+error_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
+
 
 
 fff
-
 make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas"], "Om_mB_cut.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "MB", "beta_B", "beta_R"], "Om_mB_cut_beta.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c"], "Om_mB_cut_cpop.pdf")
+
+
+diagnositics_plot()
 
 
 for i in range(5):
