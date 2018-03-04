@@ -12,6 +12,7 @@ import helper_functions
 from scipy.interpolate import interp1d
 import gzip
 from FileRead import readcol
+from astropy.io import fits
 
 
 ################################################# Get the SALT data ###################################################
@@ -29,7 +30,6 @@ def read_data(params):
                 "sample_names": [], # For storing sample names
                 "mag_cut_list": array([], dtype=float64),
                 "mag_cut_disp_list": array([], dtype=float64), # Dispersion on magnitude cut
-                "calib_names": [], # Name of each systematic uncertainty
                 "mass": [], # Host mass
                 "mass_err": [], # Host-mass uncertainty
                 "snpaths": [], # Paths to LC fits. Stored for future reference.
@@ -40,6 +40,8 @@ def read_data(params):
                 "est_mobs_sigmas": [],
                 
                 "efflambs": {}, # Filter wavelengths
+                "calib_names": [], # Name of each systematic uncertainty
+                "calib_uncertainties": [], # Name of each systematic uncertainty
                 "d_mBx1c_dcalib_list": zeros([3000,3,500], dtype=float64), # This is an inefficient way to do this, but this is initialized to fixed size, then trimmed later.
 
                 "photoz_inds": [],
@@ -61,6 +63,13 @@ def read_data(params):
     [magcut_input_fls, magcut_k_correction_fls, magcut_est_cuts, magcut_est_sigmas] = readcol(params["mag_cut"], 'aaff')
     magcut_k_correction_fls = [item.replace("$UNITY", os.environ["UNITY"]) for item in magcut_k_correction_fls]
     
+    [bulk_SN_list] = readcol(os.environ["UNITY"] + "/paramfiles/table.input", 'a')
+    fbulk = fits.open(os.environ["UNITY"] + "/paramfiles/dominant_evecs.fits")
+    bulk_eig = fbulk[0].data
+    fbulk.close()
+
+    assert len(bulk_eig[0]) == len(bulk_SN_list)
+
     for current_sample, directory in enumerate(filenamelist):
         the_data["sample_names"].append(directory)
 
@@ -204,17 +213,32 @@ def read_data(params):
                                                                                               [mBx1, x1x1, x1c],
                                                                                               [mBc, x1c, cc]]], dtype=float64)   ), axis = 0)
 
-                dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat")
+                dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat", this_redshift_helio)
 
                 for key in dparam_dzps:
                     # key is (Lambda or Zeropoint, Instrument|Band)
-                    key_parts = key[1].split("|") #  Instrument, Band
 
-                    
                     if not the_data["calib_names"].count(key):
                         the_data["calib_names"].append(key)
+
+                        if key.count("Fundamental"):
+                            the_data["calib_uncertainties"].append(0.005)
+                        else:
+                            the_data["calib_uncertainties"].append(0.01)
+
                     calib_ind = the_data["calib_names"].index(key)
                     the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]
+                
+                if this_redshift_cmb < 0.1:
+                    bulk_ind = bulk_SN_list.index(snpath.split("/")[-1])
+                    for bulk_i in range(len(bulk_eig)):
+                        key = "BULK_%03i" % bulk_i
+                        if not the_data["calib_names"].count(key):
+                            the_data["calib_names"].append(key)
+                            the_data["calib_uncertainties"].append(1.0)
+                        calib_ind = the_data["calib_names"].index(key)
+                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = bulk_eig[bulk_i, bulk_ind]
+
 
                 current_sn_ind += 1
             else:
@@ -224,7 +248,6 @@ def read_data(params):
                         print okay_names[j],
                 print
 
-    the_data["calib_uncertainties"] = [0.01]*len(the_data["calib_names"])
     for i in range(len(the_data["calib_names"])):
         print the_data["calib_names"][i], the_data["calib_uncertainties"][i]
 

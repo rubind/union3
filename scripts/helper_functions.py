@@ -102,7 +102,9 @@ def get_params(paramfl):
 
 
 
-def get_dparam_dzps(res_der_fl):
+def get_dparam_dzps(res_der_fl, redshift):
+    wavebins = array([3000., 4000., 6000., 8000., 10000., 100000.]) # 4000 and 8000 for the breaks, roughly
+
     f = open(res_der_fl)
     lines = f.read().split('\n')
     f.close()
@@ -115,6 +117,18 @@ def get_dparam_dzps(res_der_fl):
             assert parsed[3] == "All", "Weird format for " + res_der_fl
             
             dparam_dzps[(parsed[0], parsed[1][parsed[1].find("|")+1:])] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+
+        if parsed.count("Zeropoint"):
+            obslamb = (1. + redshift)*float(parsed[2])
+
+            binind = where(wavebins > obslamb)[0][0] - 1
+            thekey = ("Fundamental", (wavebins[binind], wavebins[binind + 1]))
+
+            if dparam_dzps.has_key(thekey):
+                dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+            else:
+                dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+
 
     print "dparam_dzps ", dparam_dzps
     return dparam_dzps
