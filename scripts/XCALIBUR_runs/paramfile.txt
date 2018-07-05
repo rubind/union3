@@ -1,19 +1,18 @@
 do_blind		0
-filenamelist		["$UNION/SDSS_v1.txt"]
+filenamelist		["$UNION/CSP_v1.txt","$UNION/CfA1_v1.txt","$UNION/CfA2_v1.txt","$UNION/CfA3_4S_v1.txt","$UNION/CfA3_KC_v1.txt","$UNION/CfA4_v1.txt","$UNION/SDSS_v1.txt"]
 
 weird_sn_list		"$UNITY/paramfiles/weird_sn_list.txt"
 mag_cut			"$UNITY/paramfiles/mag_cuts.txt"
-stan_code		"$UNITY/scripts/stan_code_simple.txt"
+stan_code		"$UNITY/scripts/XCALIBUR_runs/stan_code_simple.txt"
 
 
 min_redshift		0.01
-max_redshift		3.0
+max_redshift		0.15
 max_firstphase		6.
 min_lastphase		0.
 max_color_uncertainty	0.2
 
 n_x1c_star		2
-
 
 # Units of c:
 pec_vel_disp		0.001

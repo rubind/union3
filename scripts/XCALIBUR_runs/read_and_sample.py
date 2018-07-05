@@ -379,7 +379,7 @@ def init_fn():
     print "n_sne ", n_sne
     print "n_samples ", n_samples
             
-    return {"MB": random.random()*0.2 - 19.1,
+    return {"MB": random.random(size = n_samples)*0.2 - 19.1,
             "Om": random.random()*0.4 + 0.1,
             "alpha_angle": arctan(random.random()*0.2),
             "beta_angle_blue": arctan(random.random()*0.5 + 2.5),

@@ -68,7 +68,7 @@ def make_mB_vs_z():
 
 
 def show_x1color_pop():
-    plt.figure(figsize = (16,16))
+    plt.figure(figsize = (16,48))
 
     fit_params["mean_c_by_SN"] = fit_params["c_star_by_SN"] + fit_params["tau_c_by_SN"]
 
@@ -95,13 +95,15 @@ def show_x1color_pop():
                     ylim = plt.ylim()
                     plt.plot(stan_data["redshifts"], array(stan_data["obs_mBx1c"])[:,1+c_not_x1], '.', color = 'lightgray')
                     inds = where(isoutl > 0)
-                    plt.plot(stan_data["redshifts"][inds], array(stan_data["obs_mBx1c"])[:,1+c_not_x1][inds], 'o', color = 'cyan')
+                    plt.plot(stan_data["redshifts"][inds], array(stan_data["obs_mBx1c"])[:,1+c_not_x1][inds], 'o', color = 'cyan', label = "Outliers")
 
 
 
                     plt.legend(loc = 'best')
+                    
                     if i > 1:
-                        plt.ylim(ylim)
+                        #plt.ylim(ylim)
+                        pass
                     else:
                         inds = where((isoutl < 0)*(array(stan_data["obs_mBx1c"])[:,1+c_not_x1] > c_not_x1*0.3 + (1 - c_not_x1)*2))
                         for ind in inds[0]:
@@ -211,6 +213,11 @@ def make_Hubble_diagram(use_obs_color):
         for j, plt_redshift in zip(inds[0], plt_redshifts):
             plt.plot([plt_redshift]*2, [mus[j] - dmus[j], mus[j] + dmus[j]], color = eval(lines[ind][2]), linewidth = 0.75)
             plt.plot(plt_redshift, mus[j], '.', color = eval(lines[ind][2]), markersize = 2.5)
+
+            the_data["sample_names"]
+            the_data["snpaths"]
+            mus
+            fit_params["model_mu"]
 
             towrite = [the_data["sample_names"][i].split("/")[-1], the_data["snpaths"][j].split("/")[-1], mus[j] - median(fit_params["model_mu"][:,j]), dmus[j], isoutl[j]]
             f.write('\t'.join([str(item) for item in towrite]) + '\n')
@@ -406,13 +413,11 @@ make_Hubble_diagram(1)
 
 
 
-
 error_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
 
 
 
-fff
-make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
+make_corner(["Om", "alpha", "beta_B", "beta_R", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas"], "Om_mB_cut.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "MB", "beta_B", "beta_R"], "Om_mB_cut_beta.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c"], "Om_mB_cut_cpop.pdf")
