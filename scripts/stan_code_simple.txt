@@ -194,8 +194,14 @@ transformed parameters {
     
 
     alpha <- tan(alpha_angle);
-    beta_B <- tan(beta_angle_blue);
-    beta_R <- tan(beta_angle_red);
+    
+    if (do_twoalphabeta == 0) {
+        beta_B <- tan(beta_angle_red);
+        beta_R <- tan(beta_angle_red);
+    } else {
+        beta_B <- tan(beta_angle_blue);
+        beta_R <- tan(beta_angle_red);
+    }
 
     for (i in 1:n_samples) {
         sig_int_vector[i][1] <- sqrt(mBx1c_int_variance[1])*pow(10, log10_sigma_int[i]);        // This vector is in dispersion, not variance
@@ -305,7 +311,7 @@ model {
     }
 
     if (do_twoalphabeta == 0) {
-        0 ~ normal(beta_angle_blue - beta_angle_red, 0.0001);
+       beta_angle_blue ~ normal(0, 1);
     }
 
     outl_mBx1c_uncertainties[1] ~ normal(0.5, 0.5);
