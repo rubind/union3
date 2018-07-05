@@ -1,0 +1,34 @@
+#sample			kc_file						est_cut_value	est_cut_sigma
+CalanTololo_v1.txt	$UNITY/paramfiles/CalanTololo_R_selection.txt   19.0            1.0
+LOSS_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+LSQ_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+Krisciunas_v1.txt	$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+CfA1_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	18.5		1.0
+CfA2_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	18.5		1.0
+CfA3_v1.txt             $UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+CfA3_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	18.5		1.0
+CfA3_KC_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	18.5		1.0
+CfA3_4S_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	18.5		1.0
+CfA4_v1.txt             $UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+CfA4_1_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+CfA4_2_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+CfA34_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	18.5		1.0
+CSP_v1.txt     		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+
+SDSS_v1.txt		$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
+SDSS_low_v1.txt		$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
+SDSS_high_v1.txt	$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
+Pan-STARRS_v1.txt	$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
+ESSENCE_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	24.0		0.5
+SNLS_v1.txt		$UNITY/paramfiles/MEGACAMJLA_i_selection.txt	24.3		0.5
+tonry03_v1.txt		$UNITY/paramfiles/CalanTololo_I_selection.txt	23.8		0.5
+amanullah10_v1.txt	$UNITY/paramfiles/CalanTololo_I_selection.txt	23.8		0.5
+
+See-Change_v1.txt	$UNITY/paramfiles/WFC3_f125w_selection.txt	26.6		0.25
+SUSHI_v1.txt		$UNITY/paramfiles/HSC_z_selection.txt		25.7		0.5
+SCP_v1.txt		$UNITY/paramfiles/ACSWF_F850LP_selection.txt	25.7		0.5
+riess_fixed_ab_v1.txt	$UNITY/paramfiles/ACSWF_F850LP_selection.txt	25.7		0.5
+Primo_v1.txt		$UNITY/paramfiles/WFC3_f125w_selection.txt	26.6		0.25
+
+
+SDSS_sim.txt		$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
