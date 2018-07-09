@@ -53,6 +53,8 @@ def make_corner(keys, pltname):
             
     samples = transpose(array(samples))
 
+    print samples.shape, labels
+
     corner.corner(samples, labels = labels)
     plt.savefig(resdir + pltname)
     plt.close()
@@ -307,7 +309,7 @@ def error_analysis(explain, keys, dobin = 0):
 
 def get_label_dict():
     label_dict = {}
-    for key in ["mobs_cuts", "mobs_cut_sigmas"]:
+    for key in ["mobs_cuts", "mobs_cut_sigmas", "MB"]:
         label_dict[key] = [the_data["sample_names"][i].split("/")[-1].replace("_v1.txt", "") for i in range(stan_data["n_samples"])]
 
     label_dict["calibs"] = the_data["calib_names"]

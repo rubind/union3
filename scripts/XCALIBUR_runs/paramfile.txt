@@ -22,7 +22,7 @@ outl_frac		0.02
 calib_errs		
 
 
-do_twoalphabeta		1
+do_twoalphabeta		0
 
 
 iter			2000
