@@ -327,6 +327,7 @@ def add_zbins(stan_data, cosmo_model):
     
     stan_data["cosmo_model"] = cosmo_model
 
+    print "min, max", stan_data["redshifts"].min(), stan_data["redshifts"].max()
     if stan_data["redshifts"].min() == stan_data["redshifts"].max():
         stan_data["zbins"] = [stan_data["redshifts"][0]]
         stan_data["n_zbins"] = 1
