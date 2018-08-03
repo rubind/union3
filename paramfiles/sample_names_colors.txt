@@ -9,6 +9,8 @@ CfA1_v1.txt			Riess+ (1999)						(0., 0.5, 0.)
 CfA2_v1.txt			Jha+ (2006)						(0.5, 1., 0.)
 CfA34_v1.txt			Hicken+ (2009+2012)					(0., 0.5, 0.5)
 CfA3_v1.txt			Hicken+ (2009)						(0., 0.5, 0.5)
+CfA3_4S_v1.txt			Hicken+ (2009) 4S					(0., 0.5, 0.5)
+CfA3_KC_v1.txt			Hicken+ (2009) KC					(0., 0.5, 0.5)
 CfA4_v1.txt			Hicken+ (2012)						(0., 0.5, 0.5)
 
 tonry03_v1.txt			Tonry+ (2003)						(0., 1., 1.)
