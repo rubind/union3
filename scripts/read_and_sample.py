@@ -68,6 +68,7 @@ def read_data(params):
     bulk_eig = fbulk[0].data
     fbulk.close()
 
+
     assert len(bulk_eig[0]) == len(bulk_SN_list)
 
     for current_sample, directory in enumerate(filenamelist):
@@ -229,8 +230,13 @@ def read_data(params):
                     calib_ind = the_data["calib_names"].index(key)
                     the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]
                 
-                if this_redshift_cmb < 0.1:
-                    bulk_ind = bulk_SN_list.index(snpath.split("/")[-1])
+                if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1):
+                    try:
+                        bulk_ind = bulk_SN_list.index(snpath.split("/")[-1])
+                    except:
+                        print("Couldn't find " + snpath.split("/")[-1] + " in table.input. You need to regenerate the bulk flow files or run with include_pec_cov set to 0.")
+                        raise
+
                     for bulk_i in range(len(bulk_eig)):
                         key = "BULK_%03i" % bulk_i
                         if not the_data["calib_names"].count(key):
@@ -252,6 +258,9 @@ def read_data(params):
         print the_data["calib_names"][i], the_data["calib_uncertainties"][i]
 
     the_data["d_mBx1c_dcalib_list"] = the_data["d_mBx1c_dcalib_list"][:len(the_data["mB_list"]), :, :len(the_data["calib_names"])]
+    if not params["include_systematics"]:
+        the_data["d_mBx1c_dcalib_list"] *= 0
+
     print 'the_data["d_mBx1c_dcalib_list"].shape ', the_data["d_mBx1c_dcalib_list"].shape
     print 'the_data["calib_names"] ', the_data["calib_names"]
     
@@ -390,7 +399,7 @@ def init_fn():
     print "n_sne ", n_sne
     print "n_samples ", n_samples
             
-    return {"MB": random.random()*0.2 - 19.1,
+    return {"MB": random.random(size = [(n_samples - 1)*stan_data["MB_by_sample"] + 1])*0.2 - 19.1,
             "Om": random.random()*0.4 + 0.1,
             "alpha_angle": arctan(random.random()*0.2),
             "beta_angle_blue": arctan(random.random()*0.5 + 2.5),
@@ -466,6 +475,7 @@ else:
                  "n_x1c_star": params["n_x1c_star"], # 3 = quadratic in redshift with old approach
                  "mass": the_data["mass"],
                  "mass_err": the_data["mass_err"],
+                 "do_host_mass": params["do_host_mass"], "fix_Om": params["fix_Om"], "MB_by_sample": params["MB_by_sample"], 
                  # The +1 here is for Stan's indexing, which is from 1 not 0
                  "sample_list": the_data["sample_list"] + 1, "redshifts": redshifts, "redshifts_sort_fill": redshifts_sort_fill, "unsort_inds": unsort_inds,
                  "obs_mBx1c": array(obs_mBx1c),

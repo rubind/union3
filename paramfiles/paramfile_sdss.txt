@@ -21,6 +21,7 @@ pec_vel_disp		0.001
 lensing_disp		0.055
 outl_frac		0.02
 calib_errs		
+include_pec_cov		1
 
 
 do_twoalphabeta		1
