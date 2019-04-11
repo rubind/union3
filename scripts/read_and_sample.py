@@ -323,7 +323,19 @@ def zcount(z, zmin, zmax):
     return sum((array(z) >= zmin)*(array(z) < zmax))
 
 def add_zbins(stan_data, cosmo_model):
-    # For inned mu
+    # For binned mu
+    
+    stan_data["cosmo_model"] = cosmo_model
+
+    print "min, max", stan_data["redshifts"].min(), stan_data["redshifts"].max()
+    if stan_data["redshifts"].min() == stan_data["redshifts"].max():
+        stan_data["zbins"] = [stan_data["redshifts"][0]]
+        stan_data["n_zbins"] = 1
+        stan_data["dmu_dbin"] = ones([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
+        stan_data["dmudz_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
+        
+        return stan_data
+
     stan_data["zbins"] = [0.99999*stan_data["redshifts"].min()]
 
     while max(stan_data["zbins"]) < max(stan_data["redshifts"]):
@@ -366,7 +378,6 @@ def add_zbins(stan_data, cosmo_model):
     plt.savefig("dmu_dbin.pdf")
     plt.close()
         
-    stan_data["cosmo_model"] = cosmo_model
 
     return stan_data
 
