@@ -25,6 +25,8 @@ include_pec_cov		1
 MB_by_sample		0
 fix_Om			1
 
+do_host_mass		0
+
 
 do_twoalphabeta		1
 
