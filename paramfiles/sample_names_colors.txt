@@ -6,6 +6,7 @@ LSQ_v1.txt			Walker+ (2015)	      		   			(1., 0.5, 0)
 LOSS_v1.txt			Ganeshalingam+ (2010)					(0.5, 0.5, 0.5)
 
 CfA1_v1.txt			Riess+ (1999)						(0., 0.5, 0.)
+CfA1_STD_v1.txt			Riess+ (1999)						(0., 0.5, 0.)
 CfA2_v1.txt			Jha+ (2006)						(0.5, 1., 0.)
 CfA34_v1.txt			Hicken+ (2009+2012)					(0., 0.5, 0.5)
 CfA3_v1.txt			Hicken+ (2009)						(0., 0.5, 0.5)

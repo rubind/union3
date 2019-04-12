@@ -15,6 +15,22 @@ from DavidsNM import miniNM_new
 
 plt.rcParams["font.family"] = "serif"
 
+def get_sample_names_colors():
+    f = open(os.environ["UNITY"] + "/paramfiles/sample_names_colors.txt", 'r')
+    lines = f.read()
+    f.close()
+
+    for i in range(20):
+        lines = lines.replace("\t\t", "\t").replace(" \t", "\t").replace("\t ", "\t").replace("  ", " ")
+    
+    lines = lines.split('\n')
+    names_colors_dict = {}
+    for line in lines:
+        parsed = line.split('\t')
+        if len(parsed) > 1:
+            names_colors_dict[parsed[0]] = (parsed[1], parsed[2])
+    return names_colors_dict
+
 
 def get_label(key, sh, j=None, k=None):
     if len(sh) == 2:
@@ -325,17 +341,22 @@ def get_label_dict():
     return label_dict
 
 def plot_sample_mag_limits():
+    plt.figure(figsize = (6,8))
+
     for i in range(stan_data["n_samples"]):
         if stan_data["n_samples"] > 1:
             mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"][:,i], [15.8655, 50, 84.1345])
         else:
             mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"], [15.8655, 50., 84.1345])
-        plt.plot(mobs_165084, [i + 0.2]*3, color = 'k')
+        plt.plot(mobs_165084, [i + 0.2]*3, color = 'k', label = (i == 0)*"Posterior")
         plt.text(mean(mobs_165084[::2]),
-                      i - 0.2, label_dict["mobs_cuts"][i], ha = 'center')
+                      i - 0.3, label_dict["mobs_cuts"][i], ha = 'center')
         plt.plot(mobs_165084[1], i + 0.2, '.', color = 'k')
             
-        plt.plot(the_data["est_mobs_cuts"][i], i + 0.4, '.', color = 'r')
+        plt.plot(the_data["est_mobs_cuts"][i], i + 0.4, '.', color = 'r', label = (i == 0)*"Prior")
+    plt.yticks([])
+    plt.legend(loc = 'best')
+    plt.xlabel("Limiting Mag (Observer-Frame)")
     plt.savefig(resdir + "Mag_limits.pdf", bbox_inches = 'tight')
     plt.close()
 
@@ -415,11 +436,22 @@ make_Hubble_diagram(1)
 
 
 
+if len(fit_params["MB"]) == 1:
+    fit_params["MB-delta_0"] = fit_params["MB"] - fit_params["delta_0"]
+else:
+    fit_params["MB-delta_0"] = fit_params["MB"]*1.
+    
+    for i in range(len(fit_params["MB"][0])):
+        fit_params["MB-delta_0"][:,i] -= fit_params["delta_0"]
+        
+
+
 error_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
 
 
 
 make_corner(["Om", "alpha", "beta_B", "beta_R", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
+make_corner(["Om", "alpha", "beta_B", "beta_R", "MB-delta_0", "delta_0", "delta_h", "outl_frac"], "Om_MBhigh_coeffs.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas"], "Om_mB_cut.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "MB", "beta_B", "beta_R"], "Om_mB_cut_beta.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c"], "Om_mB_cut_cpop.pdf")

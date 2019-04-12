@@ -15,7 +15,10 @@ data {
     matrix [n_sne, n_x1c_star] redshift_coeffs;
 
 
-    int cosmo_model;
+    int cosmo_model; // 1 => Om, 2 => Binned mu
+    int fix_Om;
+    int MB_by_sample;
+
     int n_zbins;
     vector [n_zbins] zbins;
     matrix [n_sne, n_zbins] dmu_dbin;
@@ -34,6 +37,7 @@ data {
     int unsort_inds[n_sne + nzadd];
 
     int do_twoalphabeta;
+    int do_host_mass;
 
     real outl_frac_prior_lnmean;
     real outl_frac_prior_lnwidth;
@@ -49,6 +53,7 @@ data {
     vector [n_photoz] spike_redshift_prob; // E.g., 0.8
     vector [n_photoz] photo_spikez;
     int <lower = 0, upper = n_sne> photoz_inds [n_sne]; // index of photo-z parameter (indexed from one) if photo-z, else 0
+
 }
 
 transformed data {
@@ -56,7 +61,7 @@ transformed data {
 }
 
 parameters {
-    real MB;
+    vector [n_samples*MB_by_sample + 1*(1 - MB_by_sample)] MB;
     real <lower = -0.2, upper = 0.3> alpha_angle;
     real <lower = -1.4, upper = 1.4> beta_angle_blue;
     real <lower = -1.4, upper = 1.4> beta_angle_red;
@@ -140,6 +145,7 @@ transformed parameters {
     //vector [n_sne] PointPosteriors;
 
     real mass_0;
+    real this_MB;
 
     vector [3] dz_deriv_term;
     real dz_term;
@@ -215,7 +221,11 @@ transformed parameters {
     for (i in 1:n_sne) {
 	p_high_mass[i] <- 0.5 + 0.5*erf((mass[i] - mass_0)/(sqrt(2.)*mass_err[i]));
 
-	delta_eff <- delta_0*((  1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i]))  ) + delta_h);
+        if (do_host_mass == 1) {
+	    delta_eff <- delta_0*((  1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i]))  ) + delta_h);
+        } else {
+            delta_eff <- 0;
+        }
 
         for (j in 1:3) {
             model_mBx1c_cov[i][j,j] <- model_mBx1c_cov[i][j,j] + sig_int_vector[sample_list[i]][j]^2;
@@ -230,10 +240,16 @@ transformed parameters {
         c_star_by_SN[i] <- dot_product(c_star[sample_list[i]], redshift_coeffs[i]);
         tau_c_by_SN[i] <- dot_product(tau_c[sample_list[i]], redshift_coeffs[i]);
 
-	mobs_by_SN_except_c_R[i] <- MB + model_mu[i] + mobs_cut0[i] - alpha*x1_star_by_SN[i] + (beta_B + mobs_cut1[i])*c_star_by_SN[i] - 0.5*delta_eff;
+        if (MB_by_sample == 1) {
+            this_MB <- MB[sample_list[i]];
+        } else {
+            this_MB <- MB[1];
+        }
+
+	mobs_by_SN_except_c_R[i] <- this_MB + model_mu[i] + mobs_cut0[i] - alpha*x1_star_by_SN[i] + (beta_B + mobs_cut1[i])*c_star_by_SN[i] - 0.5*delta_eff;
 	mobs_var_by_SN_except_c_R[i] <- mobs_cut_sigmas[sample_list[i]]^2 + model_mBx1c_cov[i][1,1] + (alpha*R_x1_by_SN[i])^2 + ((beta_B + mobs_cut1[i])*R_c_by_SN[i])^2 + 0.25*delta_eff^2;
 
-        model_mBx1c[i][1] <- MB + model_mu[i] - alpha*true_x1[i] + beta_B*true_cB[i] + beta_R*true_cR[i] - delta_eff*p_high_mass[i];
+        model_mBx1c[i][1] <- this_MB + model_mu[i] - alpha*true_x1[i] + beta_B*true_cB[i] + beta_R*true_cR[i] - delta_eff*p_high_mass[i];
         model_mBx1c[i][2] <- true_x1[i];
         model_mBx1c[i][3] <- true_cB[i] + true_cR[i];
 
@@ -304,6 +320,10 @@ model {
     delta_0 ~ normal(0.0, 0.2);
     mobs_cuts ~ normal(est_mobs_cuts, 0.5);
     mobs_cut_sigmas ~ normal(est_mobs_sigmas, 0.25);
+
+    if (fix_Om == 1) {
+        Om ~ normal(0.3, 0.001);
+    }
 
     for (i in 1:n_samples) {
         x1_star[i] ~ normal(0, 1);
