@@ -5,7 +5,7 @@ from numpy import *
 import pystan
 import sys
 import os
-from string import strip
+
 import matplotlib.pyplot as plt
 from scipy.stats import scoreatpercentile
 import helper_functions
@@ -82,9 +82,9 @@ def read_data(params):
 
         f.close()
 
-        print "current_sample, directory", current_sample, directory
+        print("current_sample, directory", current_sample, directory)
         magcut_ind = magcut_input_fls.index(directory.split("/")[-1])
-        print "magcut_ind ", magcut_ind
+        print("magcut_ind ", magcut_ind)
 
         the_data["est_mobs_cuts"].append(magcut_est_cuts[magcut_ind])
         the_data["est_mobs_sigmas"].append(magcut_est_sigmas[magcut_ind])
@@ -100,10 +100,10 @@ def read_data(params):
             this_redshift_helio = helper_functions.read_param(snpath + "/lightfile", "z_heliocentric")
             if this_redshift_cmb == None and this_redshift > 0.1:
                 this_redshift_cmb = this_redshift
-                print "Couldn't find redshift for ", snpath
+                print("Couldn't find redshift for ", snpath)
             if this_redshift_helio == None and this_redshift > 0.1:
                 this_redshift_helio = this_redshift
-                print "Couldn't find redshift for ", snpath
+                print("Couldn't find redshift for ", snpath)
                 
             this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
             this_DEC = helper_functions.read_param(snpath + "/lightfile", "DEC")
@@ -122,7 +122,7 @@ def read_data(params):
                 this_x1_err = 100.
 
             weird_sn = helper_functions.read_param(params["weird_sn_list"], snpath.split("/")[-1])
-            print "weird_sn ", snpath, weird_sn
+            print("weird_sn ", snpath, weird_sn)
             
 
             okay_to_add = [this_redshift >= params["min_redshift"],
@@ -148,7 +148,7 @@ def read_data(params):
                 the_data["snpaths"].append(snpath)
 
                 if helper_functions.read_param(snpath + "/lightfile", "Photoz") != None:
-                    print "Photoz found!", snpath
+                    print("Photoz found!", snpath)
                     the_data["n_photoz"] += 1
                     
                     the_data["photoz_inds"].append(the_data["n_photoz"]) # That's right, after incrementing the counter
@@ -208,7 +208,7 @@ def read_data(params):
 
                 h_resid = (the_data["mB_list"][-1] - - 19.1 + 0.13*the_data["x1_list"][-1] - 3.*the_data["c_list"][-1]) - (5*log10(the_data["z_CMB_list"][-1]*(1. + the_data["z_CMB_list"][-1])) + 42.9)
                 if abs(h_resid) > 2 or (the_data["c_list"][-1] > 1) or (the_data["c_list"][-1] < -0.3):
-                    print "Weird supernova!", snpath
+                    print("Weird supernova!", snpath)
 
                 the_data["mBx1c_cov_list"] = concatenate((the_data["mBx1c_cov_list"], array([[[mBmB, mBx1, mBc],
                                                                                               [mBx1, x1x1, x1c],
@@ -234,7 +234,7 @@ def read_data(params):
                     try:
                         bulk_ind = bulk_SN_list.index(snpath.split("/")[-1])
                     except:
-                        print("Couldn't find " + snpath.split("/")[-1] + " in table.input. You need to regenerate the bulk flow files or run with include_pec_cov set to 0.")
+                        print(("Couldn't find " + snpath.split("/")[-1] + " in table.input. You need to regenerate the bulk flow files or run with include_pec_cov set to 0."))
                         raise
 
                     for bulk_i in range(len(bulk_eig)):
@@ -248,24 +248,24 @@ def read_data(params):
 
                 current_sn_ind += 1
             else:
-                print "Skipping...", snpath,
+                print("Skipping...", snpath, end=' ')
                 for j in range(len(okay_names)):
                     if not okay_to_add[j]:
-                        print okay_names[j],
-                print
+                        print(okay_names[j], end=' ')
+                print()
 
     for i in range(len(the_data["calib_names"])):
-        print the_data["calib_names"][i], the_data["calib_uncertainties"][i]
+        print(the_data["calib_names"][i], the_data["calib_uncertainties"][i])
 
     the_data["d_mBx1c_dcalib_list"] = the_data["d_mBx1c_dcalib_list"][:len(the_data["mB_list"]), :, :len(the_data["calib_names"])]
     if not params["include_systematics"]:
         the_data["d_mBx1c_dcalib_list"] *= 0
 
-    print 'the_data["d_mBx1c_dcalib_list"].shape ', the_data["d_mBx1c_dcalib_list"].shape
-    print 'the_data["calib_names"] ', the_data["calib_names"]
+    print('the_data["d_mBx1c_dcalib_list"].shape ', the_data["d_mBx1c_dcalib_list"].shape)
+    print('the_data["calib_names"] ', the_data["calib_names"])
     
 
-    print "read cov shape ", the_data["mBx1c_cov_list"].shape
+    print("read cov shape ", the_data["mBx1c_cov_list"].shape)
 
     for current_sample in range(len(the_data["sample_names"])):
         inds = where(the_data["sample_list"] == current_sample)
@@ -336,7 +336,7 @@ def add_zbins(stan_data, cosmo_model):
     
     stan_data["cosmo_model"] = cosmo_model
 
-    print "min, max", stan_data["redshifts"].min(), stan_data["redshifts"].max()
+    print("min, max", stan_data["redshifts"].min(), stan_data["redshifts"].max())
     if stan_data["redshifts"].min() == stan_data["redshifts"].max():
         stan_data["zbins"] = [stan_data["redshifts"][0]]
         stan_data["n_zbins"] = 1
@@ -396,8 +396,8 @@ def add_zbins(stan_data, cosmo_model):
 def init_fn():
     n_sne = len(the_data["x1_list"])
     n_samples = len(the_data["sample_names"])
-    print "n_sne ", n_sne
-    print "n_samples ", n_samples
+    print("n_sne ", n_sne)
+    print("n_samples ", n_samples)
             
     return {"MB": random.random(size = [(n_samples - 1)*stan_data["MB_by_sample"] + 1])*0.2 - 19.1,
             "Om": random.random()*0.4 + 0.1,
@@ -433,7 +433,7 @@ def init_fn():
 ################################################# Main Program ###################################################
 
 inputfl = sys.argv[1]
-print "cosmo_model: 1 for Om, 2 for binned mu, 3 for each sample diagnostics"
+print("cosmo_model: 1 for Om, 2 for binned mu, 3 for each sample diagnostics")
 cosmo_model = int(sys.argv[2])
 
 
@@ -449,7 +449,7 @@ else:
     samples_txt = "_".join([item.split(".")[0].split("/")[-1] for item in params["filenamelist"]])
 
     for i, sample in enumerate(the_data["sample_names"]):
-        print sample, sum(the_data["sample_list"] == i)
+        print(sample, sum(the_data["sample_list"] == i))
 
 
     n_sne = len(the_data["c_list"])
@@ -511,7 +511,7 @@ else:
 
 stan_data = add_zbins(stan_data, cosmo_model)
 
-print "nzadd ", stan_data['nzadd']
+print("nzadd ", stan_data['nzadd'])
 # print stan_data['n_sne']
 # print stan_data['n_samples']
 # print stan_data['sample_list'].shape
@@ -520,7 +520,7 @@ print "nzadd ", stan_data['nzadd']
 # print stan_data['obs_mBx1c_cov'].shape
 
 if stan_data["do_blind"]:
-    print "Blinding!"
+    print("Blinding!")
     # There are two phases of blinding:
     # -Making the best-fit Om = 0.3
     # -Bringing all samples into alignment with -19.1 given Om = 0.3 (eventually!)
@@ -547,18 +547,37 @@ if stan_data["do_blind"]:
         the_data["mB_list"] = array(the_data["mB_list"]) - bestvals[0] - bestvals[1]*dmublinddOmfn(stan_data["redshifts"])
 
         if i > 0:
-            print bestvals
+            print(bestvals)
             assert all(abs(bestvals) < 1e-3)
-            print "Blinding passed!"
+            print("Blinding passed!")
 
         
         
 
-print "Running..."
-fit = pystan.stan(file=params["stan_code"].replace("$UNITY", os.environ["UNITY"]), data=stan_data,
-                  iter=params["iter"], chains=params["chains"], n_jobs = params["n_jobs"], refresh = 10, init = init_fn, sample_file = params["sample_file"]
-                  # pars = ["beta", "dbeta", "alpha", "dalpha", "MB", "Om", "sigma_int", "x1_star", "R_x1", "c_star", "R_c", "calibs"]
-                      )#, sample_file = "/Users/rubind/Dropbox/samples.txt")
+print("Running...")
+
+smpfl = os.environ["UNITY"] + "/scripts/stan_code_" + os.uname()[1] + ".pickle"
+smfl = params["stan_code"].replace("$UNITY", os.environ["UNITY"])
+print(("smpfl", smpfl))
+
+f = open(smfl, 'r')
+smfl_lines = f.read()
+f.close()
+
+try:
+    print("Trying to load")
+    sm, sc = pickle.load(open(smpfl, 'rb'))
+    if sc != smfl_lines:
+        print("Okay. Need to recompile!")
+        raise_time
+except:
+    sm = pystan.StanModel(file=smfl)
+    pickle.dump((sm, smfl_lines), open(smpfl, 'wb'))
+    
+
+fit = sm.sampling(data=stan_data,
+                  iter=params["iter"], chains=params["chains"], n_jobs = params["n_jobs"], refresh = 10, init = init_fn, sample_file = params["sample_file"])
+                  # pars = ["beta", "dbeta", "alpha", "dalpha", "MB", "Om", "sigma_int", "x1_star", "R_x1", "c_star", "R_c", "calibs"])#, sample_file = "/Users/rubind/Dropbox/samples.txt")
 
 
 fit_params = fit.extract(permuted = True)
@@ -566,7 +585,7 @@ fit_params = fit.extract(permuted = True)
 try:
     fit_params = filter_fit_params(fit_params, "MB", params["chains"], params["iter"]/2) # burns the first half of the chain, so iter/2
 except:
-    print "Couldn't filter bad chains! One or more chains may be bad!"
+    print("Couldn't filter bad chains! One or more chains may be bad!")
 
 #summarize_parameters(fit_params)
 
@@ -578,9 +597,9 @@ except:
     pickle.dump(fit_params, gzip.open("samples.pickle", "wb"))
 
 
-print "I hope you have a log file:"
+print("I hope you have a log file:")
 
 try:
-    print fit
+    print(fit)
 except:
-    print "Couldn't print fit! Something is very wrong!"
+    print("Couldn't print fit! Something is very wrong!")

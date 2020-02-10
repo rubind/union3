@@ -1,7 +1,8 @@
 E-012		Unknown redshift
 SNSCP06E12	Unknown redshift
 Ashley		Unknown redshift
-	
+
+SN2005gj	Weird
 SN2005bl	1991bg		Contreras10
 SN2005ke	1991bg		Contreras10
 SN2006gt	1991bg		Contreras10

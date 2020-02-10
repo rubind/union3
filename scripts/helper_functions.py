@@ -2,8 +2,7 @@ from numpy import *
 from scipy.stats import scoreatpercentile
 from scipy.interpolate import interp1d
 import os
-import commands
-from string import strip
+import subprocess
 
 ################################################# File-Reading Functions ###################################################
 def clean_lines(lines, stringlist = [""]):
@@ -33,23 +32,23 @@ def read_param(flnm, param, default = None, ind = 1):
     for line in lines:
         parsed = line.split(None)
         if parsed[0] == param:
-            print "Reading " + param + " from " + flnm
+            print("Reading " + param + " from " + flnm)
 
             try:
                 # Yeah, I know eval is bad. But it works with all types!
                 return eval(parsed[ind])
             except:
                 return parsed[ind]
-    print 
-    print "Couldn't find ", param, flnm
-    print "Returning default ", default
-    print
+    print() 
+    print("Couldn't find ", param, flnm)
+    print("Returning default ", default)
+    print()
 
     return default
 
 
 def get_params(paramfl):
-    print "Reading params from ", paramfl
+    print("Reading params from ", paramfl)
 
     f = open(paramfl)
     lines = f.read().split('\n')
@@ -79,25 +78,25 @@ def get_params(paramfl):
                         params[key] = parsed[1:]
 
     for key in keys:
-        if not params.has_key(key):
-            print "Didn't read ", key, "setting to None"
+        if key not in params:
+            print("Didn't read ", key, "setting to None")
             params[key] = None
 
     if params["sample_file"] != None:
         params["sample_file"] = os.getcwd() + "/" + params["sample_file"]
     for key in ["weird_sn_list", "mag_cut"]:
         if params[key].count("$"):
-            print params[key]
-            params[key] = commands.getoutput("ls " + params[key])
-            print "->", params[key]
+            print(params[key])
+            params[key] = subprocess.getoutput("ls " + params[key])
+            print("->", params[key])
     for i in range(len(params["filenamelist"])):
         if params["filenamelist"][i].count("$"):
-            print params["filenamelist"][i]
-            params["filenamelist"][i] = commands.getoutput("ls " + params["filenamelist"][i])
-            print "->", params["filenamelist"][i]
+            print(params["filenamelist"][i])
+            params["filenamelist"][i] = subprocess.getoutput("ls " + params["filenamelist"][i])
+            print("->", params["filenamelist"][i])
 
 
-    print "Read params ", params
+    print("Read params ", params)
     assert isinstance(params["filenamelist"], list), "filenamelist should be a list!"
     return params
 
@@ -125,13 +124,13 @@ def get_dparam_dzps(res_der_fl, redshift):
             binind = where(wavebins > obslamb)[0][0] - 1
             thekey = ("Fundamental", (wavebins[binind], wavebins[binind + 1]))
 
-            if dparam_dzps.has_key(thekey):
+            if thekey in dparam_dzps:
                 dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
             else:
                 dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
 
 
-    print "dparam_dzps ", dparam_dzps
+    print("dparam_dzps ", dparam_dzps)
     return dparam_dzps
 
 
@@ -144,7 +143,7 @@ def get_calib_uncertainties(calib_names, zeropointfl):
     lines = f.read().split('\n')
     f.close()
 
-    print lines
+    print(lines)
     lkfjds
 
     
@@ -159,7 +158,7 @@ def get_calib_uncertainties(calib_names, zeropointfl):
                     calib_uncertainty = float(parsed[1])
                 elif calib_name[0] == "Lambda":
                     calib_uncertainty = float(parsed[2])
-                print "Applying ", calib_uncertainty, "for", calib_name
+                print("Applying ", calib_uncertainty, "for", calib_name)
                 calib_uncertainties.append(calib_uncertainty)
                 found += 1
         assert found == 1, "Found zero times or more than once! " + str(calib_name) + " " + str(found)
@@ -178,11 +177,11 @@ def samples_txt_to_pickle(flname, samples_to_burn, skip = 6):
 
     for i in range(6):
         parsed = lines[i].split(",")[skip:]
-        if len(parsed) > 1 and len(headings_size.keys()) == 0:
+        if len(parsed) > 1 and len(list(headings_size.keys())) == 0:
             headings = parsed
             for j in range(len(parsed)):
                 pparsed = parsed[j].split(".")
-                new_key = not headings_size.has_key(pparsed[0])
+                new_key = pparsed[0] not in headings_size
 
                 if parsed[j].count(".") == 0:
                     headings_size[pparsed[0]] = 0
@@ -221,9 +220,9 @@ def samples_txt_to_pickle(flname, samples_to_burn, skip = 6):
             except:
                 pass
 
-    print "samples_count ", samples_count
+    print("samples_count ", samples_count)
 
-    print headings_size
+    print(headings_size)
     samples = {}
 
     for key in headings_size:
@@ -269,9 +268,9 @@ def get_kcorrect_ifns(magcut_k_correction_fl):
 def gelman_rubin_R(samples):
     """samples should be an array (nsamples = n, nchains = m). This is the original formula without the sqrt!"""
     n = len(samples)
-    print "nsamples ", n
+    print("nsamples ", n)
     m = len(samples[0])
-    print "nchains ", m
+    print("nchains ", m)
 
     psi_dotj = mean(samples, axis = 0)
     psi_dotdot = mean(psi_dotj)
@@ -291,23 +290,23 @@ def filter_fit_params(fit_params, param_name, chains, iter_per_chain):
     for i in range(chains):
         stdevs = append(stdevs, std(fit_params[param_name][i*iter_per_chain:(i+1)*iter_per_chain])
                         )
-    print param_name, "stdevs ", stdevs
+    print(param_name, "stdevs ", stdevs)
     good_chains = stdevs > max(stdevs)/4.
-    print "good_chains", good_chains
+    print("good_chains", good_chains)
     
     good_inds = []
     for i in range(chains):
         if good_chains[i]:
-            good_inds.extend(range(i*iter_per_chain, (i+1)*iter_per_chain))
+            good_inds.extend(list(range(i*iter_per_chain, (i+1)*iter_per_chain)))
 
     for key in fit_params:
-        print key, fit_params[key].shape,
+        print(key, fit_params[key].shape, end=' ')
         try:
             fit_params[key] = fit_params[key][good_inds]
         except:
-            print "Error!"
+            print("Error!")
             sys.exit(1)
-        print fit_params[key].shape
+        print(fit_params[key].shape)
     return fit_params
 
 
@@ -318,7 +317,7 @@ def quick_print(vals, thename):
 
 def summarize_parameters(fit_params, thekeys = None, on_screen = 1):
     if thekeys == None:
-        thekeys = fit_params.keys()
+        thekeys = list(fit_params.keys())
 
     txt = ""
 
@@ -338,6 +337,6 @@ def summarize_parameters(fit_params, thekeys = None, on_screen = 1):
             pass
     
     if on_screen:
-        print txt
+        print(txt)
     return txt
 

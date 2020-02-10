@@ -21,6 +21,7 @@ SDSS_v1.txt		$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
 SDSS_low_v1.txt		$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
 SDSS_high_v1.txt	$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
 Pan-STARRS_v1.txt	$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
+SDSS_cut_v1.txt		$UNITY/paramfiles/SDSS_r_selection.txt		22.0		0.5
 ESSENCE_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	24.0		0.5
 SNLS_v1.txt		$UNITY/paramfiles/MEGACAMJLA_i_selection.txt	24.3		0.5
 tonry03_v1.txt		$UNITY/paramfiles/CalanTololo_I_selection.txt	23.8		0.5

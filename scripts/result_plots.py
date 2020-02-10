@@ -1,12 +1,12 @@
 from numpy import * # I know...
-import cPickle as pickle
+import pickle as pickle
 from matplotlib import use
 use("PDF")
 import corner # I know...
 import matplotlib.pyplot as plt
 from scipy.stats import scoreatpercentile, percentileofscore
 import sys
-import commands
+import subprocess
 import gzip
 from FileRead import readcol
 import time
@@ -44,12 +44,12 @@ def get_label(key, sh, j=None, k=None):
 
 
 def make_corner(keys, pltname):
-    print "Corner plot for ", keys
+    print("Corner plot for ", keys)
     samples = []
     labels = []
 
     for key in keys:
-        if fit_params.has_key(key):
+        if key in fit_params:
             sh = fit_params[key].shape
 
             if len(sh) == 2:
@@ -65,11 +65,11 @@ def make_corner(keys, pltname):
                 samples.append(fit_params[key])
                 labels.append(get_label(key, sh))
         else:
-            print "Skipping ", key
+            print("Skipping ", key)
             
     samples = transpose(array(samples))
 
-    print samples.shape, labels
+    print(samples.shape, labels)
 
     corner.corner(samples, labels = labels)
     plt.savefig(resdir + pltname)
@@ -90,7 +90,7 @@ def show_x1color_pop():
 
     fit_params["mean_c_by_SN"] = fit_params["c_star_by_SN"] + fit_params["tau_c_by_SN"]
 
-    for i, x1key, ckey, x1label, clabel in zip(range(1,6),
+    for i, x1key, ckey, x1label, clabel in zip(list(range(1,6)),
                                                ["x1_star_by_SN", "x1_star_by_SN", "x1_star_by_SN", "R_x1_by_SN", None],
                                                ["mean_c_by_SN", "mean_c_by_SN", "c_star_by_SN", "R_c_by_SN", "tau_c_by_SN"],
                                                ["$x^{*}_1$", "$x^{*}_1$", "$x^{*}_1$", "$R_{x1}$", ""],
@@ -171,7 +171,7 @@ def make_Hubble_diagram(use_obs_color):
     mulabels = 5*log10((1. + zlabels)*(1.00875*zlabels - 0.271648*zlabels**2. + 0.0340072*zlabels**3. + 0.000441432*zlabels**4.)) + 42.
     mustep = 0.5
 
-    print "Hacking mu_plot!!!!"*20
+    print("Hacking mu_plot!!!!"*20)
 
     z_plot = exp(linspace(log(0.01), log(2.25), 200))
     assert max(stan_data["redshifts"] < 2.25)
@@ -182,18 +182,18 @@ def make_Hubble_diagram(use_obs_color):
     mu_plot += Moffset
 
     
-    print fit_params["model_mBx1c_cov"].shape
+    print(fit_params["model_mBx1c_cov"].shape)
     med_model_mBx1c_cov = median(fit_params["model_mBx1c_cov"], axis = 0)
     
     one_alpha_negbeta = [1., median(fit_params["alpha"]), -0.5*median(fit_params["beta_B"]) -0.5*median(fit_params["beta_R"])]
-    print "one_alpha_negbeta", one_alpha_negbeta
+    print("one_alpha_negbeta", one_alpha_negbeta)
     dmus = sqrt(array([dot(one_alpha_negbeta, dot(med_model_mBx1c_cov[i], one_alpha_negbeta))
                   for i in range(stan_data["n_sne"])
                   ]))
-    print dmus
+    print(dmus)
                   
 
-    print "No host-mass correction!!!"
+    print("No host-mass correction!!!")
 
     f = open(os.environ["UNITY"] + "/paramfiles/sample_names_colors.txt", 'r')
     lines = f.read()
@@ -209,7 +209,7 @@ def make_Hubble_diagram(use_obs_color):
             lines[i] = lines[i].split('\t')
         else:
             if len(lines[i].split(None)) > 1:
-                print "Skipping ", lines[i]
+                print("Skipping ", lines[i])
             del lines[i]
 
 
@@ -242,7 +242,7 @@ def make_Hubble_diagram(use_obs_color):
 
     f.close()
 
-    print "z_plot, mu_plot", z_plot, mu_plot
+    print("z_plot, mu_plot", z_plot, mu_plot)
     plt.plot(z_plot, mu_plot, color = 'k', zorder = 0)
     plt.xlabel("Redshift")
     plt.xlim(0, 2.25)
@@ -275,7 +275,7 @@ def error_analysis(explain, keys, dobin = 0):
     explained = []
 
     for key in keys:
-        if fit_params.has_key(key):
+        if key in fit_params:
             sh = fit_params[key].shape
 
             total_explained_squared = 0.
@@ -316,11 +316,11 @@ def error_analysis(explain, keys, dobin = 0):
         
         
         for i, item in enumerate(zip(expl, lbls[:50])):
-            print "%.3g\t\t%.3g\t\t%.3g\t\t%s" % (item[0]**2./dot(expl, expl),
+            print("%.3g\t\t%.3g\t\t%.3g\t\t%s" % (item[0]**2./dot(expl, expl),
                                                   dot(expl[:i+1], expl[:i+1])/dot(expl, expl),
-                                                  item[0], item[1])
+                                                  item[0], item[1]))
         
-        print "Total expl:", sqrt(dot(expl, expl)), "of", std(fit_params[explain])
+        print("Total expl:", sqrt(dot(expl, expl)), "of", std(fit_params[explain]))
     
 
 def get_label_dict():
@@ -362,21 +362,21 @@ def plot_sample_mag_limits():
 
 
 def count_outliers():
-    if not fit_params.has_key("outl_loglike_by_SN"):
-        print "Can't count oultiers!"
+    if "outl_loglike_by_SN" not in fit_params:
+        print("Can't count oultiers!")
         return None
 
     isoutl = median(fit_params["outl_loglike_by_SN"], axis = 0) - median(fit_params["inl_loglike_by_SN"], axis = 0)
 
-    print "Total outliers:", sum(isoutl > 0), "of", len(isoutl)
+    print("Total outliers:", sum(isoutl > 0), "of", len(isoutl))
     for i in range(stan_data["n_samples"]):
         inds = where(stan_data["sample_list"] == i + 1)
 
-        print label_dict["mobs_cuts"][i], "outliers:", sum(isoutl[inds] > 0), "of", len(inds[0]),
+        print(label_dict["mobs_cuts"][i], "outliers:", sum(isoutl[inds] > 0), "of", len(inds[0]), end=' ')
         for ind in inds[0]:
             if isoutl[ind] > 0:
-                print the_data["snpaths"][ind].split("/")[-1],
-        print
+                print(the_data["snpaths"][ind].split("/")[-1], end=' ')
+        print()
     return isoutl
 
     
@@ -392,7 +392,7 @@ def diagnositics_plot():
         plt.plot(sigint_cred[1], i + 0.5, '.', color = 'k')
         plt.plot(sigint_cred[::2], [i + 0.5]*2, color = 'k')
         plt.text(sigint_cred[1], i + 0.2, label_dict["mobs_cuts"][i])
-        print "sig_int", label_dict["mobs_cuts"][i], sigint_cred
+        print("sig_int", label_dict["mobs_cuts"][i], sigint_cred)
     plt.savefig(resdir + "diagnostics.pdf", bbox_inches = 'tight')
     plt.close()
 
@@ -409,15 +409,15 @@ input_fl, sample_fl = sys.argv[1:]
 resdir = sample_fl.replace(".pickle", "").replace("samples", "results") + "/"
 assert resdir != sample_fl
 
-print "results dir ", resdir
+print("results dir ", resdir)
 
-commands.getoutput("mkdir " + resdir)
+subprocess.getoutput("mkdir " + resdir)
 #commands.getoutput("rm -f " + resdir + "*")
 
-print "Reading at ", time.asctime()
+print("Reading at ", time.asctime())
 fit_params = pickle.load(gzip.open(sample_fl, 'rb'))
 (the_data, stan_data, params) = pickle.load(gzip.open(input_fl, 'rb'))
-print "Done!", time.asctime()
+print("Done!", time.asctime())
 
 for key in ["obs_mBx1c"]:
     stan_data[key] = array(stan_data[key])
@@ -461,4 +461,4 @@ diagnositics_plot()
 
 
 for i in range(5):
-    commands.getoutput("printf \\a")
+    subprocess.getoutput("printf \\a")
