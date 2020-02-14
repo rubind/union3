@@ -66,3 +66,32 @@ PS1-11yj	1991bg		Rest14
 
 LSQ12gpw	weak lines 2006gz-like    PESSTO
 
+
+
+SNBOSS38                super-C       SNfactory; SN2012dn
+SN2012dn                super-C       SNfactory; SNBOSS38
+SN2012cu                Red           SNfactory
+LSQ12cfx                91bg-like     SNfactory
+PTF11bkf                91bg-like     SNfactory
+PTF11kjn                91bg-like     SNfactory
+PTF11okh                91bg-like     SNfactory
+PTF11pra                91bg-like     SNfactory
+PTF12dwm                91bg-like     SNfactory
+SN2005dh                91bg-like     SNfactory
+SN2005dm                91bg-like     SNfactory
+SN2009hs                91bg-like     SNfactory
+SNNGC6430               91bg-like     SNfactory; SN2012ea
+SN2012ea                91bg-like     SNfactory; SNNGC6430
+
+
+#SNF20070528-003         91T-like      SNfactory
+#SNF20070803-005         91T-like      SNfactory
+#SNF20070912-000         91T-like      SNfactory
+#SNF20080522-000         91T-like      SNfactory
+#SNF20080723-012         91T-like      SNfactory
+#SNF20080805-007         91T-like      SNfactory
+#LSQ12cyz                91T-like      SNfactory
+#LSQ12fhe                91T-like      SNfactory
+#PTF11mkx                91T-like      SNfactory
+#PTF11bju                91T-like      SNfactory
+
