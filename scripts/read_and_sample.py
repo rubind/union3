@@ -351,7 +351,7 @@ def add_zbins(stan_data, cosmo_model):
         while (zcount(stan_data["redshifts"], stan_data["zbins"][-1], stan_data["zbins"][-1]*exp(zstep)) < 10.) and (stan_data["zbins"][-1]*exp(zstep) < stan_data["redshifts"].max()):
             zstep *= 1.5
 
-        stan_data["zbins"].append(stan_data["zbins"][-1]*exp(zstep))
+        stan_data["zbins"].append(stan_data["zbins"][-1]*exp(zstep) + 0.001)
 
 
 
