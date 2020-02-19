@@ -92,17 +92,16 @@ def read_data(params):
         kc_ifn0, kc_ifn1 = helper_functions.get_kcorrect_ifns(magcut_k_correction_fls[magcut_ind])
 
         for snpath in snpaths:
-            this_redshift = helper_functions.read_param(snpath + "/result_salt2.dat", "Redshift")
             this_redshift_cmb = helper_functions.read_param(snpath + "/lightfile", "z_cmb")
             if this_redshift_cmb == None:
                 this_redshift_cmb = helper_functions.read_param(snpath + "/lightfile", "z_CMB")
 
             this_redshift_helio = helper_functions.read_param(snpath + "/lightfile", "z_heliocentric")
-            if this_redshift_cmb == None and this_redshift > 0.1:
-                this_redshift_cmb = this_redshift
+            if this_redshift_cmb == None and this_redshift_helio > 0.1:
+                this_redshift_cmb = this_redshift_helio
                 print("Couldn't find redshift for ", snpath)
-            if this_redshift_helio == None and this_redshift > 0.1:
-                this_redshift_helio = this_redshift
+            if this_redshift_helio == None and this_redshift_cmb > 0.1:
+                this_redshift_helio = this_redshift_cmb
                 print("Couldn't find redshift for ", snpath)
                 
             this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
@@ -125,8 +124,8 @@ def read_data(params):
             print("weird_sn ", snpath, weird_sn)
             
 
-            okay_to_add = [this_redshift >= params["min_redshift"],
-                           this_redshift <= params["max_redshift"],
+            okay_to_add = [this_redshift_cmb >= params["min_redshift"],
+                           this_redshift_cmb <= params["max_redshift"],
                            this_firstphase <= params["max_firstphase"],
                            this_lastphase >= params["min_lastphase"],
                            this_colorerr < params["max_color_uncertainty"],
