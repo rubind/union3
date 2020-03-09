@@ -109,6 +109,7 @@ def read_data(params):
             this_DEC = helper_functions.read_param(snpath + "/lightfile", "DEC")
             this_firstphase = helper_functions.read_param(snpath + "/result_salt2.dat", "FirstPhase")
             this_lastphase = helper_functions.read_param(snpath + "/result_salt2.dat", "LastPhase")
+            this_color = helper_functions.read_param(snpath + "/result_salt2.dat", "Color")
             this_colorerr = helper_functions.read_param(snpath + "/result_salt2.dat", "Color", ind = 2)
             this_x1 = helper_functions.read_param(snpath + "/result_salt2.dat", "X1", ind = 1)
             this_x1_err = helper_functions.read_param(snpath + "/result_salt2.dat", "X1", ind = 2)
@@ -130,8 +131,9 @@ def read_data(params):
                            this_firstphase <= params["max_firstphase"],
                            this_lastphase >= params["min_lastphase"],
                            this_colorerr < params["max_color_uncertainty"],
+                           this_color < params["max_color"],
                            weird_sn == None, abs(log(this_check)) < 0.1, abs(this_x1) + this_x1_err < 5]
-            okay_names = ["min_z", "max_z", "first_p", "last_p", "colorerr", "weirdsn", "converge", "x1"]
+            okay_names = ["min_z", "max_z", "first_p", "last_p", "colorerr", "colorcut", "weirdsn", "converge", "x1"]
 
             f_read.write('\t'.join([
                 "/".join(snpath.split("/")[-2:]),
