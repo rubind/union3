@@ -82,6 +82,7 @@ SN2005dm                91bg-like     SNfactory
 SN2009hs                91bg-like     SNfactory
 SNNGC6430               91bg-like     SNfactory; SN2012ea
 SN2012ea                91bg-like     SNfactory; SNNGC6430
+LSQ12fhs		02cx-like
 
 
 #SNF20070528-003         91T-like      SNfactory
