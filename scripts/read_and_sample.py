@@ -63,13 +63,13 @@ def read_data(params):
     [magcut_input_fls, magcut_k_correction_fls, magcut_est_cuts, magcut_est_sigmas] = readcol(params["mag_cut"], 'aaff')
     magcut_k_correction_fls = [item.replace("$UNITY", os.environ["UNITY"]) for item in magcut_k_correction_fls]
     
-    [bulk_SN_list] = readcol(os.environ["UNITY"] + "/paramfiles/table.input", 'a')
+    [bulk_RA, bulk_Dec, bulk_z] = readcol(os.environ["UNITY"] + "/paramfiles/table.input2", 'fff')
     fbulk = fits.open(os.environ["UNITY"] + "/paramfiles/dominant_evecs.fits")
     bulk_eig = fbulk[0].data
     fbulk.close()
 
 
-    assert len(bulk_eig[0]) == len(bulk_SN_list)
+    assert len(bulk_eig[0]) == len(bulk_RA)
 
     for current_sample, directory in enumerate(filenamelist):
         the_data["sample_names"].append(directory)
@@ -232,11 +232,17 @@ def read_data(params):
                     the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]
                 
                 if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1):
-                    try:
-                        bulk_ind = bulk_SN_list.index(snpath.split("/")[-1])
-                    except:
-                        print(("Couldn't find " + snpath.split("/")[-1] + " in table.input. You need to regenerate the bulk flow files or run with include_pec_cov set to 0."))
-                        raise
+
+                    #this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
+                    #this_DEC = helper_functions.read_param(snpath + "/lightfile", "DEC")
+
+                    dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_DEC)**2. + 1e6*(bulk_z - this_redshit_cmb)**2.
+                    
+                    bulk_inds = np.argsort(dists)
+                    bulk_ind = bulk_inds[0]
+
+                    assert dists < 1, "Couldn't find " + snpath.split("/")[-1] + ". You need to regenerate the bulk flow files or run with include_pec_cov set to 0."
+                    
 
                     for bulk_i in range(len(bulk_eig)):
                         key = "BULK_%03i" % bulk_i
