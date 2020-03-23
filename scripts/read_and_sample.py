@@ -236,12 +236,12 @@ def read_data(params):
                     #this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
                     #this_DEC = helper_functions.read_param(snpath + "/lightfile", "DEC")
 
-                    dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_DEC)**2. + 1e6*(bulk_z - this_redshit_cmb)**2.
+                    dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_DEC)**2. + 1e6*(bulk_z - this_redshift_cmb)**2.
                     
-                    bulk_inds = np.argsort(dists)
+                    bulk_inds = argsort(dists)
                     bulk_ind = bulk_inds[0]
 
-                    assert dists < 1, "Couldn't find " + snpath.split("/")[-1] + ". You need to regenerate the bulk flow files or run with include_pec_cov set to 0."
+                    assert dists[bulk_ind] < 2, "Couldn't find " + snpath.split("/")[-1] + ". You need to regenerate the bulk flow files or run with include_pec_cov set to 0."
                     
 
                     for bulk_i in range(len(bulk_eig)):
