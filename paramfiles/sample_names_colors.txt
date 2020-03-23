@@ -29,6 +29,7 @@ See-Change_v1.txt		Hayden+ (in prep.)					(1., 0., 0.)
 Primo_v1.txt			Rodney+ (2012)_and Jones+ (2013)			(0., 0, 1.)
 SUSHI_v1.txt			SUSHI							(0, 1., 1.)
 
+Cosmo_SALT_v1.txt		SNf							(0, 0, 1)
 
 
 X             			Riess+ (1996)						(0., 0.5, 0.)
