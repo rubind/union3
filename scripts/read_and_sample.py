@@ -211,26 +211,17 @@ def read_data(params):
                 if abs(h_resid) > 2 or (the_data["c_list"][-1] > 1) or (the_data["c_list"][-1] < -0.3):
                     print("Weird supernova!", snpath)
 
+                dparam_dzps, extra_cmat = get_MWEBV_uncs(snpath + "/lightfile", snpath + "/result_deriv.dat")
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
+                    
                 the_data["mBx1c_cov_list"] = concatenate((the_data["mBx1c_cov_list"], array([[[mBmB, mBx1, mBc],
                                                                                               [mBx1, x1x1, x1c],
-                                                                                              [mBc, x1c, cc]]], dtype=float64)   ), axis = 0)
+                                                                                              [mBc, x1c, cc]]], dtype=float64) + extra_cmat   ), axis = 0)
 
                 dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat", this_redshift_helio)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = False)
 
-                for key in dparam_dzps:
-                    # key is (Lambda or Zeropoint, Instrument|Band)
 
-                    if not the_data["calib_names"].count(key):
-                        the_data["calib_names"].append(key)
-
-                        if key.count("Fundamental"):
-                            the_data["calib_uncertainties"].append(0.005)
-                        else:
-                            the_data["calib_uncertainties"].append(0.01)
-
-                    calib_ind = the_data["calib_names"].index(key)
-                    the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]
-                
                 if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1):
 
                     #this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
@@ -263,7 +254,9 @@ def read_data(params):
 
     for i in range(len(the_data["calib_names"])):
         print(the_data["calib_names"][i], the_data["calib_uncertainties"][i])
-
+        
+    assert len(the_data["calib_names"]) == len(the_data["calib_uncertainties"])
+    
     the_data["d_mBx1c_dcalib_list"] = the_data["d_mBx1c_dcalib_list"][:len(the_data["mB_list"]), :, :len(the_data["calib_names"])]
     if not params["include_systematics"]:
         the_data["d_mBx1c_dcalib_list"] *= 0

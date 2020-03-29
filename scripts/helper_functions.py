@@ -136,6 +136,19 @@ def get_dparam_dzps(res_der_fl, redshift):
     print("dparam_dzps ", dparam_dzps)
     return dparam_dzps
 
+def get_MWEBV_uncs(lightfl, res_der_fl):
+    d_dMWEBV = array([read_param(res_der_fl, "MWEBV", ind = 5),
+                      read_param(res_der_fl, "MWEBV", ind = 6),
+                      read_param(res_der_fl, "MWEBV", ind = 7)])
+
+    MWEBV = read_param(lightfl, "MWEBV")
+
+    dparam_dzps = {"MWEBV_multnorm": MWEBV*0.1*d_dMWEBV, "MWEBV_addnorm:": 0.005*d_dMWEBV}
+
+    extra_cmat = outer(MWEBV*0.16*d_dMWEBV, MWEBV*0.16*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
+    return dparam_dzps, extra_cmat
+    
+    
 
 def get_calib_uncertainties(calib_names, zeropointfl):
     assert 0, "Deprecated!"
@@ -167,6 +180,25 @@ def get_calib_uncertainties(calib_names, zeropointfl):
         assert found == 1, "Found zero times or more than once! " + str(calib_name) + " " + str(found)
 
     return calib_uncertainties
+
+def merge_calib(the_data, dparam_dzps, current_sn_ind, use_one_for_uncertainties = False):
+    for key in dparam_dzps:
+        if not the_data["calib_names"].count(key):
+            the_data["calib_names"].append(key)
+
+            if use_one_for_uncertainties:
+                the_data["calib_uncertainties"].append(1.)
+            else:
+                if key.count("Fundamental"):
+                    the_data["calib_uncertainties"].append(0.005)
+                else:
+                    the_data["calib_uncertainties"].append(0.01)
+                
+        calib_ind = the_data["calib_names"].index(key)
+        the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]
+        
+    return the_data
+    
 
 def samples_txt_to_pickle(flname, samples_to_burn, skip = 6):
     """NOTE: these samples come out in a different order than the extracted fit!"""
