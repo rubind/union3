@@ -519,20 +519,35 @@ print("nzadd ", stan_data['nzadd'])
 # print stan_data['obs_mBx1c']
 # print stan_data['obs_mBx1c_cov'].shape
 
+
 if stan_data["do_blind"]:
     print("Blinding!")
     # There are two phases of blinding:
     # -Making the best-fit Om = 0.3
-    # -Bringing all samples into alignment with -19.1 given Om = 0.3 (eventually!)
+    # -Bringing all samples into alignment with -19.1 given Om = 0.3
 
     [zblind, mublind, dmublinddOm] = readcol(os.environ["UNITY"] + "/paramfiles/z_mu_dmudOm.txt", 'fff')
     mublindfn = interp1d(zblind, mublind, kind = 'linear')
     dmublinddOmfn = interp1d(zblind, dmublinddOm, kind = 'linear')
 
-    for i in range(2):
+    for iter_count in range(2):
         muobs = stan_data["obs_mBx1c"][:,0] + 0.14*stan_data["obs_mBx1c"][:,1] - 3.1*stan_data["obs_mBx1c"][:,2] - -  19.1
+        H_resid = muobs - mublindfn(stan_data["redshifts"])
         dmuobs = sqrt(0.15**2. + stan_data["obs_mBx1c_cov"][:,0,0] + 0.14**2. * stan_data["obs_mBx1c_cov"][:, 1,1] + 3.1**2. * stan_data["obs_mBx1c_cov"][:, 2,2]) # Doesn't have to be exact
 
+        for sample_ind in range(len(stan_data["n_samples"])):
+            inds = where(the_data["sample_list"] == sample_ind)
+            med_HR = np.median(H_resid[inds])
+
+            for SN_ind in inds[0]:
+                stan_data["obs_mBx1c"][SN_ind, 0] -= med_HR
+                the_data["mB_list"][SN_ind] -= med_HR
+
+            if iter_count > 0:
+                assert abs(med_HR) < 1e-3
+            
+        
+        """
         jmat = zeros([stan_data["n_sne"], 2], dtype=float64)
         jmat[:,0] = 1.
         jmat[:,1] = dmublinddOmfn(stan_data["redshifts"])
@@ -542,7 +557,8 @@ if stan_data["do_blind"]:
             linalg.inv(dot(transpose(jmat), dot(wmat, jmat))),
             dot(transpose(jmat), dot(wmat, muobs - mublindfn(stan_data["redshifts"])))
             )
-
+        
+        
         stan_data["obs_mBx1c"][:,0] -= bestvals[0] + bestvals[1]*dmublinddOmfn(stan_data["redshifts"])
         the_data["mB_list"] = array(the_data["mB_list"]) - bestvals[0] - bestvals[1]*dmublinddOmfn(stan_data["redshifts"])
 
@@ -550,10 +566,13 @@ if stan_data["do_blind"]:
             print(bestvals)
             assert all(abs(bestvals) < 1e-3)
             print("Blinding passed!")
+        """
 
-        
-        
 
+else:
+    assert os.environ["REALLYUNBLIND"] == 1
+
+    
 print("Running...")
 
 smpfl = os.environ["UNITY"] + "/scripts/stan_code_" + os.uname()[1] + ".pickle"
