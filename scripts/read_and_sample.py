@@ -535,9 +535,9 @@ if stan_data["do_blind"]:
         H_resid = muobs - mublindfn(stan_data["redshifts"])
         dmuobs = sqrt(0.15**2. + stan_data["obs_mBx1c_cov"][:,0,0] + 0.14**2. * stan_data["obs_mBx1c_cov"][:, 1,1] + 3.1**2. * stan_data["obs_mBx1c_cov"][:, 2,2]) # Doesn't have to be exact
 
-        for sample_ind in range(len(stan_data["n_samples"])):
+        for sample_ind in range(stan_data["n_samples"]):
             inds = where(the_data["sample_list"] == sample_ind)
-            med_HR = np.median(H_resid[inds])
+            med_HR = median(H_resid[inds])
 
             for SN_ind in inds[0]:
                 stan_data["obs_mBx1c"][SN_ind, 0] -= med_HR
@@ -570,6 +570,7 @@ if stan_data["do_blind"]:
 
 
 else:
+    print("Not Blinding!")
     assert os.environ["REALLYUNBLIND"] == 1
 
     
