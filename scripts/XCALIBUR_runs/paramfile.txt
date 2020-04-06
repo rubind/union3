@@ -1,4 +1,4 @@
-do_blind		1
+do_blind		0
 filenamelist		["$UNION/CSP_v1.txt","$UNION/CfA1_v1.txt","$UNION/CfA2_v1.txt","$UNION/CfA3_v1.txt","$UNION/CfA4_v1.txt"]
 
 weird_sn_list		"$UNITY/paramfiles/weird_sn_list.txt"
