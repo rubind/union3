@@ -571,7 +571,7 @@ if stan_data["do_blind"]:
 
 else:
     print("Not Blinding!")
-    assert os.environ["REALLYUNBLIND"] == 1
+    assert os.environ["REALLYUNBLIND"] == "1"
 
     
 print("Running...")
