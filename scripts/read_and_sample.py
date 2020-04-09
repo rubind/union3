@@ -213,7 +213,15 @@ def read_data(params):
 
                 dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", snpath + "/result_deriv.dat")
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
+
+                if params["remap_x1"] != None:
+                    new_x1, x1_slope = helper_functions.remap_x1(the_data["x1_list"][-1], params)
+                    the_data["x1_list"][-1] = new_x1
+                    x1x1 *= x1_slope**2.
+                    mBx1 *= x1_slope
+                    x1c *= x1_slope
                     
+                
                 the_data["mBx1c_cov_list"] = concatenate((the_data["mBx1c_cov_list"], array([[[mBmB, mBx1, mBc],
                                                                                               [mBx1, x1x1, x1c],
                                                                                               [mBc, x1c, cc]]], dtype=float64) + extra_cmat   ), axis = 0)

@@ -58,7 +58,7 @@ def get_params(paramfl):
             "iter", "chains", "n_jobs",
             "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color",
             "min_redshift", "max_redshift", "n_x1c_star",
-            "do_blind", "do_twoalphabeta", "outl_frac",
+            "do_blind", "do_twoalphabeta", "outl_frac", "remap_x1",
             "stan_code", "pec_vel_disp", "lensing_disp", "sample_file", "log10_sigma_int_mB",
             "do_host_mass", "fix_Om", "MB_by_sample", "include_systematics", "include_pec_cov"
             ]
@@ -297,6 +297,16 @@ def get_kcorrect_ifns(magcut_k_correction_fl):
     [z, c2, c3] = readcol(magcut_k_correction_fl, 'fff')
     return interp1d(z, c2, kind = 'linear'), interp1d(z, c3, kind = 'linear')
 
+################################################# x1 Remapping ###################################################
+
+def remap_x1(x1, params):
+    """params["remap_x1"] is negative. This mapping moves large x1 values towards zero and small x1 values further from zero. The slope is the slope of the mapping (smaller for larger x1). The off-diagonal x1 covariances scale by the slope (e.g., the precision improves for large x1s and decreases for small x1s); the x1-x1 covariance scales by the slope**2."""
+    
+    new_x1 = x1 + params["remap_x1"][0]*x1**2. + params["remap_x1"][1]*x1**3.
+    x1_slope = 1. + 2.*params["remap_x1"][0]*x1 + 3*params["remap_x1"][1]*x1**2.
+
+    return new_x1, x1_slope
+    
 
 ################################################# Chain Functions ###################################################
 
