@@ -302,8 +302,8 @@ def get_kcorrect_ifns(magcut_k_correction_fl):
 def remap_x1(x1, params):
     """params["remap_x1"] is negative. This mapping moves large x1 values towards zero and small x1 values further from zero. The slope is the slope of the mapping (smaller for larger x1). The off-diagonal x1 covariances scale by the slope (e.g., the precision improves for large x1s and decreases for small x1s); the x1-x1 covariance scales by the slope**2."""
     
-    new_x1 = x1 + params["remap_x1"][0]*x1**2. + params["remap_x1"][1]*x1**3.
-    x1_slope = 1. + 2.*params["remap_x1"][0]*x1 + 3*params["remap_x1"][1]*x1**2.
+    new_x1 = x1 + float(params["remap_x1"][0]) * x1**2. + float(params["remap_x1"][1]) * x1**3.
+    x1_slope = 1. + 2.*float(params["remap_x1"][0]) * x1 + 3*float(params["remap_x1"][1]) * x1**2.
 
     return new_x1, x1_slope
     
