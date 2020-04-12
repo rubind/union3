@@ -1,5 +1,5 @@
 // Version History. Update in print statement in transformed data!
-// Version 2.0. First official release with new selection-effect and population model!
+// Version 1.5. First official release with new selection-effect and population model!
 
 
 
@@ -57,7 +57,19 @@ data {
 }
 
 transformed data {
-    print ("Version 2.0");
+    print ("Version 1.5");
+
+    // locs [ 0.16913558  0.68695591  1.9434773 ]
+    // sigs [ 0.11070724  0.330062    0.96505958]
+    // ampls [ 0.24410438  0.43274856  0.32314706]
+
+    vector [3] exp_approx_norm;
+    vector [3] exp_approx_pos;
+    vector [3] exp_approx_width;
+
+    exp_approx_norm = [0.24410438, 0.43274856, 0.32314706];
+    exp_approx_pos = [0.16913558, 0.68695591, 1.9434773];
+    exp_approx_width = [0.11070724, 0.330062, 0.96505958];
 }
 
 parameters {
@@ -80,11 +92,13 @@ parameters {
     vector [n_sne] true_cR;
 
     matrix [n_samples, n_x1c_star] x1_star;
+    vector <lower= -0.5, upper = 0.5> [n_samples] log10_R_x1;
+    vector <lower = -3, upper = 3> [n_samples] tau_x1;
+
     matrix [n_samples, n_x1c_star] c_star;
     matrix <lower = -1.5, upper = -0.5> [n_samples, n_x1c_star] log10_R_c;
     matrix <lower = -1.5, upper = -0.5> [n_samples, n_x1c_star] log10_tau_c;
 
-    vector <lower= -0.5, upper = 0.5> [n_samples] log10_R_x1;
 
     vector [n_calib] calibs;
 
@@ -127,6 +141,7 @@ transformed parameters {
 
     vector [n_sne] x1_star_by_SN;
     vector [n_sne] R_x1_by_SN;
+    vector [n_sne] tau_x1_by_SN;
 
     vector [n_sne] c_star_by_SN;
     vector [n_sne] R_c_by_SN;
@@ -146,12 +161,13 @@ transformed parameters {
 
     real mass_0;
     real this_MB;
+    real this_norm_LL;
 
     vector [3] dz_deriv_term;
     real dz_term;
     real dz_Hinv_term;
 
-    vector [3] tmploglike;
+    vector [6] tmploglike;
 
     mass_0 <- 10.;
 
@@ -235,6 +251,7 @@ transformed parameters {
 
         x1_star_by_SN[i] <- dot_product(x1_star[sample_list[i]], redshift_coeffs[i]);
         R_x1_by_SN[i] <- R_x1[sample_list[i]];
+        tau_x1_by_SN[i] <- tau_x1[sample_list[i]];
 
         R_c_by_SN[i] <- dot_product(R_c[sample_list[i]], redshift_coeffs[i]);
         c_star_by_SN[i] <- dot_product(c_star[sample_list[i]], redshift_coeffs[i]);
@@ -248,6 +265,7 @@ transformed parameters {
 
 	mobs_by_SN_except_c_R[i] <- this_MB + model_mu[i] + mobs_cut0[i] - alpha*x1_star_by_SN[i] + (beta_B + mobs_cut1[i])*c_star_by_SN[i] - 0.5*delta_eff;
 	mobs_var_by_SN_except_c_R[i] <- mobs_cut_sigmas[sample_list[i]]^2 + model_mBx1c_cov[i][1,1] + (alpha*R_x1_by_SN[i])^2 + ((beta_B + mobs_cut1[i])*R_c_by_SN[i])^2 + 0.25*delta_eff^2;
+
 
         model_mBx1c[i][1] <- this_MB + model_mu[i] - alpha*true_x1[i] + beta_B*true_cB[i] + beta_R*true_cR[i] - delta_eff*p_high_mass[i];
         model_mBx1c[i][2] <- true_x1[i];
@@ -264,9 +282,10 @@ transformed parameters {
         }
 
 
-        tmploglike[1] <- log(0.24410438) + normal_log(true_cR[i], 0.16913558*tau_c_by_SN[i], 0.11070724*tau_c_by_SN[i]);
-        tmploglike[2] <- log(0.43274856) + normal_log(true_cR[i], 0.68695591*tau_c_by_SN[i], 0.330062*tau_c_by_SN[i]);
-        tmploglike[3] <- log(0.32314706) + normal_log(true_cR[i], 1.9434773*tau_c_by_SN[i], 0.96505958*tau_c_by_SN[i]);
+        for (g_ind in 1:3) { \\ gauss ind
+            tmploglike[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], exp_approx_width[g_ind]*tau_c_by_SN[i]);
+            tmploglike[g_ind+3] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_c_by_SN[i])^2 + R_x1_by_SN[i]^2);
+        }
 
 
 	outl_loglike_by_SN[i] <- log(outl_frac)
@@ -274,25 +293,27 @@ transformed parameters {
 					  + normal_log(true_x1[i], 0, outl_mBx1c_uncertainties[2])
 					  + normal_log(true_cB[i], 0, outl_mBx1c_uncertainties[3])
 					  + normal_log(true_cR[i], 0, outl_mBx1c_uncertainties[3]);
-					  
+
+        this_norm_LL = 0.0001;
+	for (g_indx in 1:3) {
+	    for (g_indc in 1:3 {
+	        this_norm_LL += exp_approx_norm[g_indx]*exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]],
+		
+											      mobs_by_SN_except_c_R[i] + (beta_R + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i] - alpha*exp_approx_pos[g_indx]*tau_x1_by_SN[i],
+											   
+                                                      	                                      sqrt(mobs_var_by_SN_except_c_R[i]
+											      + ((beta_R + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2
+											      + (alpha*exp_approx_width[g_indx]*tau_x1_by_SN[i])^2)   );
+	    }
+	}
+
 	inl_loglike_by_SN[i] <- log(1 - outl_frac)
                                           + multi_normal_log(obs_mBx1c[i] + dz_deriv_term, model_mBx1c[i], model_mBx1c_cov[i])
-					  + normal_log(true_x1[i], x1_star_by_SN[i], R_x1_by_SN[i])
 					  + normal_log(true_cB[i], c_star_by_SN[i], R_c_by_SN[i])
 					  + log_sum_exp(tmploglike)
 
 	                                  + normal_cdf_log(mobs_cuts[sample_list[i]] + d_mBx1c_d_calib[i][1] * calibs, obs_mBx1c[i][1] + mobs_cut0[i] + mobs_cut1[i]*obs_mBx1c[i][3], mobs_cut_sigmas[sample_list[i]])
-                                          - log(
-                                                0.24410438*normal_cdf(mobs_cuts[sample_list[i]],
-                                                    mobs_by_SN_except_c_R[i] + (beta_R + mobs_cut1[i])*0.16913558*tau_c_by_SN[i],
-                                                    sqrt(mobs_var_by_SN_except_c_R[i] + ((beta_R + mobs_cut1[i])*0.11070724*tau_c_by_SN[i])^2))
-                                              + 0.43274856*normal_cdf(mobs_cuts[sample_list[i]],
-                                                    mobs_by_SN_except_c_R[i] + (beta_R + mobs_cut1[i])*0.68695591*tau_c_by_SN[i],
-                                                    sqrt(mobs_var_by_SN_except_c_R[i] + ((beta_R + mobs_cut1[i])*0.330062*tau_c_by_SN[i])^2))
-                                              + 0.32314706*normal_cdf(mobs_cuts[sample_list[i]],
-                                                    mobs_by_SN_except_c_R[i] + (beta_R + mobs_cut1[i])*1.9434773*tau_c_by_SN[i],
-                                                    sqrt(mobs_var_by_SN_except_c_R[i] + ((beta_R + mobs_cut1[i])*0.96505958*tau_c_by_SN[i])^2))
-                                              + 0.001);  //No calibration in this term, see above comment!
+                                          - log(this_norm_LL);  //No calibration in this term, see above comment!
     }
 
 }
@@ -327,6 +348,7 @@ model {
 
     for (i in 1:n_samples) {
         x1_star[i] ~ normal(0, 1);
+        tau_x1[i] ~ normal(0, 3);
     	c_star[i] ~ normal(0, 0.3);
     }
 
