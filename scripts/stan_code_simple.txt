@@ -57,19 +57,15 @@ data {
 }
 
 transformed data {
-    vector [3] exp_approx_norm;
-    vector [3] exp_approx_pos;
-    vector [3] exp_approx_width;
+    vector [3] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
+    vector [3] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
+    vector [3] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
 
     print ("Version 1.5");
 
     // locs [ 0.16913558  0.68695591  1.9434773 ]
     // sigs [ 0.11070724  0.330062    0.96505958]
     // ampls [ 0.24410438  0.43274856  0.32314706]
-
-    exp_approx_norm = [0.24410438, 0.43274856, 0.32314706];
-    exp_approx_pos = [0.16913558, 0.68695591, 1.9434773];
-    exp_approx_width = [0.11070724, 0.330062, 0.96505958];
 }
 
 parameters {
