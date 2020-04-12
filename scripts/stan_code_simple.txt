@@ -163,7 +163,8 @@ transformed parameters {
     real dz_term;
     real dz_Hinv_term;
 
-    vector [6] tmploglike;
+    vector [3] tmploglike_x1;
+    vector [3] tmploglike_c;
 
     mass_0 <- 10.;
 
@@ -279,8 +280,8 @@ transformed parameters {
 
 
         for (g_ind in 1:3) { // gauss ind
-            tmploglike[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], exp_approx_width[g_ind]*tau_c_by_SN[i]);
-            tmploglike[g_ind+3] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_c_by_SN[i])^2 + R_x1_by_SN[i]^2));
+            tmploglike_c[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], exp_approx_width[g_ind]*tau_c_by_SN[i]);
+            tmploglike_x1[g_ind] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_c_by_SN[i])^2 + R_x1_by_SN[i]^2));
         }
 
 
@@ -306,7 +307,7 @@ transformed parameters {
 	inl_loglike_by_SN[i] <- log(1 - outl_frac)
                                           + multi_normal_log(obs_mBx1c[i] + dz_deriv_term, model_mBx1c[i], model_mBx1c_cov[i])
 					  + normal_log(true_cB[i], c_star_by_SN[i], R_c_by_SN[i])
-					  + log_sum_exp(tmploglike)
+					  + log_sum_exp(tmploglike_c) + log_sum_exp(tmploglike_x1)
 
 	                                  + normal_cdf_log(mobs_cuts[sample_list[i]] + d_mBx1c_d_calib[i][1] * calibs, obs_mBx1c[i][1] + mobs_cut0[i] + mobs_cut1[i]*obs_mBx1c[i][3], mobs_cut_sigmas[sample_list[i]])
                                           - log(this_norm_LL);  //No calibration in this term, see above comment!
