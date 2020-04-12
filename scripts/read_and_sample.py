@@ -425,6 +425,7 @@ def init_fn():
             "true_x1": random.random(size = n_sne)*0.2 - 0.1 + the_data["x1_list"],
             
             "x1_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
+            "tau_x1": -random.random(size = len(the_data["sample_names"]),
             "c_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
             "log10_R_x1": random.random(size = n_samples)*0.5 - 0.25,
             "log10_R_c": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.4 - 1.2,
