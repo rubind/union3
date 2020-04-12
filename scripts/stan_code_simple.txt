@@ -278,9 +278,9 @@ transformed parameters {
         }
 
 
-        for (g_ind in 1:3) { \\ gauss ind
+        for (g_ind in 1:3) { // gauss ind
             tmploglike[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], exp_approx_width[g_ind]*tau_c_by_SN[i]);
-            tmploglike[g_ind+3] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_c_by_SN[i])^2 + R_x1_by_SN[i]^2);
+            tmploglike[g_ind+3] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_c_by_SN[i])^2 + R_x1_by_SN[i]^2));
         }
 
 
