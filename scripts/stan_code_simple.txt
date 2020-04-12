@@ -292,7 +292,7 @@ transformed parameters {
 
         this_norm_LL = 0.0001;
 	for (g_indx in 1:3) {
-	    for (g_indc in 1:3 {
+	    for (g_indc in 1:3) {
 	        this_norm_LL += exp_approx_norm[g_indx]*exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]],
 		
 											      mobs_by_SN_except_c_R[i] + (beta_R + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i] - alpha*exp_approx_pos[g_indx]*tau_x1_by_SN[i],
