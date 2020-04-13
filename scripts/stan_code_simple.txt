@@ -88,7 +88,7 @@ parameters {
     vector [n_sne] true_cR;
 
     matrix [n_samples, n_x1c_star] x1_star;
-    vector <lower= -0.1, upper = 0.5> [n_samples] log10_R_x1;
+    vector <lower= -1.0, upper = 0.5> [n_samples] log10_R_x1;
     vector <lower = -3, upper = 3> [n_samples] tau_x1;
 
     matrix [n_samples, n_x1c_star] c_star;
