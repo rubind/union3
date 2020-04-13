@@ -80,7 +80,7 @@ parameters {
     real <lower = 0, upper = 1> Om;
     vector [n_zbins] mu_zbins;
 
-    real <lower=-1.3, upper = -0.3> log10_sigma_int[n_samples];
+    real <lower=-2.0, upper = -0.3> log10_sigma_int[n_samples];
     simplex [3] mBx1c_int_variance;
 
     vector [n_sne] true_x1;
@@ -88,12 +88,12 @@ parameters {
     vector [n_sne] true_cR;
 
     matrix [n_samples, n_x1c_star] x1_star;
-    vector <lower= -0.5, upper = 0.5> [n_samples] log10_R_x1;
+    vector <lower= -0.1, upper = 0.5> [n_samples] log10_R_x1;
     vector <lower = -3, upper = 3> [n_samples] tau_x1;
 
     matrix [n_samples, n_x1c_star] c_star;
-    matrix <lower = -1.5, upper = -0.5> [n_samples, n_x1c_star] log10_R_c;
-    matrix <lower = -1.5, upper = -0.5> [n_samples, n_x1c_star] log10_tau_c;
+    matrix <lower = -2.0, upper = -0.5> [n_samples, n_x1c_star] log10_R_c;
+    matrix <lower = -2.0, upper = -0.5> [n_samples, n_x1c_star] log10_tau_c;
 
 
     vector [n_calib] calibs;
