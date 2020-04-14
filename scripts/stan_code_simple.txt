@@ -57,9 +57,10 @@ data {
 }
 
 transformed data {
-    vector [3] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
-    vector [3] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
-    vector [3] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
+    int n_gauss;
+    vector [n_gauss] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
+    vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
+    vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
 
     print ("Version 1.5");
 
@@ -163,8 +164,8 @@ transformed parameters {
     real dz_term;
     real dz_Hinv_term;
 
-    vector [3] tmploglike_x1;
-    vector [3] tmploglike_c;
+    vector [n_gauss] tmploglike_x1;
+    vector [n_gauss] tmploglike_c;
 
     mass_0 <- 10.;
 
@@ -279,7 +280,7 @@ transformed parameters {
         }
 
 
-        for (g_ind in 1:3) { // gauss ind
+        for (g_ind in 1:n_gauss) { // gauss ind
             tmploglike_c[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], exp_approx_width[g_ind]*tau_c_by_SN[i]);
             tmploglike_x1[g_ind] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_x1_by_SN[i])^2 + R_x1_by_SN[i]^2));
         }
@@ -292,8 +293,8 @@ transformed parameters {
 					  + normal_log(true_cR[i], 0, outl_mBx1c_uncertainties[3]);
 
         this_norm_LL = 0.0001;
-	for (g_indx in 1:3) {
-	    for (g_indc in 1:3) {
+	for (g_indx in 1:n_gauss) {
+	    for (g_indc in 1:n_gauss) {
 	        this_norm_LL += exp_approx_norm[g_indx]*exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]],
 		
 											      mobs_by_SN_except_c_R[i] + (beta_R + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i] - alpha*exp_approx_pos[g_indx]*tau_x1_by_SN[i],
