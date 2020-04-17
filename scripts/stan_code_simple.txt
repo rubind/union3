@@ -15,7 +15,7 @@ data {
     matrix [n_sne, n_x1c_star] redshift_coeffs;
 
 
-    int cosmo_model; // 1 => Om, 2 => Binned mu
+    int cosmo_model; // 1 => Om, 2, 3 => Om-w => Binned mu
     int fix_Om;
     int MB_by_sample;
 
@@ -87,6 +87,7 @@ parameters {
     real <lower = 0, upper = 1> delta_h;
 
     real <lower = 0, upper = 1> Om;
+    real <lower = -2, upper = 0> wDE;
     vector [n_zbins] mu_zbins;
 
     real <lower=-2.0, upper = -0.3> log10_sigma_int[n_samples];
@@ -181,10 +182,15 @@ transformed parameters {
 
 
 
-    if (cosmo_model == 1) {
-    for (i in 1: 2*(n_sne + nzadd) - 1) {    // Inverse Hubble parameter
-        Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om) );
-    }
+    if (cosmo_model != 2) {
+        for (i in 1: 2*(n_sne + nzadd) - 1) {    // Inverse Hubble parameter
+            if (cosmo_model == 1) {
+                Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om) );
+            }
+            if (cosmo_model == 3) {
+                Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om)*pow(1. + redshifts_sort_fill[i], 3.*(1 + wDE)) );
+            }
+        }
 
     // Integrate comoving r using Simpson's rule
 
@@ -200,7 +206,12 @@ transformed parameters {
 	    dz_Hinv_term <- 0.;
         } else {
             dz_term <- dz[photoz_inds[i]];
-            dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3) + (1. - Om) );
+            if (cosmo_model == 1) {
+                dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3) + (1. - Om) );
+            }
+            if (cosmo_model == 3) {
+                dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3) + (1. - Om)*pow(1. + redshifts[i], 3.*(1 + wDE)) );
+            }
         }
         model_mu[i] <- 5.*log10((1. + redshifts[i] + dz_term)*(r_com_sort[unsort_inds[i] + 1] + dz_Hinv_term)) + 43.1586133146;
     }
