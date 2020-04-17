@@ -57,16 +57,24 @@ data {
 }
 
 transformed data {
-    int n_gauss;
-    vector [n_gauss] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
-    vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
-    vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
+    int n_gauss = 4;
+    vector [n_gauss] exp_approx_norm = [0.15038540936467037, 0.2993904768085472, 0.364279051173158, 0.18594506265362443]';
+    vector [n_gauss] exp_approx_pos = [0.10329973984501734, 0.41080906196995237, 1.083137332416308, 2.427349566890827]';
+    vector [n_gauss] exp_approx_width = [0.06596419371844692, 0.1910889454034621, 0.45516250820784515, 1.0637414822809306]';
+
+    // vector [n_gauss] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
+    // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
+    // vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
 
     print ("Version 1.5");
 
     // locs [ 0.16913558  0.68695591  1.9434773 ]
     // sigs [ 0.11070724  0.330062    0.96505958]
     // ampls [ 0.24410438  0.43274856  0.32314706]
+
+    // locs [0.10329973984501734, 0.41080906196995237, 1.083137332416308, 2.427349566890827]
+    // sigs [0.06596419371844692, 0.1910889454034621, 0.45516250820784515, 1.0637414822809306]
+    // ampls [0.15038540936467037, 0.2993904768085472, 0.364279051173158, 0.18594506265362443]
 }
 
 parameters {
@@ -89,7 +97,7 @@ parameters {
     vector [n_sne] true_cR;
 
     matrix [n_samples, n_x1c_star] x1_star;
-    vector <lower= -1.0, upper = 0.5> [n_samples] log10_R_x1;
+    vector <lower= -2.0, upper = 0.5> [n_samples] log10_R_x1;
     vector <lower = -3, upper = 3> [n_samples] tau_x1;
 
     matrix [n_samples, n_x1c_star] c_star;
@@ -171,10 +179,14 @@ transformed parameters {
 
     // -------------Begin numerical integration-----------------
 
+
+
     if (cosmo_model == 1) {
-    for (i in 1: 2*(n_sne + nzadd) - 1) {
+    for (i in 1: 2*(n_sne + nzadd) - 1) {    // Inverse Hubble parameter
         Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om) );
     }
+
+    // Integrate comoving r using Simpson's rule
 
     r_com_sort[1] <- 0.; // Redshift = 0 should be first element!
     for (i in 2:(n_sne + nzadd)) {
@@ -192,7 +204,7 @@ transformed parameters {
         }
         model_mu[i] <- 5.*log10((1. + redshifts[i] + dz_term)*(r_com_sort[unsort_inds[i] + 1] + dz_Hinv_term)) + 43.1586133146;
     }
-    } else {
+    } else { // binned mu
         model_mu <- dmu_dbin * mu_zbins;
         for (i in 1:n_sne) {
             if (photoz_inds[i] > 0) {

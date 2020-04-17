@@ -93,14 +93,18 @@ def read_data(params):
 
         for snpath in snpaths:
             this_redshift_cmb = helper_functions.read_param(snpath + "/lightfile", "z_cmb")
-            if this_redshift_cmb == None:
+            if this_redshift_cmb is None:
                 this_redshift_cmb = helper_functions.read_param(snpath + "/lightfile", "z_CMB")
 
             this_redshift_helio = helper_functions.read_param(snpath + "/lightfile", "z_heliocentric")
-            if this_redshift_cmb == None and this_redshift_helio > 0.1:
+            this_redshift_helio_true = helper_functions.read_param(snpath + "/lightfile", "z_true_heliocentric")
+
+            if this_redshift_helio_true is not None:
+                this_redshift_helio = this_redshift_helio_true
+            if this_redshift_cmb is None and this_redshift_helio > 0.1:
                 this_redshift_cmb = this_redshift_helio
                 print("Couldn't find redshift for ", snpath)
-            if this_redshift_helio == None and this_redshift_cmb > 0.1:
+            if this_redshift_helio is None and this_redshift_cmb > 0.1:
                 this_redshift_helio = this_redshift_cmb
                 print("Couldn't find redshift for ", snpath)
                 
@@ -125,8 +129,8 @@ def read_data(params):
             print("weird_sn ", snpath, weird_sn)
             
 
-            okay_to_add = [this_redshift_cmb >= params["min_redshift"],
-                           this_redshift_cmb <= params["max_redshift"],
+            okay_to_add = [this_redshift_cmb >= params["min_redshift"][current_sample],
+                           this_redshift_cmb <= params["max_redshift"][current_sample],
                            this_firstphase <= params["max_firstphase"],
                            this_lastphase >= params["min_lastphase"],
                            this_colorerr < params["max_color_uncertainty"],
@@ -424,7 +428,8 @@ def init_fn():
             "true_cR": random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0),
             "true_x1": random.random(size = n_sne)*0.2 - 0.1 + the_data["x1_list"],
             
-            "x1_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
+            #"x1_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
+            "x1_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.5,
             "tau_x1": -random.random(size = len(the_data["sample_names"])),
             "c_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
             "log10_R_x1": random.random(size = n_samples)*0.5 - 0.25,
