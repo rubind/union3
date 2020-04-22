@@ -311,6 +311,26 @@ transformed parameters {
 
 	                                  + normal_cdf_log(mobs_cuts[sample_list[i]] + d_mBx1c_d_calib[i][1] * calibs, obs_mBx1c[i][1] + mobs_cut0[i] + mobs_cut1[i]*obs_mBx1c[i][3], mobs_cut_sigmas[sample_list[i]])
                                           - log(this_norm_LL);  //No calibration in this term, see above comment!
+	// Debugging test:
+	// print("this_norm_LL ", this_norm_LL)
+	// print("{", this_MB,
+	//      ", ", model_mu[i],
+	//      ", ", mobs_cut0[i],
+	//      ", ", mobs_cut1[i],
+	//      ", ", mobs_cuts[sample_list[i]],
+	//      ", ", x1_star_by_SN[i],
+	//      ", ", alpha,
+	//      ", ", beta_B,
+	//      ", ", beta_R,
+	//      ", ", c_star_by_SN[i],
+	//      ", ", 0.5*delta_eff,
+	//      ", ", mobs_cut_sigmas[sample_list[i]],
+	//      ", ", model_mBx1c_cov[i][1,1],
+	//      ", ", R_x1_by_SN[i],
+	//      ", ", tau_x1_by_SN[i],
+	//      ", ", R_c_by_SN[i],
+	//      ", ", tau_c_by_SN[i], "}");
+	      
     }
 
 }
