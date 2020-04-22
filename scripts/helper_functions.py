@@ -98,6 +98,11 @@ def get_params(paramfl):
             params["filenamelist"][i] = subprocess.getoutput("ls " + params["filenamelist"][i])
             print("->", params["filenamelist"][i])
 
+    if not isinstance(params["min_redshift"], list):
+        params["min_redshift"] = [params["min_redshift"]] * len(params["filenamelist"])
+
+    if not isinstance(params["max_redshift"], list):
+        params["max_redshift"] = [params["max_redshift"]] * len(params["filenamelist"])
 
     print("Read params ", params)
     assert isinstance(params["filenamelist"], list), "filenamelist should be a list!"
@@ -137,15 +142,26 @@ def get_dparam_dzps(res_der_fl, redshift):
     return dparam_dzps
 
 def get_MWEBV_uncs(lightfl, res_der_fl):
+
+    sig_stat = 0.16    # 16% statistical uncertainty
+    sig_norm = 0.10    # 10% multiplicative normalization uncertainty
+    sig_add  = 0.005   # 5 mmag E(B-V) additive uncertainty
+
     d_dMWEBV = array([read_param(res_der_fl, "MWEBV", ind = 5),
                       read_param(res_der_fl, "MWEBV", ind = 6),
                       read_param(res_der_fl, "MWEBV", ind = 7)])
 
-    MWEBV = read_param(lightfl, "MWEBV")
+    # Add support for pre-correction for extinction in error propagation
+    MWEBV       = read_param(lightfl, "MWEBV")
+    MW_true_EBV = read_param(lightfl, "MW_true_EBV")
 
-    dparam_dzps = {"MWEBV_multnorm": MWEBV*0.1*d_dMWEBV, "MWEBV_addnorm:": 0.005*d_dMWEBV}
+    if MW_true_EBV == None:
+        dparam_dzps = {"MWEBV_multnorm": MWEBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_norm*d_dMWEBV}
+        extra_cmat = outer(MWEBV*sig_stat*d_dMWEBV, MWEBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
+    else:
+        dparam_dzps = {"MWEBV_multnorm": MW_true_EBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_norm*d_dMWEBV}
+        extra_cmat = outer(MW_true_EBV*sig_stat*d_dMWEBV, MW_true_EBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
 
-    extra_cmat = outer(MWEBV*0.16*d_dMWEBV, MWEBV*0.16*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
     return dparam_dzps, extra_cmat
     
     

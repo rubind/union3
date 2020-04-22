@@ -15,7 +15,7 @@ data {
     matrix [n_sne, n_x1c_star] redshift_coeffs;
 
 
-    int cosmo_model; // 1 => Om, 2 => Binned mu
+    int cosmo_model; // 1 => Om, 2, 3 => Om-w => Binned mu
     int fix_Om;
     int MB_by_sample;
 
@@ -57,15 +57,24 @@ data {
 }
 
 transformed data {
-    vector [3] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
-    vector [3] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
-    vector [3] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
+    int n_gauss = 4;
+    vector [n_gauss] exp_approx_norm = [0.15038540936467037, 0.2993904768085472, 0.364279051173158, 0.18594506265362443]';
+    vector [n_gauss] exp_approx_pos = [0.10329973984501734, 0.41080906196995237, 1.083137332416308, 2.427349566890827]';
+    vector [n_gauss] exp_approx_width = [0.06596419371844692, 0.1910889454034621, 0.45516250820784515, 1.0637414822809306]';
+
+    // vector [n_gauss] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
+    // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
+    // vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
 
     print ("Version 1.5");
 
     // locs [ 0.16913558  0.68695591  1.9434773 ]
     // sigs [ 0.11070724  0.330062    0.96505958]
     // ampls [ 0.24410438  0.43274856  0.32314706]
+
+    // locs [0.10329973984501734, 0.41080906196995237, 1.083137332416308, 2.427349566890827]
+    // sigs [0.06596419371844692, 0.1910889454034621, 0.45516250820784515, 1.0637414822809306]
+    // ampls [0.15038540936467037, 0.2993904768085472, 0.364279051173158, 0.18594506265362443]
 }
 
 parameters {
@@ -78,9 +87,10 @@ parameters {
     real <lower = 0, upper = 1> delta_h;
 
     real <lower = 0, upper = 1> Om;
+    real <lower = -2, upper = 0> wDE;
     vector [n_zbins] mu_zbins;
 
-    real <lower=-1.3, upper = -0.3> log10_sigma_int[n_samples];
+    real <lower=-2.0, upper = -0.3> log10_sigma_int[n_samples];
     simplex [3] mBx1c_int_variance;
 
     vector [n_sne] true_x1;
@@ -88,12 +98,12 @@ parameters {
     vector [n_sne] true_cR;
 
     matrix [n_samples, n_x1c_star] x1_star;
-    vector <lower= -0.5, upper = 0.5> [n_samples] log10_R_x1;
+    vector <lower= -2.0, upper = 0.5> [n_samples] log10_R_x1;
     vector <lower = -3, upper = 3> [n_samples] tau_x1;
 
     matrix [n_samples, n_x1c_star] c_star;
-    matrix <lower = -1.5, upper = -0.5> [n_samples, n_x1c_star] log10_R_c;
-    matrix <lower = -1.5, upper = -0.5> [n_samples, n_x1c_star] log10_tau_c;
+    matrix <lower = -2.0, upper = -0.5> [n_samples, n_x1c_star] log10_R_c;
+    matrix <lower = -2.0, upper = -0.5> [n_samples, n_x1c_star] log10_tau_c;
 
 
     vector [n_calib] calibs;
@@ -163,17 +173,26 @@ transformed parameters {
     real dz_term;
     real dz_Hinv_term;
 
-    vector [3] tmploglike_x1;
-    vector [3] tmploglike_c;
+    vector [n_gauss] tmploglike_x1;
+    vector [n_gauss] tmploglike_c;
 
     mass_0 <- 10.;
 
     // -------------Begin numerical integration-----------------
 
-    if (cosmo_model == 1) {
-    for (i in 1: 2*(n_sne + nzadd) - 1) {
-        Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om) );
-    }
+
+
+    if (cosmo_model != 2) {
+        for (i in 1: 2*(n_sne + nzadd) - 1) {    // Inverse Hubble parameter
+            if (cosmo_model == 1) {
+                Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om) );
+            }
+            if (cosmo_model == 3) {
+                Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om)*pow(1. + redshifts_sort_fill[i], 3.*(1 + wDE)) );
+            }
+        }
+
+    // Integrate comoving r using Simpson's rule
 
     r_com_sort[1] <- 0.; // Redshift = 0 should be first element!
     for (i in 2:(n_sne + nzadd)) {
@@ -187,11 +206,16 @@ transformed parameters {
 	    dz_Hinv_term <- 0.;
         } else {
             dz_term <- dz[photoz_inds[i]];
-            dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3) + (1. - Om) );
+            if (cosmo_model == 1) {
+                dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3) + (1. - Om) );
+            }
+            if (cosmo_model == 3) {
+                dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3) + (1. - Om)*pow(1. + redshifts[i], 3.*(1 + wDE)) );
+            }
         }
         model_mu[i] <- 5.*log10((1. + redshifts[i] + dz_term)*(r_com_sort[unsort_inds[i] + 1] + dz_Hinv_term)) + 43.1586133146;
     }
-    } else {
+    } else { // binned mu
         model_mu <- dmu_dbin * mu_zbins;
         for (i in 1:n_sne) {
             if (photoz_inds[i] > 0) {
@@ -279,7 +303,7 @@ transformed parameters {
         }
 
 
-        for (g_ind in 1:3) { // gauss ind
+        for (g_ind in 1:n_gauss) { // gauss ind
             tmploglike_c[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], exp_approx_width[g_ind]*tau_c_by_SN[i]);
             tmploglike_x1[g_ind] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_x1_by_SN[i])^2 + R_x1_by_SN[i]^2));
         }
@@ -292,8 +316,8 @@ transformed parameters {
 					  + normal_log(true_cR[i], 0, outl_mBx1c_uncertainties[3]);
 
         this_norm_LL = 0.0001;
-	for (g_indx in 1:3) {
-	    for (g_indc in 1:3) {
+	for (g_indx in 1:n_gauss) {
+	    for (g_indc in 1:n_gauss) {
 	        this_norm_LL += exp_approx_norm[g_indx]*exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]],
 		
 											      mobs_by_SN_except_c_R[i] + (beta_R + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i] - alpha*exp_approx_pos[g_indx]*tau_x1_by_SN[i],
