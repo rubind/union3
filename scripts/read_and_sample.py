@@ -254,6 +254,7 @@ def read_data(params):
                             the_data["calib_uncertainties"].append(1.0)
                         calib_ind = the_data["calib_names"].index(key)
                         the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = bulk_eig[bulk_i, bulk_ind]
+                        print("setting ", bulk_eig[bulk_i, bulk_ind], the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind], "bulk_i", bulk_i, "bulk_ind", bulk_ind, "current_sn_ind", current_sn_ind)
 
 
                 current_sn_ind += 1
@@ -270,8 +271,6 @@ def read_data(params):
     assert len(the_data["calib_names"]) == len(the_data["calib_uncertainties"])
     
     the_data["d_mBx1c_dcalib_list"] = the_data["d_mBx1c_dcalib_list"][:len(the_data["mB_list"]), :, :len(the_data["calib_names"])]
-    if not params["include_systematics"]:
-        the_data["d_mBx1c_dcalib_list"] *= 0
 
     print('the_data["d_mBx1c_dcalib_list"].shape ', the_data["d_mBx1c_dcalib_list"].shape)
     print('the_data["calib_names"] ', the_data["calib_names"])
