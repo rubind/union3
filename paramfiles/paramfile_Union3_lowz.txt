@@ -29,7 +29,7 @@ n_x1c_star		1
 do_twoalphabeta		1
 
 
-iter			60
+iter			100
 n_jobs			4
 chains			4
 

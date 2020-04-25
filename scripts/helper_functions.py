@@ -54,14 +54,15 @@ def get_params(paramfl):
     lines = f.read().split('\n')
     f.close()
 
-    keys = ["filenamelist", "weird_sn_list", "mag_cut", "calib_errs",
+    keys = ["filenamelist", "weird_sn_list", "mag_cut", #"calib_errs",
             "iter", "chains", "n_jobs",
-            "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color",
+            "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color", "min_color",
             "min_redshift", "max_redshift", "n_x1c_star",
             "do_blind", "do_twoalphabeta", "outl_frac", "remap_x1",
-            "stan_code", "pec_vel_disp", "lensing_disp", "sample_file", "log10_sigma_int_mB",
-            "do_host_mass", "fix_Om", "MB_by_sample", "include_systematics", "include_pec_cov"
+            "stan_code", "pec_vel_disp", "lensing_disp", "sample_file",
+            "do_host_mass", "fix_Om", "MB_by_sample", "include_pec_cov"
             ]
+    
     params = {}
 
     for line in lines:
@@ -79,14 +80,15 @@ def get_params(paramfl):
 
     for key in keys:
         if key not in params:
-            print("Didn't read ", key, "setting to None")
-            params[key] = None
+            print("Didn't read ", key)
+            assert 0
+            
 
-    if params["sample_file"] != None:
+    if params["sample_file"].count("None"):
+        params["sample_file"] = None
+    else:
         params["sample_file"] = os.getcwd() + "/" + params["sample_file"]
-    if params["max_color"] == None:
-        params["max_color"] = 1000
-        
+            
     for key in ["weird_sn_list", "mag_cut"]:
         if params[key].count("$"):
             print(params[key])
@@ -156,10 +158,10 @@ def get_MWEBV_uncs(lightfl, res_der_fl):
     MW_true_EBV = read_param(lightfl, "MW_true_EBV")
 
     if MW_true_EBV == None:
-        dparam_dzps = {"MWEBV_multnorm": MWEBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_norm*d_dMWEBV}
+        dparam_dzps = {"MWEBV_multnorm": MWEBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_add*d_dMWEBV}
         extra_cmat = outer(MWEBV*sig_stat*d_dMWEBV, MWEBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
     else:
-        dparam_dzps = {"MWEBV_multnorm": MW_true_EBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_norm*d_dMWEBV}
+        dparam_dzps = {"MWEBV_multnorm": MW_true_EBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_add*d_dMWEBV}
         extra_cmat = outer(MW_true_EBV*sig_stat*d_dMWEBV, MW_true_EBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
 
     return dparam_dzps, extra_cmat

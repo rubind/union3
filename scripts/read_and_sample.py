@@ -135,6 +135,7 @@ def read_data(params):
                            this_lastphase >= params["min_lastphase"],
                            this_colorerr < params["max_color_uncertainty"],
                            this_color < params["max_color"],
+                           this_color > params["min_color"],
                            weird_sn == None, abs(log(this_check)) < 0.1, abs(this_x1) + this_x1_err < 5]
             okay_names = ["min_z", "max_z", "first_p", "last_p", "colorerr", "colorcut", "weirdsn", "converge", "x1"]
 
@@ -411,7 +412,8 @@ def init_fn():
     print("n_samples ", n_samples)
             
     return {"MB": random.random(size = [(n_samples - 1)*stan_data["MB_by_sample"] + 1])*0.2 - 19.1,
-            "Om": random.random()*0.4 + 0.1,
+            "Om": 0.3,
+            "wDE": -1.01,
             "alpha_angle": arctan(random.random()*0.2),
             "beta_angle_blue": arctan(random.random()*0.5 + 2.5),
             "beta_angle_red": arctan(random.random()*0.5 + 2.5),

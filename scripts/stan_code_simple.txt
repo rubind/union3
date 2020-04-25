@@ -101,7 +101,7 @@ parameters {
     vector <lower= -2.0, upper = 0.5> [n_samples] log10_R_x1;
     vector <lower = -3, upper = 3> [n_samples] tau_x1;
 
-    matrix [n_samples, n_x1c_star] c_star;
+    matrix <lower = -0.4, upper = 0.4> [n_samples, n_x1c_star] c_star;
     matrix <lower = -2.0, upper = -0.5> [n_samples, n_x1c_star] log10_R_c;
     matrix <lower = -2.0, upper = -0.5> [n_samples, n_x1c_star] log10_tau_c;
 
@@ -110,7 +110,7 @@ parameters {
 
     real <lower = 0.001, upper = 0.1> outl_frac;
 
-    real mobs_cuts[n_samples];
+    real <lower = 15> mobs_cuts[n_samples];
     real <lower = 0.1> mobs_cut_sigmas[n_samples];
 
     vector [n_photoz] dz;
@@ -378,10 +378,12 @@ model {
         mu_zbins ~ normal(0, 1);
     }
 
-    MB ~ normal(-19, 1);
+
+    MB ~ normal(-19, 0.3);
     delta_0 ~ normal(0.0, 0.2);
     mobs_cuts ~ normal(est_mobs_cuts, 0.5);
     mobs_cut_sigmas ~ normal(est_mobs_sigmas, 0.25);
+
 
     if (fix_Om == 1) {
         Om ~ normal(0.3, 0.001);
@@ -389,8 +391,9 @@ model {
 
     for (i in 1:n_samples) {
         x1_star[i] ~ normal(0, 1);
-        tau_x1[i] ~ normal(0, 3);
-    	c_star[i] ~ normal(0, 0.3);
+        tau_x1[i] ~ normal(-1, 2);
+        tau_c[i] ~ normal(0, 0.2);
+    	c_star[i] ~ normal(0, 0.2);
     }
 
     if (do_twoalphabeta == 0) {
