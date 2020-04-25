@@ -15,6 +15,7 @@ CfA4_1_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1
 CfA4_2_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
 CfA34_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	18.5		1.0
 CSP_v1.txt     		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+Foundation_v1.txt     	$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
 sim_sne_list.txt 	$UNITY/paramfiles/sim_sne_selection.txt		22. 		0.5
 SNf_sim.txt		$UNITY/paramfiles/SDSS_r_selection.txt		20		1
 

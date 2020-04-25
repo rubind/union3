@@ -28,6 +28,7 @@ SN2009F		1991bg		Stritzinger11
 SN2009dc	SuperC/CSM	Stritzinger11
 SN2007if	SuperC/CSM	Stritzinger11
 SN2004gu	SuperC/CSM	Contreras10
+SN2008ha	Weird		
 
 SN1993H		1991bg  	Lower limits on the Hubble Constant from models of Type Ia Supernovae
 SN1992K		1991bg
