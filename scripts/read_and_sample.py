@@ -130,7 +130,15 @@ def read_data(params):
             weird_sn = helper_functions.read_param(params["weird_sn_list"], snpath.split("/")[-1])
             print("weird_sn ", snpath, weird_sn)
             
+            
+            this_MWEBV = read_param(lightfl, "MW_true_EBV")
+            if this_MWEBV == None:
+                this_MWEBV = read_param(lightfl, "MWEBV")
+            else:
+                print("Using MW_true_EBV")
+            print("this_MWEBV", this_MWEBV)
 
+            
             okay_to_add = [this_redshift_cmb >= params["min_redshift"][current_sample],
                            this_redshift_cmb <= params["max_redshift"][current_sample],
                            this_firstphase <= params["max_firstphase"],
@@ -138,6 +146,7 @@ def read_data(params):
                            this_colorerr < params["max_color_uncertainty"],
                            this_color < params["max_color"],
                            this_color > params["min_color"],
+                           this_MWEBV <= params["max_MWEBV"],
                            weird_sn == None, abs(log(this_check)) < 0.1, abs(this_x1) + this_x1_err < 5]
             okay_names = ["min_z", "max_z", "first_p", "last_p", "colorerr", "colorcut", "weirdsn", "converge", "x1"]
 
@@ -209,7 +218,7 @@ def read_data(params):
 
 
                 # First term from SALT, second term from 300 km/s, third term lensing (may be overestimated)
-                mBmB = helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B", ind = 2)**2. + (params["pec_vel_disp"]/the_data["z_CMB_list"][-1]*5./log(10.))**2. + (params["lensing_disp"]*the_data["z_CMB_list"][-1])**2.
+                mBmB = helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B", ind = 2)**2. + (params["lensing_disp"]*the_data["z_CMB_list"][-1])**2.
                 mBx1 = helper_functions.read_param(snpath + "/result_salt2.dat", "CovRestFrameMag_0_BX1")
                 mBc = helper_functions.read_param(snpath + "/result_salt2.dat", "CovColorRestFrameMag_0_B")
                 x1x1 = helper_functions.read_param(snpath + "/result_salt2.dat", "CovX1X1")
@@ -229,7 +238,40 @@ def read_data(params):
                     x1x1 *= x1_slope**2.
                     mBx1 *= x1_slope
                     x1c *= x1_slope
+
+
+                ########################################## Peculiar Velocity Dispersion and Bulk Flows ##########################################
+                
+
+                total_pec_vel_on_diag = (params["pec_vel_disp"]/the_data["z_CMB_list"][-1]*5./log(10.))**2.
+                total_bulk_quad = 0.
+                
+                if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1):
+
+                    dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_Dec)**2. + 1e6*(bulk_z - this_redshift_cmb)**2.
                     
+                    bulk_inds = argsort(dists)
+                    bulk_ind = bulk_inds[0]
+
+                    assert dists[bulk_ind] < 2, "Couldn't find " + snpath.split("/")[-1] + ". You need to regenerate the bulk flow files or run with include_pec_cov set to 0."
+
+                    for bulk_i in range(len(bulk_eig)):
+                        key = "BULK_%03i" % bulk_i
+                        if not the_data["calib_names"].count(key):
+                            the_data["calib_names"].append(key)
+                            the_data["calib_uncertainties"].append(1.0)
+                        calib_ind = the_data["calib_names"].index(key)
+                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = bulk_eig[bulk_i, bulk_ind]
+                        total_bulk_quad += bulk_eig[bulk_i, bulk_ind]**2.
+                        print("setting ", bulk_eig[bulk_i, bulk_ind], the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind], "bulk_i", bulk_i, "bulk_ind", bulk_ind, "current_sn_ind", current_sn_ind)
+                        
+                total_pec_vel_on_diag -= total_bulk_quad
+                total_pec_vel_on_diag = np.clip(total_pec_vel_on_diag, 0, 100)
+
+                mBmB += total_pec_vel_on_diag
+                
+                ########################################## Done with Ingredients for Covariance Matrix ##########################################
+
                 
                 the_data["mBx1c_cov_list"] = concatenate((the_data["mBx1c_cov_list"], array([[[mBmB, mBx1, mBc],
                                                                                               [mBx1, x1x1, x1c],
@@ -239,25 +281,7 @@ def read_data(params):
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = False)
 
 
-                if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1):
-
-                    dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_Dec)**2. + 1e6*(bulk_z - this_redshift_cmb)**2.
-                    
-                    bulk_inds = argsort(dists)
-                    bulk_ind = bulk_inds[0]
-
-                    assert dists[bulk_ind] < 2, "Couldn't find " + snpath.split("/")[-1] + ". You need to regenerate the bulk flow files or run with include_pec_cov set to 0."
-                    
-
-                    for bulk_i in range(len(bulk_eig)):
-                        key = "BULK_%03i" % bulk_i
-                        if not the_data["calib_names"].count(key):
-                            the_data["calib_names"].append(key)
-                            the_data["calib_uncertainties"].append(1.0)
-                        calib_ind = the_data["calib_names"].index(key)
-                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = bulk_eig[bulk_i, bulk_ind]
-                        print("setting ", bulk_eig[bulk_i, bulk_ind], the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind], "bulk_i", bulk_i, "bulk_ind", bulk_ind, "current_sn_ind", current_sn_ind)
-
+                
 
                 current_sn_ind += 1
             else:
