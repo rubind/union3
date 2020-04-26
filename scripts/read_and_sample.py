@@ -131,9 +131,9 @@ def read_data(params):
             print("weird_sn ", snpath, weird_sn)
             
             
-            this_MWEBV = read_param(lightfl, "MW_true_EBV")
+            this_MWEBV = helper_functions.read_param(snpath + "/lightfile", "MW_true_EBV")
             if this_MWEBV == None:
-                this_MWEBV = read_param(lightfl, "MWEBV")
+                this_MWEBV = helper_functions.read_param(snpath + "/lightfile", "MWEBV")
             else:
                 print("Using MW_true_EBV")
             print("this_MWEBV", this_MWEBV)
@@ -267,7 +267,7 @@ def read_data(params):
 
                 print("total_pec_vel_on_diag ", total_pec_vel_on_diag, the_data["z_CMB_list"][-1])
                 total_pec_vel_on_diag -= total_bulk_quad
-                total_pec_vel_on_diag = np.clip(total_pec_vel_on_diag, 0, 100)
+                total_pec_vel_on_diag = clip(total_pec_vel_on_diag, 0, 100)
                 print("total_remaining to add ", total_pec_vel_on_diag, the_data["z_CMB_list"][-1])
 
                 mBmB += total_pec_vel_on_diag

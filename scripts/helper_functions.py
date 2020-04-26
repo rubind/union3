@@ -56,7 +56,7 @@ def get_params(paramfl):
 
     keys = ["filenamelist", "weird_sn_list", "mag_cut", #"calib_errs",
             "iter", "chains", "n_jobs",
-            "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color", "min_color",
+            "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color", "min_color", "max_MWEBV",
             "min_redshift", "max_redshift", "n_x1c_star",
             "do_blind", "do_twoalphabeta", "outl_frac", "remap_x1",
             "stan_code", "pec_vel_disp", "lensing_disp", "MWEBV_zeropoint_EBV",
@@ -144,11 +144,11 @@ def get_dparam_dzps(res_der_fl, redshift):
     print("dparam_dzps ", dparam_dzps)
     return dparam_dzps
 
-def get_MWEBV_uncs(lightfl, res_der_fl, settings):
+def get_MWEBV_uncs(lightfl, res_der_fl, params):
 
     sig_stat = 0.16    # 16% statistical uncertainty
     sig_norm = 0.10    # 10% multiplicative normalization uncertainty
-    sig_add  = settings["MWEBV_zeropoint_EBV"]   # E.g., 5 mmag E(B-V) additive uncertainty
+    sig_add  = params["MWEBV_zeropoint_EBV"]   # E.g., 5 mmag E(B-V) additive uncertainty
 
     d_dMWEBV = array([read_param(res_der_fl, "MWEBV", ind = 5),
                       read_param(res_der_fl, "MWEBV", ind = 6),
