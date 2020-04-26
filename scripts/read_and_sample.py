@@ -229,7 +229,7 @@ def read_data(params):
                 if abs(h_resid) > 2 or (the_data["c_list"][-1] > 1) or (the_data["c_list"][-1] < -0.3):
                     print("Weird supernova!", snpath)
 
-                dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", snpath + "/result_deriv.dat")
+                dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", snpath + "/result_deriv.dat", params = params)
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
 
                 if params["remap_x1"] != None:

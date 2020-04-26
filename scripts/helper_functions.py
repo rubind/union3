@@ -59,7 +59,8 @@ def get_params(paramfl):
             "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color", "min_color",
             "min_redshift", "max_redshift", "n_x1c_star",
             "do_blind", "do_twoalphabeta", "outl_frac", "remap_x1",
-            "stan_code", "pec_vel_disp", "lensing_disp", "sample_file",
+            "stan_code", "pec_vel_disp", "lensing_disp", "MWEBV_zeropoint_EBV",
+            "sample_file",
             "do_host_mass", "fix_Om", "MB_by_sample", "include_pec_cov"
             ]
     
@@ -143,26 +144,23 @@ def get_dparam_dzps(res_der_fl, redshift):
     print("dparam_dzps ", dparam_dzps)
     return dparam_dzps
 
-def get_MWEBV_uncs(lightfl, res_der_fl):
+def get_MWEBV_uncs(lightfl, res_der_fl, settings):
 
     sig_stat = 0.16    # 16% statistical uncertainty
     sig_norm = 0.10    # 10% multiplicative normalization uncertainty
-    sig_add  = 0.005   # 5 mmag E(B-V) additive uncertainty
+    sig_add  = settings["MWEBV_zeropoint_EBV"]   # E.g., 5 mmag E(B-V) additive uncertainty
 
     d_dMWEBV = array([read_param(res_der_fl, "MWEBV", ind = 5),
                       read_param(res_der_fl, "MWEBV", ind = 6),
                       read_param(res_der_fl, "MWEBV", ind = 7)])
 
     # Add support for pre-correction for extinction in error propagation
-    MWEBV       = read_param(lightfl, "MWEBV")
-    MW_true_EBV = read_param(lightfl, "MW_true_EBV")
+    MWEBV = read_param(lightfl, "MW_true_EBV")
+    if MWEBV == None:
+        MWEBV = read_param(lightfl, "MWEBV")
 
-    if MW_true_EBV == None:
-        dparam_dzps = {"MWEBV_multnorm": MWEBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_add*d_dMWEBV}
-        extra_cmat = outer(MWEBV*sig_stat*d_dMWEBV, MWEBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
-    else:
-        dparam_dzps = {"MWEBV_multnorm": MW_true_EBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_add*d_dMWEBV}
-        extra_cmat = outer(MW_true_EBV*sig_stat*d_dMWEBV, MW_true_EBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
+    dparam_dzps = {"MWEBV_multnorm": MWEBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_add*d_dMWEBV}
+    extra_cmat = outer(MWEBV*sig_stat*d_dMWEBV, MWEBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
 
     return dparam_dzps, extra_cmat
     
