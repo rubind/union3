@@ -243,7 +243,7 @@ def read_data(params):
                 ########################################## Peculiar Velocity Dispersion and Bulk Flows ##########################################
                 
 
-                total_pec_vel_on_diag = (params["pec_vel_disp"]/the_data["z_CMB_list"][-1]*5./log(10.))**2.
+                total_pec_vel_on_diag = (   params["pec_vel_disp"]*(5./log(10.))*(the_data["z_CMB_list"][-1] + 1.)/(the_data["z_CMB_list"][-1]*(1 + the_data["z_CMB_list"][-1]/2.))   )**2.
                 total_bulk_quad = 0.
                 
                 if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1):
@@ -264,9 +264,11 @@ def read_data(params):
                         the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = bulk_eig[bulk_i, bulk_ind]
                         total_bulk_quad += bulk_eig[bulk_i, bulk_ind]**2.
                         print("setting ", bulk_eig[bulk_i, bulk_ind], the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind], "bulk_i", bulk_i, "bulk_ind", bulk_ind, "current_sn_ind", current_sn_ind)
-                        
+
+                print("total_pec_vel_on_diag ", total_pec_vel_on_diag, the_data["z_CMB_list"][-1])
                 total_pec_vel_on_diag -= total_bulk_quad
                 total_pec_vel_on_diag = np.clip(total_pec_vel_on_diag, 0, 100)
+                print("total_remaining to add ", total_pec_vel_on_diag, the_data["z_CMB_list"][-1])
 
                 mBmB += total_pec_vel_on_diag
                 
