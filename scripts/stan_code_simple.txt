@@ -333,7 +333,7 @@ transformed parameters {
 					  + normal_log(true_cB[i], c_star_by_SN[i], R_c_by_SN[i])
 					  + log_sum_exp(tmploglike_c) + log_sum_exp(tmploglike_x1)
 
-	                                  + normal_cdf_log(mobs_cuts[sample_list[i]] + d_mBx1c_d_calib[i][1] * calibs, obs_mBx1c[i][1] + mobs_cut0[i] + mobs_cut1[i]*obs_mBx1c[i][3], mobs_cut_sigmas[sample_list[i]])
+	                                  + normal_cdf_log(mobs_cuts[sample_list[i]], obs_mBx1c[i][1] + mobs_cut0[i] + mobs_cut1[i]*obs_mBx1c[i][3], mobs_cut_sigmas[sample_list[i]]) // mobs_cuts[sample_list[i]] + d_mBx1c_d_calib[i][1] * calibs
                                           - log(this_norm_LL);  //No calibration in this term, see above comment!
 	// Debugging test:
 	// print("this_norm_LL ", this_norm_LL)
