@@ -76,6 +76,26 @@ def make_corner(keys, pltname):
     plt.close()
 
 
+def make_calib_corner(calib_keys, pltname):
+    samples = []
+    
+    for calib_key in calib_keys:
+        ind = the_data["calib_names"].index(calib_key)
+        samples.append(fit_params["calibs"][:,ind])
+
+
+    for i in range(len(fit_params["mobs_cuts"][0])):
+        samples.append(fit_params["mobs_cuts"][:,i])
+        calib_keys.append(label_dict["mobs_cuts"][i])
+        
+    samples = transpose(array(samples))
+
+
+    corner.corner(samples, labels = calib_keys)
+    plt.savefig(resdir + pltname)
+    plt.close()
+
+    
 def make_mB_vs_z():
     plt.subplot(2,1,1)
     plt.plot(stan_data["redshifts"], array(stan_data["obs_mBx1c"])[:,0], '.', color = 'k')
@@ -449,6 +469,7 @@ else:
 error_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
 
 
+make_calib_corner(["MWEBV_multnorm", "MWEBV_addnorm"], "MWEBV_corner.pdf")
 
 make_corner(["Om", "alpha", "beta_B", "beta_R", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
 make_corner(["Om", "alpha", "beta_B", "beta_R", "MB-delta_0", "delta_0", "delta_h", "outl_frac"], "Om_MBhigh_coeffs.pdf")

@@ -33,6 +33,8 @@ def read_data(params):
                 "mass": [], # Host mass
                 "mass_err": [], # Host-mass uncertainty
                 "snpaths": [], # Paths to LC fits. Stored for future reference.
+                "RA": [],
+                "Dec": [],
                 
                 "mobs_cut0": [],
                 "mobs_cut1": [],
@@ -109,7 +111,7 @@ def read_data(params):
                 print("Couldn't find redshift for ", snpath)
                 
             this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
-            this_DEC = helper_functions.read_param(snpath + "/lightfile", "DEC")
+            this_Dec = helper_functions.read_param(snpath + "/lightfile", "DEC")
             this_firstphase = helper_functions.read_param(snpath + "/result_salt2.dat", "FirstPhase")
             this_lastphase = helper_functions.read_param(snpath + "/result_salt2.dat", "LastPhase")
             this_color = helper_functions.read_param(snpath + "/result_salt2.dat", "Color")
@@ -142,7 +144,7 @@ def read_data(params):
             f_read.write('\t'.join([
                 "/".join(snpath.split("/")[-2:]),
                 str(this_RA),
-                str(this_DEC),
+                str(this_Dec),
                 str(this_redshift_helio),
                 str(this_redshift_cmb),
                 str(all(okay_to_add))]
@@ -175,6 +177,8 @@ def read_data(params):
 
                 the_data["mobs_cut0"].append(kc_ifn0(this_redshift_helio))
                 the_data["mobs_cut1"].append(kc_ifn1(this_redshift_helio))
+                the_data["RA"].append(this_RA)
+                the_data["Dec"].append(this_Dec)
                 
 
                 the_data["mB_list"] = append(the_data["mB_list"],
@@ -237,10 +241,7 @@ def read_data(params):
 
                 if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1):
 
-                    #this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
-                    #this_DEC = helper_functions.read_param(snpath + "/lightfile", "DEC")
-
-                    dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_DEC)**2. + 1e6*(bulk_z - this_redshift_cmb)**2.
+                    dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_Dec)**2. + 1e6*(bulk_z - this_redshift_cmb)**2.
                     
                     bulk_inds = argsort(dists)
                     bulk_ind = bulk_inds[0]
