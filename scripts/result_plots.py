@@ -1,4 +1,5 @@
 from numpy import * # I know...
+import numpy as np
 import pickle as pickle
 from matplotlib import use
 use("PDF")
@@ -287,7 +288,44 @@ def make_Hubble_diagram(use_obs_color):
     plt.close()
 
 
-def error_analysis(explain, keys, dobin = 0):
+def unc_labeling(labels_indiv):
+    new_labels = []
+
+    for label_indiv in labels_indiv:
+        if label_indiv.startswith("calibs_('Fundamental"):
+            new_labels.append("Fundamental")
+            
+        elif label_indiv.startswith("calibs_MWEBV_"):
+            new_labels.append("MWEBV")
+            
+        elif label_indiv.startswith("calibs_BULK_"):
+            new_labels.append("Bulk Flow")
+
+        elif label_indiv.startswith("calibs_('Zeropoint'"):
+            new_labels.append("Instrument Zeropoints")
+
+        elif label_indiv.startswith("calibs_('Lambda'"):
+            new_labels.append("Instrument Bandpasses")
+            
+        elif label_indiv.startswith("tau_c_") or label_indiv.startswith("R_c_") or label_indiv.startswith("c_star_"):
+            new_labels.append("Color Population")
+
+        elif label_indiv.startswith("tau_x1_") or label_indiv.startswith("R_x1_") or label_indiv.startswith("x1_star_"):
+            new_labels.append("X1 Population")
+
+        elif label_indiv.startswith("mBx1c_int_variance"):
+            new_labels.append("Unexplained Scatter")
+            
+        elif label_indiv.startswith("mobs_cut"):
+            new_labels.append("Selection Effects")
+            
+        else:
+            new_labels.append(label_indiv)
+            
+    return new_labels
+
+
+def unc_analysis(explain, keys):
     labels_indiv = []
     explained_indiv = []
 
@@ -325,8 +363,18 @@ def error_analysis(explain, keys, dobin = 0):
             labels.append(key)
             explained.append(sqrt(total_explained_squared))
 
+    new_labels = unc_labeling(labels_indiv)
+    assert len(new_labels) == len(explained_indiv), str(len(new_labels)) + " " + str(len(explained_indiv))
+    unique_new = list(set(new_labels))
+    explained_new = np.zeros(len(unique_new), dtype=np.float64)
 
-    for expl, lbls in [(explained_indiv, labels_indiv), (explained, labels)]:
+    
+    for i in range(len(new_labels)):
+        ind = unique_new.index(new_labels[i])
+        explained_new[ind] += (explained_indiv[i])**2.
+    explained_new = np.sqrt(explained_new)
+            
+    for expl, lbls in [(explained_indiv, labels_indiv), (explained, labels), (explained_new, unique_new)]:
         expl = abs(array(expl))
         lbls = array(lbls)
         inds = argsort(expl)[::-1]
@@ -443,6 +491,8 @@ for key in ["obs_mBx1c"]:
     stan_data[key] = array(stan_data[key])
 
 label_dict = get_label_dict()
+for key in label_dict:
+    print("label_dict ", key, "->", label_dict[key])
 
 isoutl = count_outliers()
 
@@ -466,15 +516,15 @@ else:
         
 
 
-error_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
+unc_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
 
 
 make_calib_corner(["MWEBV_multnorm", "MWEBV_addnorm"], "MWEBV_corner.pdf")
 
-make_corner(["Om", "alpha", "beta_B", "beta_R", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
-make_corner(["Om", "alpha", "beta_B", "beta_R", "MB-delta_0", "delta_0", "delta_h", "outl_frac"], "Om_MBhigh_coeffs.pdf")
+make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_betaR", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
+make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_betaR", "MB-delta_0", "delta_0", "delta_h", "outl_frac"], "Om_MBhigh_coeffs.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas"], "Om_mB_cut.pdf")
-make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "MB", "beta_B", "beta_R"], "Om_mB_cut_beta.pdf")
+make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "MB", "beta_B", "beta_R", "delta_betaR"], "Om_mB_cut_beta.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c"], "Om_mB_cut_cpop.pdf")
 
 

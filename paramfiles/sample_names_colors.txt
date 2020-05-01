@@ -25,6 +25,8 @@ SDSS_cut_v1.txt			Sako+ (2014)						(0.5, 0.5, 1.)
 SDSS_sim.txt			Simulated						(0., 0., 0.)
 SNf_sim.txt			Simulated						(0., 0., 0.)
 Foundation_v1.txt		Foley+							(0., 0., 0.)
+DES3_Shallow_v1.txt		DES							(0.5, 0.5, 0.5)
+DES3_Deep_v1.txt		DES							(1, 0.5, 0.5)
 
 SCP_v1.txt			Suzuki+ (2012)_and Rubin+ (2013)			(0., 0.5, 0.5)
 riess_fixed_ab_v1.txt		Riess+ (2007)						(0., 1., 0.5)
