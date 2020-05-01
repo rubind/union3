@@ -18,6 +18,7 @@ data {
     int cosmo_model; // 1 => Om, 2, 3 => Om-w => Binned mu
     int fix_Om;
     int MB_by_sample;
+    int <lower = 0, upper = 1> threeD_unexplained;
 
     int n_zbins;
     vector [n_zbins] zbins;
@@ -247,10 +248,15 @@ transformed parameters {
     }
 
     for (i in 1:n_samples) {
-        sig_int_vector[i][1] <- sqrt(mBx1c_int_variance[1])*pow(10, log10_sigma_int[i]);        // This vector is in dispersion, not variance
-        sig_int_vector[i][2] <- sqrt(mBx1c_int_variance[2])*pow(10, log10_sigma_int[i])/0.13;
-        sig_int_vector[i][3] <- sqrt(mBx1c_int_variance[3])*pow(10, log10_sigma_int[i])/(-3.);
-
+        if (threeD_unexplained == 1) {
+            sig_int_vector[i][1] <- sqrt(mBx1c_int_variance[1])*pow(10, log10_sigma_int[i]);        // This vector is in dispersion, not variance
+            sig_int_vector[i][2] <- sqrt(mBx1c_int_variance[2])*pow(10, log10_sigma_int[i])/0.13;
+            sig_int_vector[i][3] <- sqrt(mBx1c_int_variance[3])*pow(10, log10_sigma_int[i])/(-3.);
+        } else {
+            sig_int_vector[i][1] <- pow(10, log10_sigma_int[i]);        // This vector is in dispersion, not variance
+            sig_int_vector[i][2] <- 0.;
+            sig_int_vector[i][3] <- 0.;
+        }
         //mobs_cuts[i] <- 21.5;
         //mobs_cut_sigmas[i] <- 0.25;
     }

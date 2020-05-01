@@ -61,7 +61,7 @@ def get_params(paramfl):
             "do_blind", "do_twoalphabeta", "outl_frac", "remap_x1",
             "stan_code", "pec_vel_disp", "lensing_disp", "MWEBV_zeropoint_EBV",
             "sample_file",
-            "do_host_mass", "fix_Om", "MB_by_sample", "include_pec_cov"
+            "do_host_mass", "fix_Om", "MB_by_sample", "include_pec_cov", "threeD_unexplained"
             ]
     
     params = {}

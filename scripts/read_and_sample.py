@@ -515,6 +515,7 @@ else:
                  "d_mBx1c_d_calib": the_data["d_mBx1c_dcalib_list"],
                  "calib_uncertainties": the_data["calib_uncertainties"],
                  "n_x1c_star": params["n_x1c_star"], # 3 = quadratic in redshift with old approach
+                 "threeD_unexplained": params["threeD_unexplained"],
                  "mass": the_data["mass"],
                  "mass_err": the_data["mass_err"],
                  "do_host_mass": params["do_host_mass"], "fix_Om": params["fix_Om"], "MB_by_sample": params["MB_by_sample"], 
