@@ -63,6 +63,12 @@ transformed data {
     vector [n_gauss] exp_approx_pos = [0.10329973984501734, 0.41080906196995237, 1.083137332416308, 2.427349566890827]';
     vector [n_gauss] exp_approx_width = [0.06596419371844692, 0.1910889454034621, 0.45516250820784515, 1.0637414822809306]';
 
+    vector [n_sne] p_high_mass;
+
+    for (i in 1:n_sne) {
+	p_high_mass[i] <- 0.5 + 0.5*erf((mass[i] - mass_0)/(sqrt(2.)*mass_err[i]));
+    }
+
     // vector [n_gauss] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
     // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
     // vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
@@ -124,13 +130,7 @@ transformed parameters {
     vector [3] model_mBx1c [n_sne];
     matrix [3,3] model_mBx1c_cov [n_sne];
     matrix [3,3] model_mBx1c_cov_outl [n_sne];
-    vector [n_sne] mean_mB_by_SN;
-    vector [n_sne] var_mB_by_SN;
 
-    vector [n_sne] mBcut0;
-    vector [n_sne] mBcut1;
-
-    vector [n_sne] p_high_mass;
     vector [3] sig_int_vector [n_samples];
 
     real alpha;
@@ -262,7 +262,6 @@ transformed parameters {
     }
 
     for (i in 1:n_sne) {
-	p_high_mass[i] <- 0.5 + 0.5*erf((mass[i] - mass_0)/(sqrt(2.)*mass_err[i]));
 
         if (do_host_mass == 1) {
 	    delta_eff <- delta_0*((  1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i]))  ) + delta_h);
