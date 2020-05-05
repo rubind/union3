@@ -64,11 +64,13 @@ transformed data {
     vector [n_gauss] exp_approx_width = [0.06596419371844692, 0.1910889454034621, 0.45516250820784515, 1.0637414822809306]';
 
     vector [n_sne] p_high_mass;
-    real mass_0 = 0;
+    real mass_0 = 10.;
 
     for (i in 1:n_sne) {
 	p_high_mass[i] <- 0.5 + 0.5*erf((mass[i] - mass_0)/(sqrt(2.)*mass_err[i]));
     }
+
+    print("p_high_mass ", p_high_mass);
 
     // vector [n_gauss] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
     // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';

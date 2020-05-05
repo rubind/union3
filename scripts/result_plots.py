@@ -297,6 +297,12 @@ def unc_labeling(labels_indiv):
             
         elif label_indiv.startswith("calibs_MWEBV_"):
             new_labels.append("MWEBV")
+
+        elif label_indiv.startswith("IG_extinction"):
+            new_labels.append("IG_extinction")
+
+        elif label_indiv.startswith("electron_scattering"):
+            new_labels.append("electron_scattering")
             
         elif label_indiv.startswith("calibs_BULK_"):
             new_labels.append("Bulk Flow")
