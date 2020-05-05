@@ -64,6 +64,7 @@ transformed data {
     vector [n_gauss] exp_approx_width = [0.06596419371844692, 0.1910889454034621, 0.45516250820784515, 1.0637414822809306]';
 
     vector [n_sne] p_high_mass;
+    real mass_0 = 0;
 
     for (i in 1:n_sne) {
 	p_high_mass[i] <- 0.5 + 0.5*erf((mass[i] - mass_0)/(sqrt(2.)*mass_err[i]));
@@ -166,7 +167,6 @@ transformed parameters {
     vector [n_sne] inl_loglike_by_SN;
     //vector [n_sne] PointPosteriors;
 
-    real mass_0;
     real this_MB;
     real this_norm_LL;
 
@@ -177,7 +177,6 @@ transformed parameters {
     vector [n_gauss] tmploglike_x1;
     vector [n_gauss] tmploglike_c;
 
-    mass_0 <- 10.;
 
     // -------------Begin numerical integration-----------------
 

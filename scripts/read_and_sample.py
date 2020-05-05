@@ -183,6 +183,8 @@ def read_data(params):
 
                 the_data["z_CMB_list"] = append(the_data["z_CMB_list"], this_redshift_cmb
                                                 )
+                the_data["z_helio_list"] = append(the_data["z_helio_list"], this_redshift_helio
+                                                )
 
                 the_data["mobs_cut0"].append(kc_ifn0(this_redshift_helio))
                 the_data["mobs_cut1"].append(kc_ifn1(this_redshift_helio))
@@ -225,12 +227,21 @@ def read_data(params):
                 x1c = helper_functions.read_param(snpath + "/result_salt2.dat", "CovColorX1")
                 cc = helper_functions.read_param(snpath + "/result_salt2.dat", "CovColorColor")
 
-                h_resid = (the_data["mB_list"][-1] - - 19.1 + 0.13*the_data["x1_list"][-1] - 3.*the_data["c_list"][-1]) - (5*log10(the_data["z_CMB_list"][-1]*(1. + the_data["z_CMB_list"][-1])) + 42.9)
+                h_resid = (the_data["mB_list"][-1] - - 19.1 + 0.13*the_data["x1_list"][-1] - 3.*the_data["c_list"][-1]) - (5*log10(the_data["z_CMB_list"][-1]*(1. + the_data["z_helio_list"][-1])) + 42.9)
                 if abs(h_resid) > 2 or (the_data["c_list"][-1] > 1) or (the_data["c_list"][-1] < -0.3):
                     print("Weird supernova!", snpath)
 
-                dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", snpath + "/result_deriv.dat", params = params)
+                dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", res_der_fl = snpath + "/result_deriv.dat", params = params)
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
+
+                dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = snpath + "/result_deriv.dat", params = params)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
+
+                
+                dparam_dzps, add_mag_electron = helper_functions.get_electron_scattering(the_data["z_CMB_list"][-1], params = params)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
+                the_data["mB_list"][-1] += add_mag_electron
+
 
                 if params["remap_x1"] != None:
                     new_x1, x1_slope = helper_functions.remap_x1(the_data["x1_list"][-1], params)

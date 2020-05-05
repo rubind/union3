@@ -1,4 +1,5 @@
 from numpy import *
+import numpy as np
 from scipy.stats import scoreatpercentile
 from scipy.interpolate import interp1d
 import os
@@ -59,7 +60,7 @@ def get_params(paramfl):
             "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color", "min_color", "max_MWEBV",
             "min_redshift", "max_redshift", "n_x1c_star",
             "do_blind", "do_twoalphabeta", "outl_frac", "remap_x1",
-            "stan_code", "pec_vel_disp", "lensing_disp", "MWEBV_zeropoint_EBV",
+            "stan_code", "pec_vel_disp", "lensing_disp", "MWEBV_zeropoint_EBV", "electron_coeff", "IG_extinction_coeff",
             "sample_file",
             "do_host_mass", "fix_Om", "MB_by_sample", "include_pec_cov", "threeD_unexplained"
             ]
@@ -163,8 +164,54 @@ def get_MWEBV_uncs(lightfl, res_der_fl, params):
     extra_cmat = outer(MWEBV*sig_stat*d_dMWEBV, MWEBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
 
     return dparam_dzps, extra_cmat
+
+def get_electron_scattering(redshift, params):
+    # Nominally 0.0039  0.001
+    assert abs(params["electron_coeff"][0]) < 0.01
+    assert abs(params["electron_coeff"][1]) < 0.01
+    assert params["electron_coeff"][0] > -0.001
     
+
+    tau_electron = params["electron_coeff"][0] * (sqrt(0.3*(1 + redshift)**3. + 0.7) - 1.)
+    dtau_electron = params["electron_coeff"][1] * (sqrt(0.3*(1 + redshift)**3. + 0.7) - 1.)
+
+    add_mag_electron = -2.5/log(10.) * tau_electron
+    dmag_electron = 2.5/log(10.) * dtau_electron
+
+    dparam_dzps = {"electron_scattering": array([dmag_electron, 0, 0])}
+
+    return dparam_dzps, add_mag_electron
+
+def eval_IG_extinction(z, efflambrest_A):
+    """Menard model
+test: eval_IG_extinction(1.0, 4400.) 0.0199155
+"""
+    assert efflambrest_A > 2000. and efflambrest_A < 12000.
+    assert z < 3.
     
+    efflamb = efflambrest_A/10000.
+
+    IGextinct = z*(0.14266413515924342 - 0.711892836963675*efflamb + 1.7510415311715886*efflamb**2 - 2.2923914751125025*efflamb**3 + 1.504991618219626*efflamb**4 - 0.38778718783447*efflamb**5 + z*(-0.017363494533132157 + 0.0884331439174376*efflamb - 0.23324737421981015*efflamb**2 + 0.3266246131010411*efflamb**3 - 0.22587470118421055*efflamb**4 + 0.06043849091784413*efflamb**5))
+    return IGextinct
+
+
+def get_IG_extinction_sys(redshift, res_der_fl, params):
+    
+    f = open(res_der_fl)
+    lines = f.read().split('\n')
+    f.close()
+
+    dparam_dzps = {"IG_extinction": np.zeros(3, dtype=np.float64)}
+    
+    for line in lines:
+        parsed = line.split(None)
+        if parsed.count("Zeropoint"):
+            IGextinct = eval_IG_extinction(redshift, float(parsed[2]))*params["IG_extinction_coeff"]
+
+            this_dmu_zp = np.array([float(parsed[5]), float(parsed[6]), float(parsed[7])])*IGextinct
+            dparam_dzps["IG_extinction"] += this_dmu_zp
+    return dparam_dzps
+            
 
 def get_calib_uncertainties(calib_names, zeropointfl):
     assert 0, "Deprecated!"
