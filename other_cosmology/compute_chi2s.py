@@ -39,6 +39,8 @@ def chi2fn(P, passdata):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4])
     elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa"):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
+    elif (run_settings["model"] == "binnedrho"):
+        cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], zbins = run_settings["zbins"], rhobins = P[5:])
     else:
         assert 0
 
@@ -86,6 +88,24 @@ def get_miniscale(run_settings, global_fit):
         for ind in run_settings["fit_BAOCMB_inds"]:
             miniscale[ind] = 0
     return miniscale
+
+
+def binned_constraints(z_list, mu_list, mu_invcov, zbins):
+    f = fits.open("merged_vals_new_samps_base_w_plikHM_TTTEEE_lowl_lowE.fits")
+    merged_mat = f[0].data
+    f.close()
+    
+    ministart = [0.0, 0.022, 0.6, 0.3, 0.0] + [0.1]*len(zbins)
+    miniscale = [0.01, 0.001, 0.01, 0.01, 0.0] + [1.]*len(zbins)
+
+
+    run_settings = dict(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "binnedrho", merged_mat = merged_mat, zbins = zbins, include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0)
+    
+    P, F, Cmat = miniNM_new(ministart = ministart, miniscale = miniscale, chi2fn = chi2fn, passdata = run_settings)
+
+    print(P)
+    print(np.sqrt(np.diag(Cmat)))
+    
 
 
 
@@ -265,6 +285,9 @@ z_list = dat[0, 1:]
 mu_invcov = dat[1:, 1:]
 
 BAO_data = load_BAO()
+
+
+#binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = [0.2, 0.5, 1.0])
 
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatw0wa")#"flatwCDM")#"LCDM")

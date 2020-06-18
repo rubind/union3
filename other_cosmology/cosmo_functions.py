@@ -231,6 +231,17 @@ def get_Hinv(z_list, cosmo):
         return 1./np.sqrt(
             omega_r*(1. + z_list)**4. + cosmo["O_m"]*(1. + z_list)**3. + cosmo["O_k"]*(1. + z_list)**2. + (1. - cosmo["O_m"] - cosmo["O_k"] - omega_r)*np.exp(-3.0*cosmo["w_a"]*z_list/(1. + z_list))*(1. + z_list)**(3.0*(1.0 + cosmo["w_0"] + cosmo["w_a"]))
             )
+
+    elif cosmo["model"] == "binnedrho":
+        DE_density = (z_list <= cosmo["zbins"][0])*(1. - cosmo["O_m"] - cosmo["O_k"] - omega_r)
+        DE_density += (z_list > cosmo["zbins"][-1])*cosmo["rhobins"][-1]
+        
+        for i in range(len(cosmo["zbins"]) - 1):
+            DE_density += (z_list > cosmo["zbins"][i])*(z_list <= cosmo["zbins"][i+1])*cosmo["rhobins"][i]
+
+        return 1./np.sqrt(
+            omega_r*(1. + z_list)**4. + cosmo["O_m"]*(1. + z_list)**3. + cosmo["O_k"]*(1. + z_list)**2. + DE_density)
+
     
     elif len(cosmo) == 5:
         w_p = cosmo[2]
@@ -243,7 +254,8 @@ def get_Hinv(z_list, cosmo):
     else:
         assert 0, "Unknown model!"
 
-    
+
+
 def get_dt(z_list, cosmo):
     return get_Hinv(z_list, cosmo)/(1. + z_list)
 
@@ -310,5 +322,4 @@ class CosConst():
     O_gammahh = 2.469e-5 # Komatsu 2008
     O_radhh = (1. + 0.2271*3.04)*O_gammahh # Komatsu 2008
     O_bhh = 0.02258 # Komatsu 2008, note that marginalizing over z_star is similar to marginalizing over O_bhh, so sometimes okay to fix
-
 

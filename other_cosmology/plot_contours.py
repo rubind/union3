@@ -36,6 +36,31 @@ def get_colors(key):
                 (190/255., 226/255., 210/255.))
     assert 0, key
 
+
+def get_DETF(all_grids):
+    dx = all_grids["Combined"][0][1:] - all_grids["Combined"][0][:-1]
+    assert np.isclose(dx, dx[0]).all()
+    dy = all_grids["Combined"][1][1:] - all_grids["Combined"][1][:-1]
+    assert np.isclose(dy, dy[0]).all()
+
+
+    plt.figure(2)
+    
+    for cut_val in np.linspace(6.15, 6.21, 100):
+        included_points = float((all_grids["Combined"][2] <= cut_val).sum())
+        included_area = included_points*dx[0]*dy[0]
+
+        plt.plot(cut_val, 1./included_area, '.', color = 'b')
+    plt.axvline(6.18007)
+    plt.savefig("DETF_evaluation.pdf")
+    plt.close()
+        
+    included_points = float((all_grids["Combined"][2] <= 6.18007).sum())
+    included_area = included_points*dx[0]*dy[0]
+    
+    DETF_FoM = 1./included_area
+    return DETF_FoM
+
 def make_contours(all_grids, BAO_Omh2):
     DETF_FoM_txt = ""
     
@@ -43,17 +68,9 @@ def make_contours(all_grids, BAO_Omh2):
         plt.figure(figsize = (5,5))
     elif (all_grids["model"] == "flatw0wa") or (all_grids["model"] == "w0wa"):
         plt.figure(figsize = (5,5))
-        dx = all_grids["Combined"][0][1:] - all_grids["Combined"][0][:-1]
-        assert np.isclose(dx, dx[0]).all()
-        dy = all_grids["Combined"][1][1:] - all_grids["Combined"][1][:-1]
-        assert np.isclose(dy, dy[0]).all()
-
-        included_points = float((all_grids["Combined"][2] <= 6.18007).sum())
-        included_area = included_points*dx[0]*dy[0]
-
-        DETF_FoM = 1./included_area
+        DETF_FoM = get_DETF(all_grids)
         DETF_FoM_txt = "\nDETF FoM: %.2f" % DETF_FoM
-        
+
         
     elif all_grids["model"] == "LCDM":
         plt.figure(figsize = (5,7.5))
