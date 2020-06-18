@@ -1,4 +1,6 @@
 import numpy as np
+from matplotlib import use
+use("PDF")
 import matplotlib.pyplot as plt
 import sys
 import pickle
@@ -37,7 +39,7 @@ def get_colors(key):
 def make_contours(all_grids, BAO_Omh2):
     if all_grids["model"] == "flatwCDM":
         plt.figure(figsize = (5,5))
-    elif all_grids["model"] == "flatw0wa":
+    elif (all_grids["model"] == "flatw0wa") or (all_grids["model"] == "w0wa"):
         plt.figure(figsize = (5,5))
     elif all_grids["model"] == "LCDM":
         plt.figure(figsize = (5,7.5))
@@ -74,6 +76,11 @@ def make_contours(all_grids, BAO_Omh2):
         plt.xlabel("$w_0$")
         plt.ylabel("$w_a$")
         plt_name = "w0-wa%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
+
+    elif all_grids["model"] == "w0wa":
+        plt.xlabel("$w_0$")
+        plt.ylabel("$w_a$")
+        plt_name = "w0-wa_open%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
 
     elif all_grids["model"] == "LCDM":
         plt.xlabel("$\Omega_m$")

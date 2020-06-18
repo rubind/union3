@@ -3,6 +3,8 @@ import pickle
 import numpy as np
 import tqdm
 from cosmo_functions import get_mu, get_R, Planck18_CMB_chi2, get_sound_horizon, load_BAO, get_BAO_chi2
+from matplotlib import use
+use("PDF")
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from matplotlib import rcParams
@@ -35,7 +37,7 @@ def chi2fn(P, passdata):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w = P[5])
     elif run_settings["model"] == "LCDM":
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4])
-    elif run_settings["model"] == "flatw0wa":
+    elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa"):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
     else:
         assert 0
@@ -113,9 +115,18 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         run_separate_contours = 1
     elif model == "flatw0wa":
         run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
-                            contour_ys = np.linspace(-2., 2., 21),
+                            contour_ys = np.linspace(-3., 2., 25),
                             ministart_fn = lambda x, y : [0, 0.022, 0.7, 0.3, 0.0, x, y],
                             miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0., 0.1, 0.1]),
+                            fit_cosmo_inds = [5, 6],
+                            fit_SN_inds = [0],
+                            fit_BAOCMB_inds = [1, 2])
+        run_separate_contours = 0
+    elif model == "w0wa":
+        run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
+                            contour_ys = np.linspace(-3., 2., 25),
+                            ministart_fn = lambda x, y : [0, 0.022, 0.7, 0.3, 0.0, x, y],
+                            miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0.02, 0.1, 0.1]),
                             fit_cosmo_inds = [5, 6],
                             fit_SN_inds = [0],
                             fit_BAOCMB_inds = [1, 2])
@@ -237,61 +248,6 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
     pickle.dump(all_grids, open("all_grids_" + model + "_" + SN_matrix.split(".fits")[0] + "_max=" + str(max_depth) + ".pickle", 'wb'))
     
-    if 1:
-        return 1
-    
-    if model == "flatwCDM":
-        plt.figure(figsize = (5,5))
-    elif model == "flatw0wa":
-        plt.figure(figsize = (5,5))
-    elif model == "LCDM":
-        plt.figure(figsize = (5,7.5))
-    else:
-        assert 0
-
-    if run_separate_contours:
-        plt.contourf(all_grids["BAO"][0], all_grids["BAO"][1], all_grids["BAO"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("green"))
-        plt.contourf(all_grids["CMB"][0], all_grids["CMB"][1], all_grids["CMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("orange"))
-        plt.contourf(all_grids["SNe"][0], all_grids["SNe"][1], all_grids["SNe"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("blue"))
-        plt.contourf(all_grids["Combined"][0], all_grids["Combined"][1], all_grids["Combined"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("gray"))
-        
-        
-        plt.contour(all_grids["SNe"][0], all_grids["SNe"][1], all_grids["SNe"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25)
-        plt.contour(all_grids["CMB"][0], all_grids["CMB"][1], all_grids["CMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25, linestyles = "dotted")
-        plt.contour(all_grids["BAO"][0], all_grids["BAO"][1], all_grids["BAO"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25, linestyles = "dashed")
-    else:
-        plt.contourf(all_grids["Combined"][0], all_grids["Combined"][1], all_grids["Combined"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("teal"))
-        plt.contour(all_grids["Combined"][0], all_grids["Combined"][1], all_grids["Combined"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25)
-
-        
-
-    if model == "flatwCDM":
-        plt.xlabel("$\Omega_m$")
-        plt.ylabel("$w$")
-        plt_name = "Om-w.pdf"
-
-    elif model == "flatw0wa":
-        plt.xlabel("$w_0$")
-        plt.ylabel("$w_a$")
-        plt_name = "w0-wa.pdf"
-
-    elif model == "LCDM":
-        plt.xlabel("$\Omega_m$")
-        plt.ylabel("$\Omega_{\Lambda}$")
-        plt.plot([0, 1], [1, 0], color = 'k', linewidth = 0.75)
-        plt.axes().set_aspect(1.)
-        plt.xlim(0, 1)
-        plt.ylim(0, 1.5)
-        plt_name = "Om-OL.pdf"
-
-    else:
-        assert 0
-
-    all_txt = "All: " + str(bestP_all) + " " + str(np.sqrt(np.diag(bestC_all))) + '\n'
-    all_txt += "SN+CMB: " + str(bestP_SNCMB) + " " + str(np.sqrt(np.diag(bestC_SNCMB)))
-    
-    plt.savefig(plt_name, bbox_inches = 'tight', metadata=dict(Keywords = all_txt))
-
     
 
 print("python compute_chi2s.py mu_mat.fits 4")
@@ -310,6 +266,7 @@ mu_invcov = dat[1:, 1:]
 
 BAO_data = load_BAO()
 
+make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatw0wa")#"flatwCDM")#"LCDM")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatwCDM")#"flatwCDM")#"LCDM")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "LCDM")#"flatwCDM")#"LCDM")
