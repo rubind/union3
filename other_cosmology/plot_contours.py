@@ -37,10 +37,24 @@ def get_colors(key):
     assert 0, key
 
 def make_contours(all_grids, BAO_Omh2):
+    DETF_FoM_txt = ""
+    
     if all_grids["model"] == "flatwCDM":
         plt.figure(figsize = (5,5))
     elif (all_grids["model"] == "flatw0wa") or (all_grids["model"] == "w0wa"):
         plt.figure(figsize = (5,5))
+        dx = all_grids["Combined"][0][1:] - all_grids["Combined"][0][:-1]
+        assert np.isclose(dx, dx[0]).all()
+        dy = all_grids["Combined"][1][1:] - all_grids["Combined"][1][:-1]
+        assert np.isclose(dy, dy[0]).all()
+
+        included_points = float((all_grids["Combined"][2] <= 6.18007).sum())
+        included_area = included_points*dx[0]*dy[0]
+
+        DETF_FoM = 1./included_area
+        DETF_FoM_txt = "\nDETF FoM: %.2f" % DETF_FoM
+        
+        
     elif all_grids["model"] == "LCDM":
         plt.figure(figsize = (5,7.5))
     else:
@@ -97,6 +111,7 @@ def make_contours(all_grids, BAO_Omh2):
     all_txt = "All: " + str(all_grids["Combined_fit"]) + " " + str(np.sqrt(np.diag(all_grids["Combined_cmat"]))) + '\n'
     all_txt += "SN+CMB: " + str(all_grids["SNCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["SNCMB_cmat"]))) + '\n'
     all_txt += "BAO+CMB: " + str(all_grids["BAOCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["BAOCMB_cmat"])))
+    all_txt += DETF_FoM_txt
     
     plt.savefig(plt_name, bbox_inches = 'tight', metadata=dict(Keywords = all_txt))
 
