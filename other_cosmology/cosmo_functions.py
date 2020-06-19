@@ -2,6 +2,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from astropy.io import ascii
 from FileRead import readcol
+import os
 
 # Ports/copies of code written for minimarginalize.py for Union compilations
 
@@ -97,9 +98,9 @@ def Planck18_CMB_chi2(cosmo, merged_mat):
     return np.dot(resid, np.dot(merged_mat[3:6], resid))
 
 def load_BAO():
-    [constraint, redshift, fiducial, value] = readcol("BAO_results.txt", 'afff')
+    [constraint, redshift, fiducial, value] = readcol(os.environ["UNITY"] + "/other_cosmology/BAO_results.txt", 'afff')
 
-    f = open("BAO_results.txt", 'r')
+    f = open(os.environ["UNITY"] + "/other_cosmology/BAO_results.txt", 'r')
     lines = f.read().split('\n')
     f.close()
 

@@ -2,6 +2,7 @@ from matplotlib import use
 use("PDF")
 import pickle
 from numpy import *
+import numpy as np
 import pystan
 import sys
 import os
@@ -13,6 +14,8 @@ from scipy.interpolate import interp1d
 import gzip
 from FileRead import readcol
 from astropy.io import fits
+from DavidsNM import save_img
+from scipy.special import erf
 
 
 ################################################# Get the SALT data ###################################################
@@ -112,6 +115,9 @@ def read_data(params):
                 
             this_RA = helper_functions.read_param(snpath + "/lightfile", "RA")
             this_Dec = helper_functions.read_param(snpath + "/lightfile", "DEC")
+            if this_Dec == None:
+                this_Dec = helper_functions.read_param(snpath + "/lightfile", "Dec")
+
             this_firstphase = helper_functions.read_param(snpath + "/result_salt2.dat", "FirstPhase")
             this_lastphase = helper_functions.read_param(snpath + "/result_salt2.dat", "LastPhase")
             this_color = helper_functions.read_param(snpath + "/result_salt2.dat", "Color")
@@ -351,32 +357,44 @@ def get_redshifts(redshifts):
     return redshifts, redshifts_sort_fill, unsort_inds, len(appended_redshifts)
 
 
-def get_redshift_coeffs(sample_list, z_list, n_x1c_star):
-    redshift_coeffs = [[] for i in range(n_x1c_star)]
+def get_redshift_coeffs(z_list, n_x1c_star, p_high_mass, separate_mass_x1c):
+    actual_n_x1c_star = n_x1c_star*(1 + separate_mass_x1c)
+    
+    a_list = 1./(1. + np.array(z_list))
+    a_nodes = np.linspace(min(a_list) - 1e-5, max(a_list) + 1e-5, n_x1c_star)
+    
+    redshift_coeffs = [[] for i in range(actual_n_x1c_star)]
 
     for i in range(len(z_list)):
-        inds = where(sample_list == sample_list[i])
-        sample_z = z_list[inds]
-
         if n_x1c_star > 1:
-            minz = min(sample_z)*0.99999
-            maxz = max(sample_z)*1.00001
-            assert maxz > minz, "Only one redshift? " + str(sample)
-
             for j in range(n_x1c_star):
                 coeffs = zeros(n_x1c_star, dtype=float64)
                 coeffs[j] = 1
-                ifn = interp1d(linspace(minz, maxz, n_x1c_star), coeffs, kind = 'linear')
-                redshift_coeffs[j].append(ifn(z_list[i]))
+            
+                ifn = interp1d(a_nodes, coeffs, kind = 'linear')
+
+                if separate_mass_x1c:
+                    redshift_coeffs[j].append(ifn(a_list[i])*p_high_mass[i])
+                    redshift_coeffs[n_x1c_star + j].append(ifn(a_list[i])*(1. - p_high_mass[i]))
+                else:
+                    redshift_coeffs[j].append(ifn(a_list[i]))
+
         else:
-            redshift_coeffs[0].append(1.)
-    #plt.figure(2)
-    #for i in range(len(z_list)):
-    #    for j in range(4):
-    #        plt.plot(z_list[i], redshift_coeffs[j][i], '.', color = 'bcgr'[j])
-    #plt.savefig("redshift_coeffs.pdf")
+            if separate_mass_x1c:
+                redshift_coeffs[0].append(p_high_mass[i])
+                redshift_coeffs[1].append(1. - p_high_mass[i])
+            else:
+                redshift_coeffs[0].append(1.)
+
+    plt.figure(2)
+    for i in range(len(z_list)):
+        for j in range(actual_n_x1c_star):
+            plt.plot(z_list[i], redshift_coeffs[j][i], '.', color = "C" + str(j))
+    plt.savefig("redshift_coeffs.pdf")
+    plt.close()
     
     return transpose(array(redshift_coeffs))
+
 
 def zcount(z, zmin, zmax):
     return sum((array(z) >= zmin)*(array(z) < zmax))
@@ -448,13 +466,22 @@ def init_fn():
     n_samples = len(the_data["sample_names"])
     print("n_sne ", n_sne)
     print("n_samples ", n_samples)
+
+    if stan_data["cosmo_model"] == 2:
+        mu_init = 43.2 + 5*np.log10(np.array(stan_data["zbins"])*(1. + np.array(stan_data["zbins"])))
+        
+    else:
+        mu_init = np.zeros(stan_data["n_zbins"], dtype=np.float64)
+        
             
     return {"MB": random.random(size = [(n_samples - 1)*stan_data["MB_by_sample"] + 1])*0.2 - 19.1,
             "Om": 0.3,
             "wDE": -1.01,
+            "mu_zbins": mu_init,
             "alpha_angle": arctan(random.random()*0.2),
             "beta_angle_blue": arctan(random.random()*0.5 + 2.5),
-            "beta_angle_red": arctan(random.random()*0.5 + 2.5),
+            "beta_angle_red_low": arctan(random.random()*0.5 + 2.5),
+            "beta_angle_red_high": arctan(random.random()*0.5 + 2.5),
             "log10_sigma_int": log10(random.random(size = n_samples)*0.1 + 0.1),
             "mBx1c_int_variance": [0.9, 0.05, 0.05],
             #"mass_0": 10,
@@ -466,15 +493,15 @@ def init_fn():
             "true_cB": random.random(size = n_sne)*0.02 - 0.01 + clip(the_data["c_list"]/2., -0.2, 1.0),
             "true_cR": random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0),
             "true_x1": random.random(size = n_sne)*0.2 - 0.1 + the_data["x1_list"],
-            
-            #"x1_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
-            "x1_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.5,
-            "tau_x1": -random.random(size = len(the_data["sample_names"])),
-            "c_star": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.05,
-            "log10_R_x1": random.random(size = n_samples)*0.5 - 0.25,
-            "log10_R_c": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.4 - 1.2,
-            "log10_tau_c": random.random(size = [len(the_data["sample_names"]), stan_data["n_x1c_star"]])*0.4 - 1.2,
 
+            "x1_star": random.random(size = stan_data["n_x1c_star"])*0.5,
+            "tau_x1": -random.random(size = stan_data["n_x1c_star"]),
+            "R_x1": random.random(size = stan_data["n_x1c_star"])*0.5 + 0.25,
+
+            "c_star": -random.random(size = stan_data["n_x1c_star"])*0.05,
+            "tau_c": random.random(size = stan_data["n_x1c_star"])*0.05,
+            "R_c": random.random(size = stan_data["n_x1c_star"])*0.05 + 0.02,
+            
             "outl_frac": random.random()*0.02 + 0.01,
             "mobs_cuts": stan_data["est_mobs_cuts"] + random.normal(size = n_samples)*0.1, "mobs_cut_sigmas": [0.5]*n_samples,
 
@@ -517,18 +544,20 @@ else:
 
     redshifts, redshifts_sort_fill, unsort_inds, nzadd = get_redshifts(the_data["z_CMB_list"])
 
-
-
+    p_high_mass = 0.5*(1. + erf((np.array(the_data["mass"]) - 10.)/(2. * np.array(the_data["mass_err"]))))
+    redshift_coeffs = get_redshift_coeffs(the_data["z_CMB_list"], params["n_x1c_star"], p_high_mass, params["separate_mass_x1c"])
+    
     stan_data = {"n_sne": n_sne, "nzadd": nzadd,
                  "n_samples": len(the_data["sample_names"]),
-                 "redshift_coeffs": get_redshift_coeffs(the_data["sample_list"], the_data["z_CMB_list"], params["n_x1c_star"]),
+                 "redshift_coeffs": redshift_coeffs,
                  "n_calib": len(the_data["calib_names"]),
                  "d_mBx1c_d_calib": the_data["d_mBx1c_dcalib_list"],
                  "calib_uncertainties": the_data["calib_uncertainties"],
-                 "n_x1c_star": params["n_x1c_star"], # 3 = quadratic in redshift with old approach
+                 "n_x1c_star": params["n_x1c_star"]*(1 + params["separate_mass_x1c"]), # 3 = 3 scale-factor nodes
                  "threeD_unexplained": params["threeD_unexplained"],
                  "mass": the_data["mass"],
                  "mass_err": the_data["mass_err"],
+                 "p_high_mass": p_high_mass,
                  "do_host_mass": params["do_host_mass"], "fix_Om": params["fix_Om"], "MB_by_sample": params["MB_by_sample"], 
                  # The +1 here is for Stan's indexing, which is from 1 not 0
                  "sample_list": the_data["sample_list"] + 1, "redshifts": redshifts, "redshifts_sort_fill": redshifts_sort_fill, "unsort_inds": unsort_inds,
@@ -663,6 +692,17 @@ except:
 
 #summarize_parameters(fit_params)
 
+try:
+    mu_cov = np.cov(fit_params["mu_zbins"].T)
+    whole_mat = np.zeros([len(mu_cov) + 1]*2, dtype=np.float64)
+    whole_mat[1:, 1:] = np.linalg.inv(mu_cov)
+    whole_mat[1:, 0] = np.median(fit_params["mu_zbins"], axis = 0)
+    whole_mat[0, 1:] = stan_data["zbins"]
+    
+    save_img(whole_mat, "mu_mat.fits")
+except:
+    print("Couldn't save whole_mat")
+
 
 try:
     samples_txt
@@ -670,10 +710,13 @@ try:
 except:
     pickle.dump(fit_params, gzip.open("samples.pickle", "wb"))
 
+    
 
 print("I hope you have a log file:")
 
 try:
-    print(fit)
+    print(fit.stansummary(digits_summary=5))
 except:
     print("Couldn't print fit! Something is very wrong!")
+
+

@@ -14,6 +14,7 @@ from astropy.io import ascii
 
 from adaptive_contour import adaptive_contour
 import sys
+import os
 
 
 
@@ -91,11 +92,11 @@ def get_miniscale(run_settings, global_fit):
 
 
 def binned_constraints(z_list, mu_list, mu_invcov, zbins):
-    f = fits.open("merged_vals_new_samps_base_w_plikHM_TTTEEE_lowl_lowE.fits")
+    f = fits.open(os.environ["UNITY"] + "/other_cosmology/merged_vals_new_samps_base_w_plikHM_TTTEEE_lowl_lowE.fits")
     merged_mat = f[0].data
     f.close()
     
-    ministart = [0.0, 0.022, 0.6, 0.3, 0.0] + [0.1]*len(zbins)
+    ministart = [0.0, 0.022, 0.7, 0.3, 0.0] + [0.5]*len(zbins)
     miniscale = [0.01, 0.001, 0.01, 0.01, 0.0] + [1.]*len(zbins)
 
 
@@ -111,7 +112,7 @@ def binned_constraints(z_list, mu_list, mu_invcov, zbins):
 
 
 def make_contours(z_list, mu_list, mu_invcov, model):
-    f = fits.open("merged_vals_new_samps_base_w_plikHM_TTTEEE_lowl_lowE.fits")
+    f = fits.open(os.environ["UNITY"] + "/other_cosmology/merged_vals_new_samps_base_w_plikHM_TTTEEE_lowl_lowE.fits")
     merged_mat = f[0].data
     f.close()
 
@@ -287,7 +288,7 @@ mu_invcov = dat[1:, 1:]
 BAO_data = load_BAO()
 
 
-#binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = [0.2, 0.5, 1.0])
+binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = [0.2, 0.5, 2.0])
 
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatw0wa")#"flatwCDM")#"LCDM")
