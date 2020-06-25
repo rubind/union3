@@ -250,7 +250,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
         all_xyz, grid_x, grid_y, grid_z = adaptive_contour(tmp_chi2fn, x_1D = run_settings["contour_xs"],
                                                            y_1D = run_settings["contour_ys"],
-                                                           contour_levels = np.array([2.29575, 6.18007, 11.8292]), max_depth = max_depth) # Nominal 5!
+                                                           contour_levels = np.sort(np.array([2.29575, 6.18007, 11.8292] + [1.0, 5.99146]*model.count("w0wa"))), max_depth = max_depth) # Nominal 5!
 
         all_grids[the_name] = (grid_x, grid_y, grid_z)
         
