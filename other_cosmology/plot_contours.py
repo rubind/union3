@@ -136,6 +136,9 @@ def make_contours(all_grids, BAO_Omh2):
 
 for fl in sys.argv[1:]:
     all_grids = pickle.load(open(fl, 'rb'))
+    for key in all_grids:
+        print(key)
+    print("Combined_minos", all_grids["Combined_minos"])
     make_contours(all_grids, BAO_Omh2 = 0)
     make_contours(all_grids, BAO_Omh2 = 1)
 

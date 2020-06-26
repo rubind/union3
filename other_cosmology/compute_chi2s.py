@@ -1,4 +1,4 @@
-from DavidsNM import miniNM_new
+from DavidsNM import miniNM_new, minos
 import pickle
 import numpy as np
 import tqdm
@@ -106,8 +106,28 @@ def binned_constraints(z_list, mu_list, mu_invcov, zbins):
 
     print(P)
     print(np.sqrt(np.diag(Cmat)))
-    
 
+
+
+def get_minos(bestP, bestF, run_settings):
+    this_minos = {}
+    
+    for i in range(1, len(bestP)):
+        this_miniscale = get_miniscale(run_settings, global_fit = 1)
+        
+        if this_miniscale[i] != 0:
+            this_miniscale[i] = 0.
+            dx = bestP*0.
+            dx[i] = 1
+            
+            minos_result_plus = minos([bestP.tolist()], [this_miniscale.tolist()], chi2fn = chi2fn, dx = 0.01, targetchi2 = bestF + 1., pos = i, minichi2 = bestF, passdata = run_settings)
+            print("minos_result_plus", minos_result_plus)
+            
+            minos_result_minus = minos([bestP.tolist()], [this_miniscale.tolist()], chi2fn = chi2fn, dx = -0.01, targetchi2 = bestF + 1., pos = i, minichi2 = bestF, passdata = run_settings)
+            print("minos_result_minus", minos_result_minus)
+
+            this_minos[run_settings["param_names"][i]] = [bestP[i], minos_result_plus[0], minos_result_minus[0]]
+    return this_minos
 
 
 
@@ -123,7 +143,8 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0., 0.1]),
                             fit_cosmo_inds = [3, 5],
                             fit_SN_inds = [0],
-                            fit_BAOCMB_inds = [1, 2])
+                            fit_BAOCMB_inds = [1, 2],
+                            param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w"])
         run_separate_contours = 1
     elif model == "LCDM":
         run_settings = dict(contour_xs = np.linspace(0., 1, 30),
@@ -132,7 +153,8 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0.03]),
                             fit_cosmo_inds = [3, 4],
                             fit_SN_inds = [0],
-                            fit_BAOCMB_inds = [1, 2])
+                            fit_BAOCMB_inds = [1, 2],
+                            param_names = ["MB", "O_bhh", "h", "Om", "Ok"])
         run_separate_contours = 1
     elif model == "flatw0wa":
         run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
@@ -141,7 +163,8 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0., 0.1, 0.1]),
                             fit_cosmo_inds = [5, 6],
                             fit_SN_inds = [0],
-                            fit_BAOCMB_inds = [1, 2])
+                            fit_BAOCMB_inds = [1, 2],
+                            param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w0", "wa"])
         run_separate_contours = 0
     elif model == "w0wa":
         run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
@@ -150,7 +173,8 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0.02, 0.1, 0.1]),
                             fit_cosmo_inds = [5, 6],
                             fit_SN_inds = [0],
-                            fit_BAOCMB_inds = [1, 2])
+                            fit_BAOCMB_inds = [1, 2],
+                            param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w0", "wa"])
         run_separate_contours = 0
     else:
         assert 0
@@ -170,7 +194,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         print("bestP", bestP)
         all_grids["SNe_chi2"] = bestF
         all_grids["SNe_fit"] = bestP
-        
+        all_grids["SNe_minos"] = get_minos(bestP, bestF, run_settings)
 
         run_settings.update(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0)
         bestP, bestF, NA = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
@@ -212,6 +236,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     all_grids["Combined_chi2"] = bestF_all
     all_grids["Combined_fit"] = bestP_all
     all_grids["Combined_cmat"] = bestC_all
+    all_grids["Combined_minos"] = get_minos(bestP_all, bestF_all, run_settings)
 
 
     run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0)
@@ -223,6 +248,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     all_grids["SNCMB_chi2"] = bestF_SNCMB
     all_grids["SNCMB_fit"] = bestP_SNCMB
     all_grids["SNCMB_cmat"] = bestC_SNCMB
+    all_grids["SNCMB_minos"] = get_minos(bestP_SNCMB, bestF_SNCMB, run_settings)
 
 
 
@@ -235,7 +261,8 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     all_grids["BAOCMB_chi2"] = bestF_BAOCMB
     all_grids["BAOCMB_fit"] = bestP_BAOCMB
     all_grids["BAOCMB_cmat"] = bestC_BAOCMB
-    
+    all_grids["BAOCMB_minos"] = get_minos(bestP_BAOCMB, bestF_BAOCMB, run_settings)
+
     
 
 
@@ -268,6 +295,8 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
 
     pickle.dump(all_grids, open("all_grids_" + model + "_" + SN_matrix.split(".fits")[0] + "_max=" + str(max_depth) + ".pickle", 'wb'))
+
+    
     
     
 
@@ -290,9 +319,9 @@ BAO_data = load_BAO()
 
 binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = [0.2, 0.5, 2.0])
 
+make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatwCDM")#"flatwCDM")#"LCDM")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatw0wa")#"flatwCDM")#"LCDM")
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatwCDM")#"flatwCDM")#"LCDM")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "LCDM")#"flatwCDM")#"LCDM")
 
 
