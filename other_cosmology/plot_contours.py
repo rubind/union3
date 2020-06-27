@@ -133,12 +133,43 @@ def make_contours(all_grids, BAO_Omh2):
     plt.savefig(plt_name, bbox_inches = 'tight', metadata=dict(Keywords = all_txt))
 
     
+    
+def make_latex_table(all_grids):
+    keys_to_look_for = ["SNe_minos", "SNCMB_minos", "BAOCMB_minos", "Combined_minos"]
+    labels = dict(SNe_minos = "SNe", SNCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", Combined_minos = "SNe+BAO+CMB")
+    param_order = ["h", "Om", "Ok", "w", "w0", "wa"]
+    fmt_strs = ["%.3f", "%.3f", "%.3f", "%.3f", "%.3f", "%.2f"]
+
+    these_latex_lines = ""
+    
+    for key in keys_to_look_for:
+        these_latex_lines += labels[key] + " "
+        if key in all_grids:
+            for param, fmt_str in zip(param_order, fmt_strs):
+                if param in all_grids[key]:
+                    this_conf = all_grids[key][param]
+                    these_latex_lines += (" &  $" + fmt_str + "^{+" + fmt_str + "}_{" + fmt_str + "}$ ") % tuple(this_conf)
+                else:
+                    these_latex_lines += " & \\nodata "
+            these_latex_lines += ' \\\\ \n'
+    return these_latex_lines
+
+
+
+model_labels = dict(w0wa = "Open $w_0$-$w_a$",
+                    flatw0wa = "Flat $w_0$-$w_a$",
+                    LCDM = "Open $\Lambda$CDM",
+                    flatwCDM = "Flat $w$CDM")
+
+all_latex_lines = ""
 
 for fl in sys.argv[1:]:
     all_grids = pickle.load(open(fl, 'rb'))
-    for key in all_grids:
-        print(key)
-    print("Combined_minos", all_grids["Combined_minos"])
+
+    all_latex_lines += "\cutinhead{" + model_labels[all_grids["model"]] + "}\n"
+    all_latex_lines += make_latex_table(all_grids)
+    
     make_contours(all_grids, BAO_Omh2 = 0)
     make_contours(all_grids, BAO_Omh2 = 1)
 
+print(all_latex_lines)
