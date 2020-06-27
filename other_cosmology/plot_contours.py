@@ -143,8 +143,9 @@ def make_latex_table(all_grids):
     these_latex_lines = ""
     
     for key in keys_to_look_for:
-        these_latex_lines += labels[key] + " "
         if key in all_grids:
+            these_latex_lines += labels[key] + " "
+
             for param, fmt_str in zip(param_order, fmt_strs):
                 if param in all_grids[key]:
                     this_conf = all_grids[key][param]
