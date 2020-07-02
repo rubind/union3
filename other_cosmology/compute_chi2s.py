@@ -36,7 +36,7 @@ def chi2fn(P, passdata):
             return 1e10
 
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w = P[5])
-    elif run_settings["model"] == "LCDM":
+    elif run_settings["model"] == "LCDM" or run_settings["model"] == "flatLCDM":
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4])
     elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa"):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
@@ -156,6 +156,16 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok"])
         run_separate_contours = 1
+    elif model == "flatLCDM":
+        run_settings = dict(contour_xs = np.linspace(0., 0.5, 30),
+                            contour_ys = np.linspace(0.5, 1.0, 31),
+                            ministart_fn = lambda x, y : [0, 0.022, y, x, 0.0],
+                            miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0.0]),
+                            fit_cosmo_inds = [2, 3],
+                            fit_SN_inds = [0],
+                            fit_BAOCMB_inds = [1, 2],
+                            param_names = ["MB", "O_bhh", "h", "Om", "Ok"])
+        run_separate_contours = 1
     elif model == "flatw0wa":
         run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
                             contour_ys = np.linspace(-3., 2., 25),
@@ -263,6 +273,19 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     all_grids["BAOCMB_cmat"] = bestC_BAOCMB
     all_grids["BAOCMB_minos"] = get_minos(bestP_BAOCMB, bestF_BAOCMB, run_settings)
 
+
+
+    
+    run_settings.update(include_SNe = 1, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0)
+    bestP_SNBAO, bestF_SNBAO, bestC_SNBAO = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
+                                                          miniscale = get_miniscale(run_settings, global_fit = 1),
+                                                          passdata = run_settings,
+                                                          chi2fn = chi2fn, verbose = False)
+    print("bestP_SNBAO", bestP_SNBAO)
+    all_grids["SNBAO_chi2"] = bestF_SNBAO
+    all_grids["SNBAO_fit"] = bestP_SNBAO
+    all_grids["SNBAO_cmat"] = bestC_SNBAO
+    all_grids["SNBAO_minos"] = get_minos(bestP_SNBAO, bestF_SNBAO, run_settings)
     
 
 
@@ -318,7 +341,7 @@ BAO_data = load_BAO()
 
 
 binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = [0.2, 0.5, 2.0])
-
+make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatLCDM")#"flatwCDM")#"LCDM")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatwCDM")#"flatwCDM")#"LCDM")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatw0wa")#"flatwCDM")#"LCDM")
