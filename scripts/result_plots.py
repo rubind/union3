@@ -76,7 +76,19 @@ def make_corner(keys, pltname):
     plt.savefig(resdir + pltname)
     plt.close()
 
+def make_kde_corner(keys, pltname):
+    labels = []
+    samples = []
+    latex_labels = {"delta_0": "Host-Mass\nLuminosity Offset $\delta_0$", "delta_beta_R": "Host-Mass\nColor Relation Offset $\delta_{\\beta}$"}
+    
+    for key in keys:
+        samples.append(fit_params[key])
+        labels.append(latex_labels[key])
+    kde_corner.kde_corner(np.array([samples]), labels, bw_method = 0.2)
+    plt.savefig(resdir + pltname, bbox_inches = 'tight')
+    plt.close()
 
+    
 def make_calib_corner(calib_keys, pltname):
     samples = []
     
@@ -106,7 +118,7 @@ def make_mB_vs_z():
     plt.close()
 
 
-def show_x1color_pop():
+def show_x1color_pop(log_scale):
     plt.figure(figsize = (16,48))
 
     fit_params["mean_c_by_SN"] = fit_params["c_star_by_SN"] + fit_params["tau_c_by_SN"]
@@ -149,8 +161,12 @@ def show_x1color_pop():
                             plt.text(stan_data["redshifts"][ind], stan_data["obs_mBx1c"][ind,1+c_not_x1], the_data["snpaths"][ind].split("/")[-1], size = 4)
 
                 plt.ylabel(label)
+                if log_scale:
+                    plt.xscale('log')
+
+                
     plt.xlabel("Redshift")
-    plt.savefig(resdir + "x1color_pop_model.pdf", bbox_inches = 'tight')
+    plt.savefig(resdir + "x1color_pop_model" + "_log"*log_scale + ".pdf", bbox_inches = 'tight')
     plt.close()
 
 
@@ -206,7 +222,7 @@ def make_Hubble_diagram(use_obs_color):
     print(fit_params["model_mBx1c_cov"].shape)
     med_model_mBx1c_cov = median(fit_params["model_mBx1c_cov"], axis = 0)
     
-    one_alpha_negbeta = [1., median(fit_params["alpha"]), -0.5*median(fit_params["beta_B"]) -0.5*median(fit_params["beta_R"])]
+    one_alpha_negbeta = [1., median(fit_params["alpha"]), -0.5*median(fit_params["beta_B"]) -0.5*median(fit_params["beta_R_low"])]
     print("one_alpha_negbeta", one_alpha_negbeta)
     dmus = sqrt(array([dot(one_alpha_negbeta, dot(med_model_mBx1c_cov[i], one_alpha_negbeta))
                   for i in range(stan_data["n_sne"])
@@ -415,7 +431,7 @@ def get_label_dict():
     return label_dict
 
 def plot_sample_mag_limits():
-    plt.figure(figsize = (6,8))
+    plt.figure(figsize = (6,0.75*stan_data["n_samples"]))
 
     for i in range(stan_data["n_samples"]):
         if stan_data["n_samples"] > 1:
@@ -427,7 +443,11 @@ def plot_sample_mag_limits():
                       i - 0.3, label_dict["mobs_cuts"][i], ha = 'center')
         plt.plot(mobs_165084[1], i + 0.2, '.', color = 'k')
             
-        plt.plot(the_data["est_mobs_cuts"][i], i + 0.4, '.', color = 'r', label = (i == 0)*"Prior")
+        plt.plot(the_data["est_mobs_cuts"][i], i + 0.4, '.', color = 'r')
+        plt.plot([the_data["est_mobs_cuts"][i] - 0.5, the_data["est_mobs_cuts"][i] + 0.5], [i + 0.4]*2, color = 'r', label = (i == 0)*"Prior")
+        print("PRIOR WIDTH HACK!!!!"*100)
+
+    plt.ylim(-0.5, stan_data["n_samples"] - 0.5)
     plt.yticks([])
     plt.legend(loc = 'best')
     plt.xlabel("Limiting Mag (Observer-Frame)")
@@ -493,6 +513,10 @@ fit_params = pickle.load(gzip.open(sample_fl, 'rb'))
 (the_data, stan_data, params) = pickle.load(gzip.open(input_fl, 'rb'))
 print("Done!", time.asctime())
 
+fit_params["beta_R"] = 0.5*(fit_params["beta_R_low"] + fit_params["beta_R_high"])
+fit_params["delta_beta_R"] = fit_params["beta_R_high"] - fit_params["beta_R_low"]
+
+
 for key in ["obs_mBx1c"]:
     stan_data[key] = array(stan_data[key])
 
@@ -503,7 +527,8 @@ for key in label_dict:
 isoutl = count_outliers()
 
 make_mB_vs_z()
-show_x1color_pop()
+show_x1color_pop(log_scale = 0)
+show_x1color_pop(log_scale = 1)
 
 plot_sample_mag_limits()
 
@@ -522,13 +547,26 @@ else:
         
 
 
-unc_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
+unc_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
 
 
 make_calib_corner(["MWEBV_multnorm", "MWEBV_addnorm"], "MWEBV_corner.pdf")
 
-make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_betaR", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
-make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_betaR", "MB-delta_0", "delta_0", "delta_h", "outl_frac"], "Om_MBhigh_coeffs.pdf")
+
+make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
+make_corner(["delta_beta_R", "delta_0", "delta_h"], "host_coeffs.pdf")
+
+try:
+    import kde_corner
+    run_kde = 1
+except:
+    run_kde = 0
+
+if run_kde:
+    make_kde_corner(["delta_beta_R", "delta_0"], "host_coeffs_kde.pdf")
+    
+make_corner(["delta_beta_R", "delta_0", "delta_h"], "host_coeffs.pdf")
+make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB-delta_0", "delta_0", "delta_h", "outl_frac"], "Om_MBhigh_coeffs.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas"], "Om_mB_cut.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "MB", "beta_B", "beta_R", "delta_betaR"], "Om_mB_cut_beta.pdf")
 make_corner(["Om", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c"], "Om_mB_cut_cpop.pdf")

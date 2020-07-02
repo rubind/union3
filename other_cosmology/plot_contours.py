@@ -66,7 +66,7 @@ def make_contours(all_grids, BAO_Omh2):
     
     if all_grids["model"] == "flatwCDM":
         plt.figure(figsize = (5,5))
-    elif (all_grids["model"] == "flatw0wa") or (all_grids["model"] == "w0wa"):
+    elif (all_grids["model"] == "flatw0wa") or (all_grids["model"] == "w0wa") or (all_grids["model"] == "flatLCDM"):
         plt.figure(figsize = (5,5))
         DETF_FoM = get_DETF(all_grids)
         DETF_FoM_txt = "\nDETF FoM: %.2f" % DETF_FoM
@@ -103,6 +103,11 @@ def make_contours(all_grids, BAO_Omh2):
         plt.ylabel("$w$")
         plt_name = "Om-w%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
 
+    elif all_grids["model"] == "flatLCDM":
+        plt.xlabel("$\Omega_m$")
+        plt.ylabel("$h$")
+        plt_name = "Om-h%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
+        
     elif all_grids["model"] == "flatw0wa":
         plt.xlabel("$w_0$")
         plt.ylabel("$w_a$")
@@ -135,8 +140,8 @@ def make_contours(all_grids, BAO_Omh2):
     
     
 def make_latex_table(all_grids):
-    keys_to_look_for = ["SNe_minos", "SNCMB_minos", "BAOCMB_minos", "Combined_minos"]
-    labels = dict(SNe_minos = "SNe", SNCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", Combined_minos = "SNe+BAO+CMB")
+    keys_to_look_for = ["SNe_minos", "SNCMB_minos", "BAOCMB_minos", "SNBAO_minos", "Combined_minos"]
+    labels = dict(SNe_minos = "SNe", SNBAO_minos = "SNe+BAO+$\Omega_b h^2$", SNCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", Combined_minos = "SNe+BAO+CMB")
     param_order = ["h", "Om", "Ok", "w", "w0", "wa"]
     fmt_strs = ["%.3f", "%.3f", "%.3f", "%.3f", "%.3f", "%.2f"]
 
@@ -157,7 +162,8 @@ def make_latex_table(all_grids):
 
 
 
-model_labels = dict(w0wa = "Open $w_0$-$w_a$",
+model_labels = dict(flatLCDM = "Flat $\Lambda$CDM",
+                    w0wa = "Open $w_0$-$w_a$",
                     flatw0wa = "Flat $w_0$-$w_a$",
                     LCDM = "Open $\Lambda$CDM",
                     flatwCDM = "Flat $w$CDM")

@@ -32,6 +32,7 @@ data {
     vector [n_calib] calib_uncertainties;
     vector [n_sne] mass;
     vector [n_sne] mass_err;
+    vector [n_sne] p_high_mass;
 
     int nzadd;
     real redshifts_sort_fill [2*(n_sne + nzadd) - 1];
@@ -63,14 +64,6 @@ transformed data {
     vector [n_gauss] exp_approx_pos = [0.10329973984501734, 0.41080906196995237, 1.083137332416308, 2.427349566890827]';
     vector [n_gauss] exp_approx_width = [0.06596419371844692, 0.1910889454034621, 0.45516250820784515, 1.0637414822809306]';
 
-    vector [n_sne] p_high_mass;
-    real mass_0 = 10.;
-
-    for (i in 1:n_sne) {
-	p_high_mass[i] <- 0.5 + 0.5*erf((mass[i] - mass_0)/(sqrt(2.)*mass_err[i]));
-    }
-
-    print("p_high_mass ", p_high_mass);
 
     // vector [n_gauss] exp_approx_norm = [0.24410438, 0.43274856, 0.32314706]';
     // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
@@ -91,7 +84,8 @@ parameters {
     vector [n_samples*MB_by_sample + 1*(1 - MB_by_sample)] MB;
     real <lower = -0.2, upper = 0.3> alpha_angle;
     real <lower = -1.4, upper = 1.4> beta_angle_blue;
-    real <lower = -1.4, upper = 1.4> beta_angle_red;
+    real <lower = -1.4, upper = 1.4> beta_angle_red_low;
+    real <lower = -1.4, upper = 1.4> beta_angle_red_high;
     // real <lower = 9, upper = 11> mass_0;
     real delta_0;
     real <lower = 0, upper = 1> delta_h;
@@ -107,14 +101,18 @@ parameters {
     vector [n_sne] true_cB;
     vector [n_sne] true_cR;
 
-    matrix [n_samples, n_x1c_star] x1_star;
-    vector <lower= -2.0, upper = 0.5> [n_samples] log10_R_x1;
-    vector <lower = -3, upper = 3> [n_samples] tau_x1;
 
-    matrix <lower = -0.4, upper = 0.4> [n_samples, n_x1c_star] c_star;
-    matrix <lower = -2.0, upper = -0.5> [n_samples, n_x1c_star] log10_R_c;
-    matrix <lower = -2.0, upper = -0.5> [n_samples, n_x1c_star] log10_tau_c;
+    // Population parameters:
+  
+    vector [n_x1c_star] x1_star;
+    vector <lower= 0, upper = 2> [n_x1c_star] R_x1;
+    vector [n_x1c_star] tau_x1;
 
+    vector [n_x1c_star] c_star;
+    vector <lower= 0, upper = 0.2> [n_x1c_star] R_c;
+    vector [n_x1c_star] tau_c;
+
+    //
 
     vector [n_calib] calibs;
 
@@ -138,16 +136,12 @@ transformed parameters {
 
     real alpha;
     real beta_B;
-    real beta_R;
-    real dbeta;
+    real beta_R_high;
+    real beta_R_low;
 
     real alpha_eff;
     real beta_eff;
-    real delta_eff;
-
-    vector [n_samples] R_x1;
-    matrix [n_samples, n_x1c_star] R_c;
-    matrix [n_samples, n_x1c_star] tau_c;
+    real p_high_mass_eff;
 
     vector [n_sne] x1_star_by_SN;
     vector [n_sne] R_x1_by_SN;
@@ -229,10 +223,6 @@ transformed parameters {
 
     // -------------End numerical integration---------------
 
-    R_x1 <- exp(log(10.) * log10_R_x1);
-    R_c <- exp(log(10.) * log10_R_c);
-    tau_c <- exp(log(10.) * log10_tau_c);
-
 
     model_mBx1c_cov <- obs_mBx1c_cov;
     model_mBx1c_cov_outl <- obs_mBx1c_cov;
@@ -241,11 +231,13 @@ transformed parameters {
     alpha <- tan(alpha_angle);
     
     if (do_twoalphabeta == 0) {
-        beta_B <- tan(beta_angle_red);
-        beta_R <- tan(beta_angle_red);
+        beta_B <- tan(beta_angle_red_low);
+        beta_R_low <- tan(beta_angle_red_low);
+        beta_R_high <- tan(beta_angle_red_low);
     } else {
         beta_B <- tan(beta_angle_blue);
-        beta_R <- tan(beta_angle_red);
+        beta_R_low <- tan(beta_angle_red_low);
+        beta_R_high <- tan(beta_angle_red_high);
     }
 
     for (i in 1:n_samples) {
@@ -265,9 +257,9 @@ transformed parameters {
     for (i in 1:n_sne) {
 
         if (do_host_mass == 1) {
-	    delta_eff <- delta_0*((  1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i]))  ) + delta_h);
+	    p_high_mass_eff = (1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i])) + delta_h)*p_high_mass[i];
         } else {
-            delta_eff <- 0;
+            p_high_mass_eff = 0;
         }
 
         for (j in 1:3) {
@@ -276,13 +268,13 @@ transformed parameters {
 	model_mBx1c_cov_outl[i][1,1] <- model_mBx1c_cov_outl[i][1,1] + outl_mBx1c_uncertainties[1]^2;
 
 
-        x1_star_by_SN[i] <- dot_product(x1_star[sample_list[i]], redshift_coeffs[i]);
-        R_x1_by_SN[i] <- R_x1[sample_list[i]];
-        tau_x1_by_SN[i] <- tau_x1[sample_list[i]];
+        x1_star_by_SN[i] = dot_product(x1_star, redshift_coeffs[i]);
+        R_x1_by_SN[i] = dot_product(R_x1, redshift_coeffs[i]);
+        tau_x1_by_SN[i] = dot_product(tau_x1, redshift_coeffs[i]);
 
-        R_c_by_SN[i] <- dot_product(R_c[sample_list[i]], redshift_coeffs[i]);
-        c_star_by_SN[i] <- dot_product(c_star[sample_list[i]], redshift_coeffs[i]);
-        tau_c_by_SN[i] <- dot_product(tau_c[sample_list[i]], redshift_coeffs[i]);
+        c_star_by_SN[i] = dot_product(c_star, redshift_coeffs[i]);
+        R_c_by_SN[i] = dot_product(R_c, redshift_coeffs[i]);
+        tau_c_by_SN[i] = dot_product(tau_c, redshift_coeffs[i]);
 
         if (MB_by_sample == 1) {
             this_MB <- MB[sample_list[i]];
@@ -290,11 +282,11 @@ transformed parameters {
             this_MB <- MB[1];
         }
 
-	mobs_by_SN_except_c_R[i] <- this_MB + model_mu[i] + mobs_cut0[i] - alpha*x1_star_by_SN[i] + (beta_B + mobs_cut1[i])*c_star_by_SN[i] - 0.5*delta_eff;
-	mobs_var_by_SN_except_c_R[i] <- mobs_cut_sigmas[sample_list[i]]^2 + model_mBx1c_cov[i][1,1] + (alpha*R_x1_by_SN[i])^2 + ((beta_B + mobs_cut1[i])*R_c_by_SN[i])^2 + 0.25*delta_eff^2;
+	mobs_by_SN_except_c_R[i] <- this_MB + model_mu[i] + mobs_cut0[i] - alpha*x1_star_by_SN[i] + (beta_B + mobs_cut1[i])*c_star_by_SN[i] - delta_0*p_high_mass_eff;
+	mobs_var_by_SN_except_c_R[i] <- mobs_cut_sigmas[sample_list[i]]^2 + model_mBx1c_cov[i][1,1] + (alpha*R_x1_by_SN[i])^2 + ((beta_B + mobs_cut1[i])*R_c_by_SN[i])^2;
 
 
-        model_mBx1c[i][1] <- this_MB + model_mu[i] - alpha*true_x1[i] + beta_B*true_cB[i] + beta_R*true_cR[i] - delta_eff*p_high_mass[i];
+        model_mBx1c[i][1] <- this_MB + model_mu[i] - alpha*true_x1[i] + beta_B*true_cB[i] + (beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff)*true_cR[i] - delta_0*p_high_mass_eff;
         model_mBx1c[i][2] <- true_x1[i];
         model_mBx1c[i][3] <- true_cB[i] + true_cR[i];
 
@@ -310,7 +302,7 @@ transformed parameters {
 
 
         for (g_ind in 1:n_gauss) { // gauss ind
-            tmploglike_c[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], exp_approx_width[g_ind]*tau_c_by_SN[i]);
+            tmploglike_c[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], abs(exp_approx_width[g_ind]*tau_c_by_SN[i]));
             tmploglike_x1[g_ind] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_x1_by_SN[i])^2 + R_x1_by_SN[i]^2));
         }
 
@@ -326,10 +318,10 @@ transformed parameters {
 	    for (g_indc in 1:n_gauss) {
 	        this_norm_LL += exp_approx_norm[g_indx]*exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]], //  + d_mBx1c_d_calib[i][1] * calibs
 		
-											      mobs_by_SN_except_c_R[i] + (beta_R + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i] - alpha*exp_approx_pos[g_indx]*tau_x1_by_SN[i],
+											      mobs_by_SN_except_c_R[i] + ((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i] - alpha*exp_approx_pos[g_indx]*tau_x1_by_SN[i],
 											   
                                                       	                                      sqrt(mobs_var_by_SN_except_c_R[i]
-											      + ((beta_R + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2
+											      + (((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2
 											      + (alpha*exp_approx_width[g_indx]*tau_x1_by_SN[i])^2)   );
 	    }
 	}
@@ -355,7 +347,6 @@ transformed parameters {
 	//      ", ", beta_B,
 	//      ", ", beta_R,
 	//      ", ", c_star_by_SN[i],
-	//      ", ", 0.5*delta_eff,
 	//      ", ", mobs_cut_sigmas[sample_list[i]],
 	//      ", ", model_mBx1c_cov[i][1,1],
 	//      ", ", R_x1_by_SN[i],
@@ -397,12 +388,14 @@ model {
         Om ~ normal(0.3, 0.001);
     }
 
-    for (i in 1:n_samples) {
-        x1_star[i] ~ normal(0, 1);
-        tau_x1[i] ~ normal(-1, 2);
-        tau_c[i] ~ normal(0, 0.2);
-    	c_star[i] ~ normal(0, 0.2);
-    }
+    x1_star ~ normal(0., 2.);
+    tau_x1 ~ normal(-1., 2.);
+    R_x1 ~ normal(1, 2);
+
+    c_star  ~ normal(-0.1, 0.2);
+    tau_c ~ normal(0.1, 0.2);
+    R_c ~ normal(0.1, 0.2);
+    
 
     if (do_twoalphabeta == 0) {
        beta_angle_blue ~ normal(0, 1);

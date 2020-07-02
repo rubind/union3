@@ -27,7 +27,7 @@ lensing_disp		0.055
 MWEBV_zeropoint_EBV	0.005
 outl_frac		0.02
 calib_errs		
-n_x1c_star		1
+n_x1c_star		5
 electron_coeff		[0.0039,0.001]
 IG_extinction_coeff	1.
 

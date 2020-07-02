@@ -59,7 +59,7 @@ def get_params(paramfl):
             "iter", "chains", "n_jobs",
             "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color", "min_color", "max_MWEBV",
             "min_redshift", "max_redshift", "n_x1c_star",
-            "do_blind", "do_twoalphabeta", "outl_frac", "remap_x1",
+            "do_blind", "do_twoalphabeta", "separate_mass_x1c", "outl_frac", "remap_x1",
             "stan_code", "pec_vel_disp", "lensing_disp", "MWEBV_zeropoint_EBV", "electron_coeff", "IG_extinction_coeff",
             "sample_file",
             "do_host_mass", "fix_Om", "MB_by_sample", "include_pec_cov", "threeD_unexplained"
