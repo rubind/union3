@@ -149,7 +149,7 @@ def make_latex_table(all_grids):
     
     for key in keys_to_look_for:
         if key in all_grids:
-            these_latex_lines += labels[key] + " "
+            these_latex_lines += labels[key] + " & %.1f " % all_grids[key.replace("_minos", "_chi2")]
 
             for param, fmt_str in zip(param_order, fmt_strs):
                 if param in all_grids[key]:
