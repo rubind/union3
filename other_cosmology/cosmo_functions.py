@@ -104,10 +104,14 @@ def load_BAO():
     lines = f.read().split('\n')
     f.close()
 
+    lines = [line for line in lines if len(line.split(None)) > 1]
+    
     cov_mat = []
     for line in lines[1:]:
         cov_mat.append([float(item) for item in line.split(None)[6:]])
     cov_mat = np.array(cov_mat)
+
+    print("cov_mat", cov_mat)
     assert cov_mat.shape[0] == cov_mat.shape[1]
     assert (np.isclose(cov_mat - cov_mat.T, 0)).all()
     w_mat = np.linalg.inv(cov_mat)
@@ -160,7 +164,6 @@ def get_BAO_chi2(BAO_data, cosmo, verbose = False):
     c_mat = np.linalg.inv(BAO_data["w_mat"])
     uncs = np.sqrt(np.diag(c_mat))
     #print(resid/uncs)
-    chi2 = np.dot(resid/uncs, resid/uncs)
 
         
     return chi2
