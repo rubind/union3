@@ -137,7 +137,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     f.close()
 
     if model == "flatwCDM":
-        run_settings = dict(contour_xs = np.linspace(0., 0.5, 30),
+        run_settings = dict(contour_xs = np.linspace(0.0001, 0.5, 30),
                             contour_ys = np.linspace(-2., 0., 31),
                             ministart_fn = lambda x, y : [0, 0.022, 0.7, x, 0.0, y],
                             miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0., 0.1]),
