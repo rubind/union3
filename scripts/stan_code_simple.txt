@@ -94,7 +94,7 @@ parameters {
     real <lower = -2, upper = 0> wDE;
     vector [n_zbins] mu_zbins;
 
-    real <lower=-2.0, upper = -0.3> log10_sigma_int[n_samples];
+    real <lower=0.01, upper = 0.3> sigma_int[n_samples];
     simplex [3] mBx1c_int_variance;
 
     vector [n_sne] true_x1;
@@ -242,11 +242,11 @@ transformed parameters {
 
     for (i in 1:n_samples) {
         if (threeD_unexplained == 1) {
-            sig_int_vector[i][1] <- sqrt(mBx1c_int_variance[1])*pow(10, log10_sigma_int[i]);        // This vector is in dispersion, not variance
-            sig_int_vector[i][2] <- sqrt(mBx1c_int_variance[2])*pow(10, log10_sigma_int[i])/0.13;
-            sig_int_vector[i][3] <- sqrt(mBx1c_int_variance[3])*pow(10, log10_sigma_int[i])/(-3.);
+            sig_int_vector[i][1] <- sqrt(mBx1c_int_variance[1])*sigma_int[i];        // This vector is in dispersion, not variance
+            sig_int_vector[i][2] <- sqrt(mBx1c_int_variance[2])*sigma_int[i]/0.13;
+            sig_int_vector[i][3] <- sqrt(mBx1c_int_variance[3])*sigma_int[i]/(-3.);
         } else {
-            sig_int_vector[i][1] <- pow(10, log10_sigma_int[i]);        // This vector is in dispersion, not variance
+            sig_int_vector[i][1] <- sigma_int[i];        // This vector is in dispersion, not variance
             sig_int_vector[i][2] <- 0.;
             sig_int_vector[i][3] <- 0.;
         }

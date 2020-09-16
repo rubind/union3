@@ -4,6 +4,8 @@ from numpy import *
 from FileRead import readcol
 from scipy.interpolate import interp1d
 import os
+import tqdm
+import sys
 
 UNITY = os.environ["UNITY"]
 
@@ -13,22 +15,45 @@ def do_it(cmd):
 
 
 
+sim_sel_effects = int(sys.argv[1])
+fit_sel_effects = int(sys.argv[2])
+sim_sig_int = int(sys.argv[3])
+sim_two_beta = int(sys.argv[4])
+fit_two_beta = int(sys.argv[5])
+k_correct = int(sys.argv[6])
+
+
+
 nsne = [300, 150, 150]
-sel_fl = ["SDSS_r_selection.txt", "SDSS_r_selection.txt", "SDSS_i_selection.txt"]
+if k_correct:
+    sel_fl = ["SDSS_r_selection.txt", "SDSS_r_selection.txt", "SDSS_i_selection.txt"]
+else:
+    sel_fl = ["No_k_correct.txt"]*3
 datasetnames = ["Nearby", "SDSS", "SNLS"]
-mag_limits = [18.5, 21., 24.]
+if sim_sel_effects:
+    mag_limits = [18.5, 21., 24.]
+else:
+    mag_limits = [21., 24., 27.]
 max_z = [0.1, 0.5, 1.0]
 
 dc = 0.03
 dx1 = 0.3
 dm = 0.03
-sig_unexpl = 0.1
+
+if sim_sig_int:
+    sig_unexpl = 0.1
+else:
+    sig_unexpl = 0.
+
 beta_unexpl = 3.1 # For converting magnitude to color
-beta_B = 2.
-beta_R = 4.
+if sim_two_beta:
+    beta_B = 2.
+    beta_R = 4.
+else:
+    beta_B = 3.1
+    beta_R = 3.1
 
-
-for sim_ind in range(100):
+for sim_ind in tqdm.trange(0, 400):
     sim_wd = "simulated_data_runs/sim_%03i/" % sim_ind
     subprocess.getoutput("rm -fr " + sim_wd)
     subprocess.getoutput("mkdir -p " + sim_wd)
@@ -53,7 +78,7 @@ filenamelist            ["Nearby_sim.txt","SDSS_sim.txt","SNLS_sim.txt"]
 
 weird_sn_list           "weird_sn_list.txt"
 mag_cut                 "mag_cuts.txt"
-stan_code               "$UNITY/scripts/stan_code_simple.txt"
+    stan_code               '$UNITY/scripts/""" + "stan_code_simple_fixsel.txt"*(fit_sel_effects == 2) + "stan_code_simple.txt"*(fit_sel_effects == 1) + (fit_sel_effects == 0)*"stan_code_simple_no_sel.txt" + """'
 sample_file             "None"
 
 
@@ -79,7 +104,7 @@ electron_coeff          [0.0039,0.001]
 IG_extinction_coeff     1.
 
 
-do_twoalphabeta         1
+do_twoalphabeta         """ + str(fit_two_beta) + """
 threeD_unexplained      1
 
 
@@ -213,4 +238,4 @@ Check                                  All|All|All               All            
         f1.close()
 
     
-    ffffff
+
