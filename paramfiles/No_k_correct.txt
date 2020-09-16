@@ -1,0 +1,4 @@
+#redshift  mobs = mB + col2 + col3*c
+-0.000100  0.0  0.0
+3.0 0.0 0.0
+
