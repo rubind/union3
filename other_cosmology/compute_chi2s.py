@@ -147,8 +147,8 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w"])
         run_separate_contours = 1
     elif model == "LCDM":
-        run_settings = dict(contour_xs = np.linspace(0., 1, 30),
-                            contour_ys = np.linspace(0., 1.5, 45),
+        run_settings = dict(contour_xs = np.linspace(0., 1, 30)**1.5,
+                            contour_ys = np.linspace(0., 1.31, 45)**1.5,
                             ministart_fn = lambda x, y : [0, 0.022, 0.7, x, 1 - x - y],
                             miniscale_all = np.array([0.02, 0.001, 0.01, 0.02, 0.03]),
                             fit_cosmo_inds = [3, 4],

@@ -99,7 +99,7 @@ model {
     mobs_cut_sigma ~ normal(0.5, 0.25);
 
 
-    c_star  ~ normal(0.1, 0.2);
+    c_star  ~ normal(0.0, 0.2);
     R_c ~ normal(0.1, 0.2);
 }
 """
