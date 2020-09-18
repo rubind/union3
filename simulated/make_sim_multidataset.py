@@ -149,7 +149,7 @@ separate_mass_x1c       1""")
         
         x1s = random.normal(size = nsne[samp_ind]*10)*0.5 + 0.5 - random.exponential(size = nsne[samp_ind]*10)*(0.5 + high_mass)
 
-        mBs = -19.1 + mus -0.14*x1s + 4.*cRs + 2.*cBs # - (masses > 10.)*0.08
+        mBs = -19.1 + mus -0.14*x1s + beta_R*cRs + beta_B*cBs # - (masses > 10.)*0.08
 
         obs_cs = cBs + cRs + random.normal(size = nsne[samp_ind]*10)*dc + random.normal(size = nsne[samp_ind]*10)*c_sig_int
         obs_x1s = x1s + random.normal(size = nsne[samp_ind]*10)*dx1
