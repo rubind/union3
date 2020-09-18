@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 import os
 import tqdm
 import sys
+import time
 
 UNITY = os.environ["UNITY"]
 
@@ -22,6 +23,7 @@ sim_two_beta = int(sys.argv[4])
 fit_two_beta = int(sys.argv[5])
 k_correct = int(sys.argv[6])
 
+print("sim_sel_effects, fit_sel_effects, sim_sig_int, sim_two_beta, fit_two_beta, k_correct", sim_sel_effects, fit_sel_effects, sim_sig_int, sim_two_beta, fit_two_beta, k_correct)
 
 
 nsne = [300, 150, 150]
@@ -238,4 +240,26 @@ Check                                  All|All|All               All            
         f1.close()
 
     
+    pwd = subprocess.getoutput("pwd")
+
+    
+    f = open("tmp.sh", 'w')
+    f.write("""#!/bin/bash
+#SBATCH --job-name=unity
+#SBATCH --partition=shared
+#SBATCH --time=1-00:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=8G # Memory per node my job requires
+#SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
+#SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
+source ~/.bash_profile
+pip install pystan --user
+""")
+    f.write("cd " + pwd + "/" + sim_wd + '\n')
+    f.write("python $UNITY/scripts/read_and_sample.py paramfile.txt 1 > log.txt\n")
+    f.close()
+        
+    subprocess.getoutput("sbatch tmp.sh")
+    time.sleep(0.25)
 
