@@ -104,6 +104,7 @@ def binned_constraints(z_list, mu_list, mu_invcov, zbins):
     
     P, F, Cmat = miniNM_new(ministart = ministart, miniscale = miniscale, chi2fn = chi2fn, passdata = run_settings)
 
+    print("Binned:")
     print(P)
     print(np.sqrt(np.diag(Cmat)))
 
@@ -340,7 +341,7 @@ mu_invcov = dat[1:, 1:]
 BAO_data = load_BAO()
 
 
-binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = [0.2, 0.5, 2.0])
+binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = [0.2, 0.5, 2.0, 4.0])
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatLCDM")#"flatwCDM")#"LCDM")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatwCDM")#"flatwCDM")#"LCDM")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")

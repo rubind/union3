@@ -3,6 +3,9 @@ use("PDF")
 import pickle
 from numpy import *
 import numpy as np
+import multiprocessing
+multiprocessing.set_start_method("fork")
+
 import pystan
 import sys
 import os

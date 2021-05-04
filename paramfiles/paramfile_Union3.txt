@@ -37,7 +37,7 @@ threeD_unexplained	1
 
 
 
-iter			1000
+iter			2000
 n_jobs			4
 chains			4
 
@@ -45,4 +45,5 @@ do_host_mass		1
 fix_Om			0
 MB_by_sample		0
 include_pec_cov		1
+separate_mass_x1c	1
 
