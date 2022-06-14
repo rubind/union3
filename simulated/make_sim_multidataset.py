@@ -23,7 +23,8 @@ sim_two_beta = int(sys.argv[4])
 fit_two_beta = int(sys.argv[5])
 k_correct = int(sys.argv[6])
 
-print("sim_sel_effects, fit_sel_effects, sim_sig_int, sim_two_beta, fit_two_beta, k_correct", sim_sel_effects, fit_sel_effects, sim_sig_int, sim_two_beta, fit_two_beta, k_correct)
+print("sim_sel_effects, fit_sel_effects, sim_sig_int, sim_two_beta, fit_two_beta, k_correct",
+      sim_sel_effects, fit_sel_effects, sim_sig_int, sim_two_beta, fit_two_beta, k_correct)
 
 
 nsne = [300, 150, 150]
@@ -31,6 +32,7 @@ if k_correct:
     sel_fl = ["SDSS_r_selection.txt", "SDSS_r_selection.txt", "SDSS_i_selection.txt"]
 else:
     sel_fl = ["No_k_correct.txt"]*3
+
 datasetnames = ["Nearby", "SDSS", "SNLS"]
 if sim_sel_effects:
     mag_limits = [18.5, 21., 24.]
