@@ -323,7 +323,7 @@ class CosConst():
     cH70 = cH100 - 5.*np.log10(0.7)
     Hinv100 = 9.77813 # Gyrs
 
-    O_gammahh = 2.469e-5 # Komatsu 2008
-    O_radhh = (1. + 0.2271*3.04)*O_gammahh # Komatsu 2008
-    O_bhh = 0.02258 # Komatsu 2008, note that marginalizing over z_star is similar to marginalizing over O_bhh, so sometimes okay to fix
+    O_gammahh = 0.000024729 #2.469e-5 # Komatsu 2009
+    O_radhh = (1. + 0.2271*3.04)*O_gammahh # Komatsu 2009
+    O_bhh = 0.02258 # Komatsu 2009, note that marginalizing over z_star is similar to marginalizing over O_bhh, so sometimes okay to fix
 
