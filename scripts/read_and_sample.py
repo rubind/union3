@@ -17,7 +17,7 @@ from scipy.interpolate import interp1d
 import gzip
 from FileRead import readcol
 from astropy.io import fits
-from DavidsNM import save_img
+from DavidsNM import save_img#, miniNM_new
 from scipy.special import erf
 
 
@@ -402,6 +402,50 @@ def get_redshift_coeffs(z_list, n_x1c_star, p_high_mass, separate_mass_x1c):
 def zcount(z, zmin, zmax):
     return sum((array(z) >= zmin)*(array(z) < zmax))
 
+"""
+def zbins_chi2fn(P, alldata):
+    z = alldata[0]
+
+    dbin = P[1:] - P[:-1]
+    if dbin.min() < 0.02:
+        return 1e100
+    if dbin.max() > 0.2:
+        return 1e100
+
+    zmean = 0.5*(P[1:] + P[:-1])
+
+    should_be_const = dbin/(1. + zmean)
+    should_be_const -= np.mean(should_be_const)
+
+    chi2 = np.dot(should_be_const, should_be_const)
+
+    
+    for i in range(len(P) - 1):
+        nsne = zcount(z, P[i], P[i+1])
+        chi2 += (nsne < 10.)*(nsne - 10.)**10.
+        chi2 += (nsne > 100.)*((nsne - 100.)/20.)**2.
+
+    return chi2
+"""
+
+def get_equal_a_bins(z, n_to_add):
+    ministart = np.linspace(0, 1, 30 - n_to_add)
+
+    if n_to_add == 0:
+        zbins = -1. + (   1 + z.max() + 0.001   )**ministart * (   1 + z.min() - 0.001   )**(1. - ministart)
+        return zbins
+    else:
+        highest_X = np.sort(stan_data["redshifts"])
+
+        zbins = -1. + (   1 + highest_X[-10*n_to_add - 1]   )**ministart * (   1 + z.min() - 0.001   )**(1. - ministart)
+
+        for i in range(n_to_add):
+            zbins = np.append(zbins, highest_X[-10*n_to_add + (i + 1)*10 - 1] + 0.001)
+        zbins[-1] += 0.001
+        
+        return zbins
+        
+
 def add_zbins(stan_data, cosmo_model):
     # For binned mu
     
@@ -416,15 +460,39 @@ def add_zbins(stan_data, cosmo_model):
         
         return stan_data
 
+    n_to_add = 0
+    good_bins = 0
+
+    while good_bins == 0:
+        zbins = get_equal_a_bins(stan_data["redshifts"], n_to_add)
+        n_to_add += 1
+
+        good_bins = 1
+        for i in range(len(zbins) - 1):
+            if zcount(stan_data["redshifts"], zbins[i], zbins[i+1]) < 10:
+                good_bins = 0
+                print("bad_bins!", zbins)
+                
+                print("n_to_add for zbins", n_to_add)
+                
+    #zbins, NA, NA = miniNM_new(ministart = ministart,
+    #                           miniscale = np.array([0.] + [0.1]*28 + [0.]),
+    #                           chi2fn = zbins_chi2fn, passdata = stan_data["redshifts"], maxiter = 5000, maxruncount = 100, compute_Cmat = False)
+
+    stan_data["zbins"] = zbins
+    
+    """
     stan_data["zbins"] = [0.99999*stan_data["redshifts"].min()]
 
     while max(stan_data["zbins"]) < max(stan_data["redshifts"]):
-        zstep = 0.125
-        while (zcount(stan_data["redshifts"], stan_data["zbins"][-1], stan_data["zbins"][-1]*exp(zstep)) < 10.) and (stan_data["zbins"][-1]*exp(zstep) < stan_data["redshifts"].max()):
+        #zstep = 0.125
+        zstep = 0.02*(1. + stan_data["zbins"][-1])
+        while (zcount(stan_data["redshifts"], stan_data["zbins"][-1], stan_data["zbins"][-1] + zstep) < 10.) and (stan_data["zbins"][-1] + zstep < stan_data["redshifts"].max()):
             zstep *= 1.5
 
-        stan_data["zbins"].append(stan_data["zbins"][-1]*exp(zstep) + 0.001)
-
+        #stan_data["zbins"].append(stan_data["zbins"][-1]*exp(zstep) + 0.001)
+        stan_data["zbins"].append(stan_data["zbins"][-1] + zstep)
+    """
 
 
     stan_data["n_zbins"] = len(stan_data["zbins"])
@@ -435,8 +503,9 @@ def add_zbins(stan_data, cosmo_model):
     f.close()
 
     plt.figure()
-    plt.hist(stan_data["redshifts"])
+    plt.hist(stan_data["redshifts"], bins = 20)
     plt.plot(stan_data["zbins"], [100]*stan_data["n_zbins"], '.', color = 'k')
+    plt.yscale('log')
     plt.savefig("redshift_binning.pdf")
     plt.close()
 

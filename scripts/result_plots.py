@@ -34,9 +34,15 @@ def get_sample_names_colors():
 
 
 def get_label(key, sh, j=None, k=None):
+    print("get_label", key, sh, j, k)
+    
     if len(sh) == 2:
-        return key + "_" + str(label_dict.get(key, [j]*(j + 1))[j]
-                               )
+        try:
+            return key + "_" + str(label_dict.get(key, [j]*(j + 1))[j]
+                                   )
+        except:
+            return key
+        
     elif len(sh) == 3:
         return key + "_" + str(label_dict.get(key, [[(j,k)]*(k + 1)]*(j + 1))[j][k]
         )
@@ -204,7 +210,7 @@ def make_Hubble_diagram(use_obs_color):
            - median(fit_params["MB"])
            )
 
-    zlabels = array([0.1, 0.4, 0.9, 1.5])
+    zlabels = array([0.17, 0.35, 0.95, 1.65])
     mulabels = 5*log10((1. + zlabels)*(1.00875*zlabels - 0.271648*zlabels**2. + 0.0340072*zlabels**3. + 0.000441432*zlabels**4.)) + 42.
     mustep = 0.5
 
@@ -415,8 +421,10 @@ def unc_analysis(explain, keys):
 
 def get_label_dict():
     label_dict = {}
+    dataset_names = [the_data["sample_names"][i].split("/")[-1].replace("_v1.txt", "") for i in range(stan_data["n_samples"])]
+    
     for key in ["mobs_cuts", "mobs_cut_sigmas", "MB"]:
-        label_dict[key] = [the_data["sample_names"][i].split("/")[-1].replace("_v1.txt", "") for i in range(stan_data["n_samples"])]
+        label_dict[key] = dataset_names
 
     label_dict["calibs"] = the_data["calib_names"]
 
@@ -425,13 +433,15 @@ def get_label_dict():
 
         for i in range(stan_data["n_samples"]):
             label_dict[key].append([])
+                
             for j in range(stan_data["n_x1c_star"]):
-                label_dict[key][i].append(label_dict["mobs_cuts"][i] + "_" + str(j))
+                label_dict[key][i].append(dataset_names[i] + "_" + str(j))
 
     return label_dict
 
+
 def plot_sample_mag_limits():
-    plt.figure(figsize = (6,0.75*stan_data["n_samples"]))
+    plt.figure(figsize = (6,0.5*stan_data["n_samples"]))
 
     for i in range(stan_data["n_samples"]):
         if stan_data["n_samples"] > 1:
@@ -440,7 +450,7 @@ def plot_sample_mag_limits():
             mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"], [15.8655, 50., 84.1345])
         plt.plot(mobs_165084, [i + 0.2]*3, color = 'k', label = (i == 0)*"Posterior")
         plt.text(mean(mobs_165084[::2]),
-                      i - 0.3, label_dict["mobs_cuts"][i], ha = 'center')
+                      i - 0.2, label_dict["mobs_cuts"][i], ha = 'center')
         plt.plot(mobs_165084[1], i + 0.2, '.', color = 'k')
             
         plt.plot(the_data["est_mobs_cuts"][i], i + 0.4, '.', color = 'r')
@@ -449,6 +459,11 @@ def plot_sample_mag_limits():
 
     plt.ylim(-0.5, stan_data["n_samples"] - 0.5)
     plt.yticks([])
+
+    xticks, NA = plt.xticks()
+    for xtick in xticks:
+        plt.axvline(xtick, color = 'k', linestyle = ":")
+    
     plt.legend(loc = 'best')
     plt.xlabel("Limiting Mag (Observer-Frame)")
     plt.savefig(resdir + "Mag_limits.pdf", bbox_inches = 'tight')
@@ -479,7 +494,7 @@ def diagnositics_plot():
     plt.figure(figsize = (4, stan_data["n_samples"]*0.5))
 
     for i in range(stan_data["n_samples"]):
-        sigint = 10.**fit_params["log10_sigma_int"][:,i]
+        sigint = fit_params["sigma_int"][:,i]
         
         sigint_cred = scoreatpercentile(sigint, [15.8655, 50., 84.1345])
         
@@ -509,8 +524,19 @@ subprocess.getoutput("mkdir " + resdir)
 #commands.getoutput("rm -f " + resdir + "*")
 
 print("Reading at ", time.asctime())
-fit_params = pickle.load(gzip.open(sample_fl, 'rb'))
-(the_data, stan_data, params) = pickle.load(gzip.open(input_fl, 'rb'))
+try:
+    fit_params = pickle.load(open(sample_fl, 'rb'))
+except:
+    fit_params = pickle.load(gzip.open(sample_fl, 'rb'))
+
+for key in fit_params:
+    print("fit_params", key, fit_params[key].shape)
+    
+try:
+    (the_data, stan_data, params) = pickle.load(open(input_fl, 'rb'))
+except:
+    (the_data, stan_data, params) = pickle.load(gzip.open(input_fl, 'rb'))
+
 print("Done!", time.asctime())
 
 fit_params["beta_R"] = 0.5*(fit_params["beta_R_low"] + fit_params["beta_R_high"])

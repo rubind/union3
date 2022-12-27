@@ -105,12 +105,12 @@ parameters {
     // Population parameters:
   
     vector [n_x1c_star] x1_star;
-    vector <lower= 0, upper = 2> [n_x1c_star] R_x1;
+    vector <lower= 0.1, upper = 2> [n_x1c_star] R_x1;
     vector [n_x1c_star] tau_x1;
 
     vector [n_x1c_star] c_star;
-    vector <lower= 0, upper = 0.2> [n_x1c_star] R_c;
-    vector [n_x1c_star] tau_c;
+    vector <lower= 0.01, upper = 0.2> [n_x1c_star] R_c;
+    vector [n_x1c_star] tau_c; // This doesn't actually have to be positive. If it's negative, the color distribution will have negative skew.
 
     //
 

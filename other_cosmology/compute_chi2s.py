@@ -54,6 +54,8 @@ def chi2fn(P, passdata):
         chi2 += np.dot(resid, np.dot(run_settings["mu_invcov"], resid))
     if run_settings["include_CMB"]:
         chi2 += Planck18_CMB_chi2(cosmo, run_settings["merged_mat"])
+    if run_settings["include_H0"]:
+        chi2 += ((cosmo["h"]*100. - 72.53)/0.99)**2.
     if run_settings["include_BAO"]:
         chi2 += get_BAO_chi2(BAO_data, cosmo)
         if run_settings["include_CMB"] or run_settings["include_O_mh2"]:
@@ -91,7 +93,7 @@ def get_miniscale(run_settings, global_fit):
     return miniscale
 
 
-def binned_constraints(z_list, mu_list, mu_invcov, zbins):
+def binned_constraints(z_list, mu_list, mu_invcov, zbins, include_BAO):
     f = fits.open(os.environ["UNITY"] + "/other_cosmology/merged_vals_new_samps_base_w_plikHM_TTTEEE_lowl_lowE.fits")
     merged_mat = f[0].data
     f.close()
@@ -100,13 +102,13 @@ def binned_constraints(z_list, mu_list, mu_invcov, zbins):
     miniscale = [0.01, 0.001, 0.01, 0.01, 0.0] + [1.]*len(zbins)
 
 
-    run_settings = dict(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "binnedrho", merged_mat = merged_mat, zbins = zbins, include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0)
+    run_settings = dict(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "binnedrho", merged_mat = merged_mat, zbins = zbins, include_SNe = 1, include_CMB = 1, include_BAO = include_BAO, include_O_mh2 = 0)
     
     P, F, Cmat = miniNM_new(ministart = ministart, miniscale = miniscale, chi2fn = chi2fn, passdata = run_settings)
 
     print("Binned:")
     print(P)
-    print(np.sqrt(np.diag(Cmat)))
+    print("bins", zbins, "include_BAO", include_BAO, "uncertainties", np.sqrt(np.diag(Cmat)))
 
 
 
@@ -197,7 +199,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
 
     if run_separate_contours:
-        run_settings.update(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0)
+        run_settings.update(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0)
         bestP, bestF, NA = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                          miniscale = get_miniscale(run_settings, global_fit = 1),
                                          passdata = run_settings,
@@ -207,7 +209,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         all_grids["SNe_fit"] = bestP
         all_grids["SNe_minos"] = get_minos(bestP, bestF, run_settings)
 
-        run_settings.update(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0)
+        run_settings.update(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0)
         bestP, bestF, NA = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                       miniscale = get_miniscale(run_settings, global_fit = 1),
                                       passdata = run_settings,
@@ -217,7 +219,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         all_grids["CMB_fit"] = bestP
 
         
-        run_settings.update(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 1)
+        run_settings.update(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 1, include_H0 = 0)
         bestP, bestF, NA = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                       miniscale = get_miniscale(run_settings, global_fit = 1),
                                       passdata = run_settings,
@@ -227,7 +229,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         all_grids["BAO_Omh2_fit"] = bestP
 
 
-        run_settings.update(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0)
+        run_settings.update(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0)
         bestP, bestF, NA = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                       miniscale = get_miniscale(run_settings, global_fit = 1),
                                       passdata = run_settings,
@@ -237,8 +239,20 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         all_grids["BAO_fit"] = bestP
 
 
+    run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0)
+    bestP_all, bestF_all, bestC_all = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
+                                                 miniscale = get_miniscale(run_settings, global_fit = 1),
+                                                 passdata = run_settings,
+                                                 chi2fn = chi2fn, verbose = False)
+    print("bestP_all", bestP_all)
+    all_grids["SNeBAOCMB_chi2"] = bestF_all
+    all_grids["SNeBAOCMB_fit"] = bestP_all
+    all_grids["SNeBAOCMB_cmat"] = bestC_all
+    all_grids["SNeBAOCMB_minos"] = get_minos(bestP_all, bestF_all, run_settings)
+
+        
     
-    run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0)
+    run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 1)
     bestP_all, bestF_all, bestC_all = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                                  miniscale = get_miniscale(run_settings, global_fit = 1),
                                                  passdata = run_settings,
@@ -250,7 +264,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     all_grids["Combined_minos"] = get_minos(bestP_all, bestF_all, run_settings)
 
 
-    run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0)
+    run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0)
     bestP_SNCMB, bestF_SNCMB, bestC_SNCMB = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                                        miniscale = get_miniscale(run_settings, global_fit = 1),
                                                        passdata = run_settings,
@@ -263,7 +277,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
 
 
-    run_settings.update(include_SNe = 0, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0)
+    run_settings.update(include_SNe = 0, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0)
     bestP_BAOCMB, bestF_BAOCMB, bestC_BAOCMB = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                                           miniscale = get_miniscale(run_settings, global_fit = 1),
                                                           passdata = run_settings,
@@ -277,7 +291,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
 
     
-    run_settings.update(include_SNe = 1, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0)
+    run_settings.update(include_SNe = 1, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0)
     bestP_SNBAO, bestF_SNBAO, bestC_SNBAO = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                                           miniscale = get_miniscale(run_settings, global_fit = 1),
                                                           passdata = run_settings,
@@ -290,10 +304,10 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     
 
 
-    for include_dict, the_name in [[dict(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0), "SNe"],
-                                   [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 1), "BAO_Omh2"],
-                                   [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0), "BAO"],
-                                   [dict(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0), "CMB"]]*run_separate_contours + [[dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0), "Combined"]]:
+    for include_dict, the_name in [[dict(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0), "SNe"],
+                                   [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 1, include_H0 = 0), "BAO_Omh2"],
+                                   [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0), "BAO"],
+                                   [dict(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0), "CMB"]]*run_separate_contours + [[dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0), "Combined"]]:
         run_settings.update(include_dict)
         tmp_chi2fn = lambda x, y: miniNM_new(ministart = run_settings["ministart_fn"](x, y), miniscale = get_miniscale(run_settings, global_fit = 0),
                                              passdata = run_settings,
@@ -301,7 +315,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
         all_xyz, grid_x, grid_y, grid_z = adaptive_contour(tmp_chi2fn, x_1D = run_settings["contour_xs"],
                                                            y_1D = run_settings["contour_ys"],
-                                                           contour_levels = np.sort(np.array([2.29575, 6.18007, 11.8292] + [1.0, 5.99146]*model.count("w0wa"))), max_depth = max_depth) # Nominal 5!
+                                                           contour_levels = np.sort(np.array([2.29575, 6.18007, 11.8292] + [1.0, 5.99146]*model.count("w0wa"))), max_depth = max_depth) # Nominal max_depth = 5!
 
         all_grids[the_name] = (grid_x, grid_y, grid_z)
         
@@ -318,7 +332,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         plt.close()
 
 
-    pickle.dump(all_grids, open("all_grids_" + model + "_" + SN_matrix.split(".fits")[0] + "_max=" + str(max_depth) + ".pickle", 'wb'))
+    pickle.dump(all_grids, open("all_grids_" + model + "_" + SN_matrix.split(".fits")[0].split("/")[-1] + "_max=" + str(max_depth) + ".pickle", 'wb'))
 
     
     
@@ -338,14 +352,26 @@ mu_list = dat[1:, 0]
 z_list = dat[0, 1:]
 mu_invcov = dat[1:, 1:]
 
+print("BLINDED!!!!!"*100)
+mu_list = get_mu(z_list, cosmo = dict(model = "flatLCDM", O_bhh = 0.022, h = 0.67, O_m = 0.31, O_k = 0.))
+
+                 
 BAO_data = load_BAO()
 
+"""
+for include_BAO in [0, 1]:
+    for zbins in [[0.2, 0.5, 1.0, 2.0],
+                  [0.2, 0.5, 2.0, 4.0],
+                  [0.5, 1.0, 2.0],
+                  [0.5, 1.0, 2.2],
+                  [0.5, 2.0, 4.0],
+                  [0.2, 0.5, 1.0, 2.0, 4.0]]:
+        binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = zbins, include_BAO = include_BAO)
+"""
 
-binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = [0.2, 0.5, 2.0, 4.0])
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatLCDM")#"flatwCDM")#"LCDM")
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatwCDM")#"flatwCDM")#"LCDM")
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatw0wa")#"flatwCDM")#"LCDM")
+make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatwCDM")#"flatwCDM")#"LCDM")
+make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatLCDM")#"flatwCDM")#"LCDM")
+make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")
 make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "LCDM")#"flatwCDM")#"LCDM")
-
 

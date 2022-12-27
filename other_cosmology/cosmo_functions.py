@@ -314,7 +314,11 @@ def mu_to_z(mu_list, cosmo): # I'll have to generalize this later
     return ifn(mu_list)
 
 
+def no_big_bang(Om): # For Omega_m-Omega_Lambda
+     return 1 - Om + (3*Om**(4./3.))/(2.*(1 + np.sqrt(1 - 2*Om) - Om)**(1./3.)) + (3*((1 + np.sqrt(1 - 2*Om) - Om)*Om**2)**(1./3.))/2.
 
+assert np.isclose(no_big_bang(0.1), 27./20)
+assert np.isclose(no_big_bang(0.5), 2.)
 
 class CosConst():
     c = 299792458. # c / (100 km/s/Mpc) / (10 pc) = 299792458
