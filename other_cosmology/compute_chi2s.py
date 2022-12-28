@@ -258,10 +258,10 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                                                  passdata = run_settings,
                                                  chi2fn = chi2fn, verbose = False)
     print("bestP_all", bestP_all)
-    all_grids["Combined_chi2"] = bestF_all
-    all_grids["Combined_fit"] = bestP_all
-    all_grids["Combined_cmat"] = bestC_all
-    all_grids["Combined_minos"] = get_minos(bestP_all, bestF_all, run_settings)
+    all_grids["SNeBAOCMBH0_chi2"] = bestF_all
+    all_grids["SNeBAOCMBH0_fit"] = bestP_all
+    all_grids["SNeBAOCMBH0_cmat"] = bestC_all
+    all_grids["SNeBAOCMBH0_minos"] = get_minos(bestP_all, bestF_all, run_settings)
 
 
     run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0)
@@ -307,7 +307,10 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     for include_dict, the_name in [[dict(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0), "SNe"],
                                    [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 1, include_H0 = 0), "BAO_Omh2"],
                                    [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0), "BAO"],
-                                   [dict(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0), "CMB"]]*run_separate_contours + [[dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0), "Combined"]]:
+                                   [dict(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0), "CMB"]]*run_separate_contours + [
+                                       [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0), "SNeBAOCMB"],
+                                       [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 1), "SNeBAOCMBH0"]]:
+
         run_settings.update(include_dict)
         tmp_chi2fn = lambda x, y: miniNM_new(ministart = run_settings["ministart_fn"](x, y), miniscale = get_miniscale(run_settings, global_fit = 0),
                                              passdata = run_settings,
@@ -342,7 +345,12 @@ print("python compute_chi2s.py mu_mat.fits 4")
 
 SN_matrix = sys.argv[1]
 max_depth = int(sys.argv[2])
+try:
+    models_to_run = sys.argv[3:]
+except:
+    models_to_run = ["flatw0wa", "flatwCDM", "flatLCDM", "w0wa", "LCDM"]
 
+print("models_to_run", models_to_run)
 
 f = fits.open(SN_matrix)
 dat = f[0].data
@@ -369,9 +377,6 @@ for include_BAO in [0, 1]:
         binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = zbins, include_BAO = include_BAO)
 """
 
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatw0wa")#"flatwCDM")#"LCDM")
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatwCDM")#"flatwCDM")#"LCDM")
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "flatLCDM")#"flatwCDM")#"LCDM")
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "w0wa")
-make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "LCDM")#"flatwCDM")#"LCDM")
+for model_to_run in models_to_run:
+    make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = model_to_run)#"flatwCDM")#"LCDM")
 

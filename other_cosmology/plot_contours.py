@@ -197,8 +197,8 @@ def make_contours(all_grids, BAO_Omh2):
     
     
 def make_latex_table(all_grids):
-    keys_to_look_for = ["SNe_minos", "SNCMB_minos", "BAOCMB_minos", "SNBAO_minos", "Combined_minos"]
-    labels = dict(SNe_minos = "SNe", SNBAO_minos = "SNe+BAO+$\Omega_b h^2$", SNCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", Combined_minos = "SNe+BAO+CMB")
+    keys_to_look_for = ["SNe_minos", "SNCMB_minos", "BAOCMB_minos", "SNBAO_minos", "SNeBAOCMB_minos", "Combined_minos"]
+    labels = dict(SNe_minos = "SNe", SNBAO_minos = "SNe+BAO+$\Omega_b h^2$", SNCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", SNeBAOCMB_minos = "SNe+BAO+CMB", Combined_minos = "SNe+BAO+CMB+$H_0$")
     param_order = [["h"], ["Om"], ["Ok"], ["w", "w0"], ["wa"]]
     fmt_strs = ["%.3f", "%.3f", "%.3f", "%.3f", "%.2f"]
 

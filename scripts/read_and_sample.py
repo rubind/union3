@@ -13,6 +13,7 @@ import os
 import matplotlib.pyplot as plt
 from scipy.stats import scoreatpercentile
 import helper_functions
+import Spectra
 from scipy.interpolate import interp1d
 import gzip
 from FileRead import readcol
@@ -127,10 +128,9 @@ def read_data(params):
             this_colorerr = helper_functions.read_param(snpath + "/result_salt2.dat", "Color", ind = 2)
             this_x1 = helper_functions.read_param(snpath + "/result_salt2.dat", "X1", ind = 1)
             this_x1_err = helper_functions.read_param(snpath + "/result_salt2.dat", "X1", ind = 2)
-            try:
-                this_check = helper_functions.read_param(snpath + "/result_deriv.dat", "Check", ind = 4)
-            except:
-                this_check = 1000
+
+            this_check = Spectra.check_derivs(snpath)
+
 
             if this_x1_err == None:
                 this_x1 = 100.
@@ -152,11 +152,12 @@ def read_data(params):
                            this_redshift_cmb <= params["max_redshift"][current_sample],
                            this_firstphase <= params["max_firstphase"],
                            this_lastphase >= params["min_lastphase"],
+                           this_firstphase + 10 < this_lastphase,
                            this_colorerr < params["max_color_uncertainty"],
                            this_color < params["max_color"],
                            this_color > params["min_color"],
                            this_MWEBV <= params["max_MWEBV"],
-                           weird_sn == None, abs(log(this_check)) < 0.1, abs(this_x1) + this_x1_err < 5]
+                           weird_sn == None, this_check, abs(this_x1) + this_x1_err < 5]
             okay_names = ["min_z", "max_z", "first_p", "last_p", "colorerr", "colorcut", "weirdsn", "converge", "x1"]
 
             f_read.write('\t'.join([
