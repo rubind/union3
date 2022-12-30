@@ -1,11 +1,13 @@
 # union3
 Union3/UNITY1.5 repo
 
+# Need to set these environment variables:
+
 ```export UNITY=path/to/union3```
 
 ```export UNION=path/to/lcfits```
 
-For the LC fits:
+# For making the LC fits:
 
 ```python parse_nearby.py paramfile_default.txt```
 
@@ -17,7 +19,7 @@ From the Union3 directory, run:
 
 ```python $PATHMODEL/python_code/tmpfit.py 0 4 1```
 
-For regenerating the bulk-flow eigenvectors: from BulkFlow/Public/Run_Example2
+# For regenerating the bulk-flow eigenvectors: from BulkFlow/Public/Run_Example2
 
 ```python step1_make_Union3.py```
 
