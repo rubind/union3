@@ -39,16 +39,16 @@ def get_colors(key):
 
 
 def get_DETF(all_grids):
-    dx = all_grids["Combined"][0][1:] - all_grids["Combined"][0][:-1]
+    dx = all_grids["SNeBAOCMB"][0][1:] - all_grids["SNeBAOCMB"][0][:-1]
     assert np.isclose(dx, dx[0]).all()
-    dy = all_grids["Combined"][1][1:] - all_grids["Combined"][1][:-1]
+    dy = all_grids["SNeBAOCMB"][1][1:] - all_grids["SNeBAOCMB"][1][:-1]
     assert np.isclose(dy, dy[0]).all()
 
 
     plt.figure(2)
     
     for cut_val in np.linspace(6.15, 6.21, 100):
-        included_points = float((all_grids["Combined"][2] <= cut_val).sum())
+        included_points = float((all_grids["SNeBAOCMB"][2] <= cut_val).sum())
         included_area = included_points*dx[0]*dy[0]
 
         plt.plot(cut_val, 1./included_area, '.', color = 'b')
@@ -56,7 +56,7 @@ def get_DETF(all_grids):
     plt.savefig("DETF_evaluation.pdf")
     plt.close()
         
-    included_points = float((all_grids["Combined"][2] <= 6.18007).sum())
+    included_points = float((all_grids["SNeBAOCMB"][2] <= 6.18007).sum())
     included_area = included_points*dx[0]*dy[0]
     
     DETF_FoM = 1./included_area
@@ -100,7 +100,7 @@ def make_contours(all_grids, BAO_Omh2):
         plt.contourf(all_grids[BAO_key][0], all_grids[BAO_key][1], all_grids[BAO_key][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("green"), zorder = 0 + 2.5*(all_grids["model"] == "LCDM"))
         plt.contourf(all_grids["CMB"][0], all_grids["CMB"][1], all_grids["CMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("orange"), zorder = 1)
         plt.contourf(all_grids["SNe"][0], all_grids["SNe"][1], all_grids["SNe"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("blue"), zorder = 2)
-        plt.contourf(all_grids["Combined"][0], all_grids["Combined"][1], all_grids["Combined"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("gray"), zorder = 3)
+        plt.contourf(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("gray"), zorder = 3)
         
         
         plt.contour(all_grids["SNe"][0], all_grids["SNe"][1], all_grids["SNe"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25, zorder = 4)
@@ -110,8 +110,8 @@ def make_contours(all_grids, BAO_Omh2):
         if BAO_Omh2:
             return 0
         
-        plt.contourf(all_grids["Combined"][0], all_grids["Combined"][1], all_grids["Combined"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("teal"))
-        plt.contour(all_grids["Combined"][0], all_grids["Combined"][1], all_grids["Combined"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25)
+        plt.contourf(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("teal"))
+        plt.contour(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25)
 
         
 
@@ -187,7 +187,7 @@ def make_contours(all_grids, BAO_Omh2):
     else:
         assert 0
 
-    all_txt = "All: " + str(all_grids["Combined_fit"]) + " " + str(np.sqrt(np.diag(all_grids["Combined_cmat"]))) + '\n'
+    all_txt = "All: " + str(all_grids["SNeBAOCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["SNeBAOCMB_cmat"]))) + '\n'
     all_txt += "SN+CMB: " + str(all_grids["SNCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["SNCMB_cmat"]))) + '\n'
     all_txt += "BAO+CMB: " + str(all_grids["BAOCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["BAOCMB_cmat"])))
     all_txt += DETF_FoM_txt
@@ -197,8 +197,8 @@ def make_contours(all_grids, BAO_Omh2):
     
     
 def make_latex_table(all_grids):
-    keys_to_look_for = ["SNe_minos", "SNCMB_minos", "BAOCMB_minos", "SNBAO_minos", "SNeBAOCMB_minos", "Combined_minos"]
-    labels = dict(SNe_minos = "SNe", SNBAO_minos = "SNe+BAO+$\Omega_b h^2$", SNCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", SNeBAOCMB_minos = "SNe+BAO+CMB", Combined_minos = "SNe+BAO+CMB+$H_0$")
+    keys_to_look_for = ["SNe_minos", "SNCMB_minos", "BAOCMB_minos", "SNBAO_minos", "SNeBAOCMB_minos", "SNeBAOCMBH0_minos"]
+    labels = dict(SNe_minos = "SNe", SNBAO_minos = "SNe+BAO+$\Omega_b h^2$", SNCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", SNeBAOCMB_minos = "SNe+BAO+CMB", SNeBAOCMBH0_minos = "SNe+BAO+CMB+$H_0$")
     param_order = [["h"], ["Om"], ["Ok"], ["w", "w0"], ["wa"]]
     fmt_strs = ["%.3f", "%.3f", "%.3f", "%.3f", "%.2f"]
 
