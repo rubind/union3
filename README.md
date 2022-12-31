@@ -9,11 +9,23 @@ Union3/UNITY1.5 repo
 
 # For making the LC fits:
 
+From Union3_Photometry:
+
 ```python parse_nearby.py paramfile_default.txt```
 
-Note that NB99_also_contains_non_X-CALIBUR_magsys/AB_Landolt.py contains the color-transformed magnitude systems.
+If a host galaxy or redshift is missing from the json, use:
 
-For magnitude systems and instruments: edit the original_* files in $PATHMODEL. Then run python_code/shiftfilters.py if you want to be able to use snfit (as opposed to SALT3.py).
+```python make_list_of_hosts.py LSQ14fep 0.06 0.01 PESSTO```
+
+or
+
+```python make_list_of_hosts.py LSQ13aiz "ESO 576-17"```
+
+# For updating filters or magnitude systems (magsys):
+
+Union3_Photometry/NB99_also_contains_non_X-CALIBUR_magsys/AB_Landolt.py contains the color-transformed magnitude systems.
+
+For magnitude systems and instruments: edit the original_* files in $PATHMODEL. Then run python_code/shiftfilters.py to make the files that are actually read in by SALT.
 
 From the Union3 directory, run:
 
