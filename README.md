@@ -21,15 +21,17 @@ or
 
 ```python make_list_of_hosts.py LSQ13aiz "ESO 576-17"```
 
+From the Union3 directory, run:
+
+```python $PATHMODEL/python_code/tmpfit.py 0 4 1```
+
+where 4 is the number of LC fits to do at once.
+
 # For updating filters or magnitude systems (magsys):
 
 Union3_Photometry/NB99_also_contains_non_X-CALIBUR_magsys/AB_Landolt.py contains the color-transformed magnitude systems.
 
 For magnitude systems and instruments: edit the original_* files in $PATHMODEL. Then run python_code/shiftfilters.py to make the files that are actually read in by SALT.
-
-From the Union3 directory, run:
-
-```python $PATHMODEL/python_code/tmpfit.py 0 4 1```
 
 # For regenerating the bulk-flow eigenvectors: from BulkFlow/Public/Run_Example2
 
