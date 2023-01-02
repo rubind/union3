@@ -50,8 +50,8 @@ def read_data(params):
                 
                 "efflambs": {}, # Filter wavelengths
                 "calib_names": [], # Name of each systematic uncertainty
-                "calib_uncertainties": [], # Name of each systematic uncertainty
-                "d_mBx1c_dcalib_list": zeros([3000,3,500], dtype=float64), # This is an inefficient way to do this, but this is initialized to fixed size, then trimmed later.
+                
+                "d_mBx1c_dcalib_list": zeros([3000,3,1000], dtype=float64), # This is an inefficient way to do this, but this is initialized to fixed size, then trimmed later.
 
                 "photoz_inds": [],
                 "d_mBx1c_dz_list": [],
@@ -77,7 +77,25 @@ def read_data(params):
     bulk_eig = fbulk[0].data
     fbulk.close()
 
+    f_cal = open(os.environ["UNITY"] + "/paramfiles/calibration_uncertainties.txt", 'r')
+    lines = f_cal.read().split('\n')
+    f_cal.close()
+    calibration_uncertainties = {}
+    for line in lines:
+        parsed = line.split(":")
+        if len(parsed) == 2:
+            parsed = [item.strip() for item in parsed]
+            calibration_uncertainties[eval(parsed[0])] = float(parsed[1])
+    
 
+    calibration_uncertainties["MWEBV_multnorm"] = 1.
+    calibration_uncertainties["MWEBV_addnorm"] = 1.
+    calibration_uncertainties["electron_scattering"] = 1.
+    calibration_uncertainties["IG_extinction"] = 1.
+
+    for key in calibration_uncertainties:
+        print("calibration_uncertainties", key, calibration_uncertainties[key])
+                                      
     assert len(bulk_eig[0]) == len(bulk_RA)
 
     for current_sample, directory in enumerate(filenamelist):
@@ -242,14 +260,14 @@ def read_data(params):
                     print("Weird supernova!", snpath)
 
                 dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", res_der_fl = snpath + "/result_deriv.dat", params = params)
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = [1.])
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
 
                 dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = snpath + "/result_deriv.dat", params = params)
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = [1.])
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
 
                 
                 dparam_dzps, add_mag_electron = helper_functions.get_electron_scattering(the_data["z_CMB_list"][-1], params = params)
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = [1.])
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
                 the_data["mB_list"][-1] += add_mag_electron
 
 
@@ -264,6 +282,7 @@ def read_data(params):
                 ########################################## Peculiar Velocity Dispersion and Bulk Flows ##########################################
                 
 
+                # This formula is in Davis+ 2010, but they reference K09
                 total_pec_vel_on_diag = (   params["pec_vel_disp"]*(5./log(10.))*(the_data["z_CMB_list"][-1] + 1.)/(the_data["z_CMB_list"][-1]*(1 + the_data["z_CMB_list"][-1]/2.))   )**2.
                 total_bulk_quad = 0.
                 
@@ -280,11 +299,18 @@ def read_data(params):
                         key = "BULK_%03i" % bulk_i
                         if not the_data["calib_names"].count(key):
                             the_data["calib_names"].append(key)
-                            the_data["calib_uncertainties"].append(1.0)
                         calib_ind = the_data["calib_names"].index(key)
                         the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = bulk_eig[bulk_i, bulk_ind]
                         total_bulk_quad += bulk_eig[bulk_i, bulk_ind]**2.
                         print("setting ", bulk_eig[bulk_i, bulk_ind], the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind], "bulk_i", bulk_i, "bulk_ind", bulk_ind, "current_sn_ind", current_sn_ind)
+
+                    key = "corr_redshift_sys"
+                    if not the_data["calib_names"].count(key):
+                        the_data["calib_names"].append(key)
+                    calib_ind = the_data["calib_names"].index(key)
+                    the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = (3e-5)*(5./log(10.))*(the_data["z_CMB_list"][-1] + 1.)/(the_data["z_CMB_list"][-1]*(1 + the_data["z_CMB_list"][-1]/2.))
+
+                    
 
                 print("total_pec_vel_on_diag ", total_pec_vel_on_diag, the_data["z_CMB_list"][-1])
                 total_pec_vel_on_diag -= total_bulk_quad
@@ -302,7 +328,7 @@ def read_data(params):
 
                 dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat", this_redshift_helio)
                 
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = tmp_zp_uncertainties)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties)
 
 
                 
@@ -315,10 +341,8 @@ def read_data(params):
                         print(okay_names[j], end=' ')
                 print()
 
-    for i in range(len(the_data["calib_names"])):
-        print("calib_uncertainties", the_data["calib_names"][i], the_data["calib_uncertainties"][i])
-    ffff
-    assert len(the_data["calib_names"]) == len(the_data["calib_uncertainties"])
+
+    #assert len(the_data["calib_names"]) == the_data["d_mBx1c_dcalib_list"].shape[-1], "calib_names %i d_mBx1c_dcalib_list %s" % (len(the_data["calib_names"]), str(the_data["d_mBx1c_dcalib_list"].shape))
     
     the_data["d_mBx1c_dcalib_list"] = the_data["d_mBx1c_dcalib_list"][:len(the_data["mB_list"]), :, :len(the_data["calib_names"])]
 
@@ -631,7 +655,6 @@ else:
                  "redshift_coeffs": redshift_coeffs,
                  "n_calib": len(the_data["calib_names"]),
                  "d_mBx1c_d_calib": the_data["d_mBx1c_dcalib_list"],
-                 "calib_uncertainties": the_data["calib_uncertainties"],
                  "n_x1c_star": params["n_x1c_star"]*(1 + params["separate_mass_x1c"]), # 3 = 3 scale-factor nodes
                  "threeD_unexplained": params["threeD_unexplained"],
                  "mass": the_data["mass"],

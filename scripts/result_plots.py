@@ -315,16 +315,22 @@ def unc_labeling(labels_indiv):
 
     for label_indiv in labels_indiv:
         if label_indiv.startswith("calibs_('Fundamental"):
-            new_labels.append("Fundamental")
+            new_labels.append("Fundamental Calibration")
             
         elif label_indiv.startswith("calibs_MWEBV_"):
-            new_labels.append("MWEBV")
+            new_labels.append("Milky Way Extinction")
 
-        elif label_indiv.startswith("IG_extinction"):
-            new_labels.append("IG_extinction")
+        elif label_indiv.startswith("MB"):
+            new_labels.append("Absolute Magnitude $M_B$")
+            
+        elif label_indiv == "calibs_IG_extinction":
+            new_labels.append("Intergalactic Dust")
 
-        elif label_indiv.startswith("electron_scattering"):
-            new_labels.append("electron_scattering")
+        elif label_indiv == "calibs_corr_redshift_sys":
+            new_labels.append("Redshift Calibration")
+            
+        elif label_indiv == "calibs_electron_scattering":
+            new_labels.append("Electron Scattering")
             
         elif label_indiv.startswith("calibs_BULK_"):
             new_labels.append("Bulk Flow")
@@ -339,13 +345,27 @@ def unc_labeling(labels_indiv):
             new_labels.append("Color Population")
 
         elif label_indiv.startswith("tau_x1_") or label_indiv.startswith("R_x1_") or label_indiv.startswith("x1_star_"):
-            new_labels.append("X1 Population")
+            new_labels.append("$x_1$ Population")
 
         elif label_indiv.startswith("mBx1c_int_variance"):
             new_labels.append("Unexplained Scatter")
             
         elif label_indiv.startswith("mobs_cut"):
             new_labels.append("Selection Effects")
+        elif label_indiv == "beta_B":
+            new_labels.append("$\\beta_B$")
+        elif label_indiv == "beta_R":
+            new_labels.append("$\\beta_R$")
+        elif label_indiv == "alpha":
+            new_labels.append("$\\alpha$")
+
+
+        elif label_indiv == "delta_beta_R":
+            new_labels.append("$\Delta \\beta_R$")
+        elif label_indiv == "delta_h":
+            new_labels.append("$\delta(z = \infty)$")
+        elif label_indiv == "delta_0":
+            new_labels.append("$\delta(z = 0)$")
             
         else:
             new_labels.append(label_indiv)
@@ -412,9 +432,10 @@ def unc_analysis(explain, keys):
         
         
         for i, item in enumerate(zip(expl, lbls[:50])):
-            print("%.3g\t\t%.3g\t\t%.3g\t\t%s" % (item[0]**2./dot(expl, expl),
-                                                  dot(expl[:i+1], expl[:i+1])/dot(expl, expl),
-                                                  item[0], item[1]))
+            print("%.4f\t&\t%.3f\t&\t%.3f\t&\t%s \\\\" % (item[0],
+                                                          item[0]**2./dot(expl, expl),
+                                                          dot(expl[:i+1], expl[:i+1])/dot(expl, expl),
+                                                          item[1]))
         
         print("Total expl:", sqrt(dot(expl, expl)), "of", std(fit_params[explain]))
     
@@ -427,6 +448,7 @@ def get_label_dict():
         label_dict[key] = dataset_names
 
     label_dict["calibs"] = the_data["calib_names"]
+
 
     for key in ["c_star", "tau_c", "R_c", "x1_star"]:
         label_dict[key] = []

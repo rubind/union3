@@ -29,7 +29,6 @@ data {
     vector[3] obs_mBx1c [n_sne];
     matrix[3,3] obs_mBx1c_cov [n_sne];
     matrix[3, n_calib] d_mBx1c_d_calib [n_sne];
-    vector [n_calib] calib_uncertainties;
     vector [n_sne] mass;
     vector [n_sne] mass_err;
     vector [n_sne] p_high_mass;
@@ -371,7 +370,7 @@ model {
                               log(1. - spike_redshift_prob[i]) + normal_log(dz[i], photo_z0[i] - photo_spikez[i], photo_dz[i]));
     }
 
-    calibs ~ normal(0, calib_uncertainties);
+    calibs ~ normal(0, 1.);
     
     if (cosmo_model == 2) {
         MB ~ normal(-19, 0.01);
