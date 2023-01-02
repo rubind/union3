@@ -242,14 +242,14 @@ def read_data(params):
                     print("Weird supernova!", snpath)
 
                 dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", res_der_fl = snpath + "/result_deriv.dat", params = params)
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = [1.])
 
                 dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = snpath + "/result_deriv.dat", params = params)
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = [1.])
 
                 
                 dparam_dzps, add_mag_electron = helper_functions.get_electron_scattering(the_data["z_CMB_list"][-1], params = params)
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = True)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = [1.])
                 the_data["mB_list"][-1] += add_mag_electron
 
 
@@ -301,7 +301,8 @@ def read_data(params):
                                                                                               [mBc, x1c, cc]]], dtype=float64) + extra_cmat   ), axis = 0)
 
                 dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat", this_redshift_helio)
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, use_one_for_uncertainties = False)
+                
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = tmp_zp_uncertainties)
 
 
                 
@@ -315,8 +316,8 @@ def read_data(params):
                 print()
 
     for i in range(len(the_data["calib_names"])):
-        print(the_data["calib_names"][i], the_data["calib_uncertainties"][i])
-        
+        print("calib_uncertainties", the_data["calib_names"][i], the_data["calib_uncertainties"][i])
+    ffff
     assert len(the_data["calib_names"]) == len(the_data["calib_uncertainties"])
     
     the_data["d_mBx1c_dcalib_list"] = the_data["d_mBx1c_dcalib_list"][:len(the_data["mB_list"]), :, :len(the_data["calib_names"])]
@@ -599,7 +600,12 @@ else:
     assert params["iter"] % 4 == 0, "iter should be a multiple of four! "  + str(params["iter"])
 
     the_data = read_data(params)
-    samples_txt = "_".join([item.split(".")[0].split("/")[-1] for item in params["filenamelist"]])
+    names_of_all_inputs = [item.split(".")[0].split("/")[-1].replace("_v1", "") for item in params["filenamelist"]]
+    if len("".join(names_of_all_inputs)) > 200:
+        names_of_all_inputs = [item[:5] for item in names_of_all_inputs]
+        
+    samples_txt = "_".join(names_of_all_inputs)
+
 
     for i, sample in enumerate(the_data["sample_names"]):
         print(sample, sum(the_data["sample_list"] == i))

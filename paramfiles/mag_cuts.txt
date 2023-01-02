@@ -2,6 +2,7 @@
 CalanTololo_v1.txt	$UNITY/paramfiles/CalanTololo_R_selection.txt   19.0            1.0
 LOSS_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
 LSQ_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
+LSQ+LCO_v1.txt          $UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
 Krisciunas_v1.txt	$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0
 CfA1_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt	18.5		1.0
 CfA1_STD_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   18.5            1.0

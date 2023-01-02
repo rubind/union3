@@ -244,19 +244,12 @@ def get_calib_uncertainties(calib_names, zeropointfl):
 
     return calib_uncertainties
 
-def merge_calib(the_data, dparam_dzps, current_sn_ind, use_one_for_uncertainties = False):
+def merge_calib(the_data, dparam_dzps, current_sn_ind, uncertainties):
     for key in dparam_dzps:
         if not the_data["calib_names"].count(key):
             the_data["calib_names"].append(key)
-
-            if use_one_for_uncertainties:
-                the_data["calib_uncertainties"].append(1.)
-            else:
-                if key.count("Fundamental"):
-                    the_data["calib_uncertainties"].append(0.005)
-                else:
-                    the_data["calib_uncertainties"].append(0.01)
-                
+            the_data["calib_uncertainties"].append(1000.)
+            
         calib_ind = the_data["calib_names"].index(key)
         the_data["d_mBx1c_dcalib_list"][current_sn_ind, :, calib_ind] = dparam_dzps[key]
         

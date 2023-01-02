@@ -2,7 +2,9 @@ CalanTololo_v1.txt		CT (Hamuy+ 1996)						(0, 0, 0.5)
 Krisciunas_v1.txt		Krisciunas+ (2005)					(0.5, 1., 1.)
 NB99_v1.txt			SCP (Kowalski+ 2008)					(0., 0.5, 1.)
 CSP_v1.txt			CSP (Contreras+ 2010,_Stritzinger+ 2011,_and Krisciunas+ 2017)	(1., 0.5, 0)
-LSQ_v1.txt			LSQ (Walker+ 2015)	      		   			(1., 0.5, 0)
+LSQ_v1.txt			LSQ+CSP (Walker+ 2015)	      		   			(1., 0.5, 0)
+LSQ+LCO_v1.txt			LSQ+LCO (Baltay+ 2021)						(0.5, 0.5, 0)
+
 LOSS_v1.txt			LOSS (Ganeshalingam+ 2010_and Stahl+ 2019)			(0.5, 0.5, 0.5)
 CNIa02_v1.txt			CNIa0.02 (Chen+ 2020)   						(1.0, 0.0, 0.0)
 
