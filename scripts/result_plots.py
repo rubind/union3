@@ -210,8 +210,9 @@ def make_Hubble_diagram(use_obs_color):
            - median(fit_params["MB"])
            )
 
-    zlabels = array([0.17, 0.35, 0.95, 1.65])
+    zlabels = array([0.01, 0.15, 0.20, 0.95, 1.65])
     mulabels = 5*log10((1. + zlabels)*(1.00875*zlabels - 0.271648*zlabels**2. + 0.0340072*zlabels**3. + 0.000441432*zlabels**4.)) + 42.
+    mulabels[0] = 46.2
     mustep = 0.5
 
     print("Hacking mu_plot!!!!"*20)
@@ -333,7 +334,10 @@ def unc_labeling(labels_indiv):
             new_labels.append("Electron Scattering")
             
         elif label_indiv.startswith("calibs_BULK_"):
-            new_labels.append("Bulk Flow")
+            new_labels.append("Peculiar-Velocity Correlations")
+
+        elif label_indiv.startswith("calibs_SALT"):
+            new_labels.append("SALT Calibration")
 
         elif label_indiv.startswith("calibs_('Zeropoint'"):
             new_labels.append("Instrument Zeropoints")
@@ -372,6 +376,12 @@ def unc_labeling(labels_indiv):
             
     return new_labels
 
+def smart_format(val, digits):
+    format_str = "%." + str(digits) + "f"
+    return_str = format_str % val
+    if float(return_str) == 0:
+        return_str = "$ < " + (format_str % (10.**(-digits))) + "$"
+    return return_str
 
 def unc_analysis(explain, keys):
     labels_indiv = []
@@ -432,12 +442,15 @@ def unc_analysis(explain, keys):
         
         
         for i, item in enumerate(zip(expl, lbls[:50])):
-            print("%.4f\t&\t%.3f\t&\t%.3f\t&\t%s \\\\" % (item[0],
-                                                          item[0]**2./dot(expl, expl),
-                                                          dot(expl[:i+1], expl[:i+1])/dot(expl, expl),
-                                                          item[1]))
-        
-        print("Total expl:", sqrt(dot(expl, expl)), "of", std(fit_params[explain]))
+            
+            
+            print("%s\t&\t%s\t&\t%s\t&\t%s \\\\" % (smart_format(item[0], 4),
+                                                    smart_format(item[0]**2./dot(expl, expl), 3),
+                                                    smart_format(dot(expl[:i+1], expl[:i+1])/dot(expl, expl), 3),
+                                                    item[1]))
+        print("\hline")
+        print(smart_format(sqrt(dot(expl, expl)), 4), "of", smart_format(std(fit_params[explain]), 4)
+              )
     
 
 def get_label_dict():

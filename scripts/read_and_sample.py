@@ -77,6 +77,10 @@ def read_data(params):
     bulk_eig = fbulk[0].data
     fbulk.close()
 
+
+    [lensing_z, lensing_mag] = readcol(os.environ["UNITY"] + "/paramfiles/lensing_bias.txt", 'ff')
+    lensing_ifn = interp1d(lensing_z, lensing_mag, kind = 'linear')
+
     f_cal = open(os.environ["UNITY"] + "/paramfiles/calibration_uncertainties.txt", 'r')
     lines = f_cal.read().split('\n')
     f_cal.close()
@@ -92,6 +96,7 @@ def read_data(params):
     calibration_uncertainties["MWEBV_addnorm"] = 1.
     calibration_uncertainties["electron_scattering"] = 1.
     calibration_uncertainties["IG_extinction"] = 1.
+    calibration_uncertainties["lensing_bias"] = 1.
 
     for key in calibration_uncertainties:
         print("calibration_uncertainties", key, calibration_uncertainties[key])
@@ -270,6 +275,10 @@ def read_data(params):
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
                 the_data["mB_list"][-1] += add_mag_electron
 
+                dparam_dzps = helper_functions.get_lensing_bias(the_data["z_CMB_list"][-1], lensing_ifn)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind,
+                                                        uncertainties = calibration_uncertainties, check_1 = True)
+                
 
                 if params["remap_x1"] != None:
                     new_x1, x1_slope = helper_functions.remap_x1(the_data["x1_list"][-1], params)
@@ -308,7 +317,7 @@ def read_data(params):
                     if not the_data["calib_names"].count(key):
                         the_data["calib_names"].append(key)
                     calib_ind = the_data["calib_names"].index(key)
-                    the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = (3e-5)*(5./log(10.))*(the_data["z_CMB_list"][-1] + 1.)/(the_data["z_CMB_list"][-1]*(1 + the_data["z_CMB_list"][-1]/2.))
+                    the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = (3.3e-5)*(5./log(10.))*(the_data["z_CMB_list"][-1] + 1.)/(the_data["z_CMB_list"][-1]*(1 + the_data["z_CMB_list"][-1]/2.))
 
                     
 

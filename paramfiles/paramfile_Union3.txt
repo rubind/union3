@@ -1,11 +1,7 @@
 do_blind		1
 
-filenamelist		["$UNION/Amanullah10_v1.txt","$UNION/CNIa02_v1.txt","$UNION/CSP_v1.txt","$UNION/CalanTololo_v1.txt","$UNION/CfA1_v1.txt","$UNION/CfA2_v1.txt","$UNION/CfA3_v1.txt","$UNION/CfA4_v1.txt","$UNION/DES3_Deep_v1.txt","$UNION/DES3_Shallow_v1.txt","$UNION/ESSENCE_v1.txt","$UNION/Foundation_v1.txt","$UNION/LOSS_v1.txt","$UNION/MCT_v1.txt","$UNION/NB99_v1.txt","$UNION/Pan-STARRS_v1.txt","$UNION/Riess07_v1.txt","$UNION/SDSS_low_v1.txt","$UNION/SDSS_high_v1.txt","$UNION/SNLS_v1.txt","$UNION/SuzukiRubin_v1.txt","$UNION/Tonry03_v1.txt","$UNION/LSQ+LCO_v1.txt","$UNION/LSQ_v1.txt"]
+filenamelist		["$UNION/Amanullah10_v1.txt","$UNION/CNIa02_v1.txt","$UNION/CSP_v1.txt","$UNION/CalanTololo_v1.txt","$UNION/CfA1_v1.txt","$UNION/CfA2_v1.txt","$UNION/CfA3_v1.txt","$UNION/CfA4_v1.txt","$UNION/DES3_Deep_v1.txt","$UNION/DES3_Shallow_v1.txt","$UNION/ESSENCE_v1.txt","$UNION/Foundation_v1.txt","$UNION/LOSS_v1.txt","$UNION/MCT_v1.txt","$UNION/NB99_v1.txt","$UNION/Pan-STARRS_v1.txt","$UNION/Riess07_v1.txt","$UNION/SDSS_low_v1.txt","$UNION/SDSS_high_v1.txt","$UNION/SNLS_v1.txt","$UNION/SuzukiRubin_v1.txt","$UNION/Tonry03_v1.txt","$UNION/LSQ+LCO_v1.txt","$UNION/LSQ_v1.txt","$UNION/knop03_v1.txt","$UNION/Krisciunas_v1.txt"]
 
-
-["$UNION/CalanTololo_v1.txt","$UNION/LOSS_v1.txt","$UNION/CfA1_v1.txt","$UNION/CfA2_v1.txt","$UNION/CfA3_v1.txt","$UNION/CfA4_v1.txt","$UNION/CSP_v1.txt","$UNION/SDSS_v1.txt","$UNION/ESSENCE_v1.txt","$UNION/Pan-STARRS_v1.txt","$UNION/SNLS_v1.txt","$UNION/DES3_Shallow_v1.txt","$UNION/DES3_Deep_v1.txt"]
-
-,"$UNION/LSQ_v1.txt","$UNION/Krisciunas_v1.txt","$UNION/tonry03_v1.txt","$UNION/amanullah10_v1.txt","$UNION/riess_fixed_ab_v1.txt","$UNION/SCP_v1.txt","$UNION/Primo_v1.txt"
 
 weird_sn_list		"$UNITY/paramfiles/weird_sn_list.txt"
 mag_cut			"$UNITY/paramfiles/mag_cuts.txt"

@@ -4,6 +4,8 @@
 ('Fundamental', (8000.0, 10000.0)):									0.005
 ('Fundamental', (10000.0, 100000.0)):									0.005
 
+"SALT_U_CAL":												0.01
+"SALT_I_CAL":												0.01
 
 ('Zeropoint', 'NB99|NB99_r5'):										0.01
 ('Zeropoint', 'NB99|NB99_r11'):										0.01
@@ -144,13 +146,30 @@
 
 
 ('Zeropoint', 'CalanTololo|Bessell12_B'):								0.03
-('Zeropoint', 'CalanTololo|Bessell12_V'):								0.03
+('Zeropoint', 'CalanTololo|Bessell12_V'):								0.02
 ('Zeropoint', 'CalanTololo|Bessell12_R'):								0.03
 ('Zeropoint', 'CalanTololo|Bessell12_I'):								0.03
 ('Lambda', 'CalanTololo|Bessell12_B'):									10
 ('Lambda', 'CalanTololo|Bessell12_V'):									10
 ('Lambda', 'CalanTololo|Bessell12_R'):									10
 ('Lambda', 'CalanTololo|Bessell12_I'):									10
+
+('Zeropoint', 'Krisciunas|Bessell12_U'):                                                                0.05
+('Zeropoint', 'Krisciunas|Bessell12_B'):								0.03
+('Zeropoint', 'Krisciunas|Bessell12_V'):								0.02
+('Zeropoint', 'Krisciunas|Bessell12_R'):								0.03
+('Zeropoint', 'Krisciunas|Bessell12_I'):								0.03
+('Lambda', 'Krisciunas|Bessell12_U'):                                                                   10
+('Lambda', 'Krisciunas|Bessell12_B'):									10
+('Lambda', 'Krisciunas|Bessell12_V'):									10
+('Lambda', 'Krisciunas|Bessell12_R'):									10
+('Lambda', 'Krisciunas|Bessell12_I'):									10
+
+('Zeropoint', 'Knop|Bessell12_R'):									0.02
+('Zeropoint', 'Knop|Bessell12_I'):									0.02
+('Lambda', 'Knop|Bessell12_R'):										10
+('Lambda', 'Knop|Bessell12_I'):										10
+
 
 
 ('Zeropoint', 'CfA34_FLWO|CfA3_MC_B'):									0.01

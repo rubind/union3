@@ -130,8 +130,9 @@ def get_dparam_dzps(res_der_fl, redshift):
             
             dparam_dzps[(parsed[0], parsed[1][parsed[1].find("|")+1:])] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
 
-        if parsed.count("Zeropoint"):
-            obslamb = (1. + redshift)*float(parsed[2])
+        if parsed.count("Zeropoint") and parsed.count("All"):
+            restlamb = float(parsed[2])
+            obslamb = (1. + redshift)*restlamb
 
             binind = where(wavebins > obslamb)[0][0] - 1
             thekey = ("Fundamental", (wavebins[binind], wavebins[binind + 1]))
@@ -141,6 +142,25 @@ def get_dparam_dzps(res_der_fl, redshift):
             else:
                 dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
 
+
+            if restlamb < 4000:
+                thekey = "SALT_U_CAL"
+                
+                if thekey in dparam_dzps:
+                    dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+                else:
+                    dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+                
+            if restlamb > 7000:
+                thekey = "SALT_I_CAL"
+                
+                if thekey in dparam_dzps:
+                    dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+                else:
+                    dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+
+            
+                
 
     print("dparam_dzps ", dparam_dzps)
     return dparam_dzps
@@ -211,6 +231,13 @@ def get_IG_extinction_sys(redshift, res_der_fl, params):
             this_dmu_zp = np.array([float(parsed[5]), float(parsed[6]), float(parsed[7])])*IGextinct
             dparam_dzps["IG_extinction"] += this_dmu_zp
     return dparam_dzps
+
+
+def get_lensing_bias(redshift, lensing_ifn):
+    dparam_dzps = {"lensing_bias": array([lensing_ifn(redshift), 0, 0])}
+
+    return dparam_dzps
+
             
 
 def get_calib_uncertainties(calib_names, zeropointfl):
