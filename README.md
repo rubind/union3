@@ -42,3 +42,9 @@ For magnitude systems and instruments: edit the original_* files in $PATHMODEL. 
 ```python step2_convert_to_fits.py```
 
 ```python step3_eig_reduce_n_at_a_time.py 1 100```
+
+# For updating the CMB compression:
+
+```python step1_make_new_samps.py```
+
+```python step2_make_cov_mat.py```
