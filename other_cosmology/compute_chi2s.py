@@ -61,7 +61,8 @@ def chi2fn(P, passdata):
         if run_settings["include_CMB"] or run_settings["include_O_mh2"]:
             pass
         else:
-            chi2 += ((cosmo["O_bhh"] - 0.02239245)/0.00014778988)**2.
+            chi2 += ((100*cosmo["O_bhh"] - 2.208)/0.052)**2. # Cooke+ 2016, as interpreted through Dark Energy Survey Year 1 Results: A Precise H0 Measurement from DES Y1, BAO, and D/H Data
+            #chi2 += ((cosmo["O_bhh"] - 0.02239245)/0.00014778988)**2.
 
 
         

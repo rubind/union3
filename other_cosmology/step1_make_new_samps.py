@@ -5,7 +5,14 @@ import sys
 import glob
 import tqdm
 
+
+# As of 2023-Jan-06:
+# ~/Downloads/COM_CosmoParams_fullGrid_R3/base_w/plikHM_TTTEEE_lowl_lowE/base_w_plikHM_TTTEEE_lowl_lowE
+# ~/Downloads/COM_CosmoParams_fullGrid_R3/base_omegak/plikHM_TTTEEE_lowl_lowE/base_omegak_plikHM_TTTEEE_lowl_lowE
+
+
 prefix = sys.argv[1]
+
 
 [param_names] = readcol(prefix + ".paramnames", 'a')
 

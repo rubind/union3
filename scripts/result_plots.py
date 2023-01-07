@@ -210,7 +210,7 @@ def make_Hubble_diagram(use_obs_color):
            - median(fit_params["MB"])
            )
 
-    zlabels = array([0.01, 0.15, 0.20, 0.95, 1.65])
+    zlabels = array([0.01, 0.15, 0.95, 1.65])
     mulabels = 5*log10((1. + zlabels)*(1.00875*zlabels - 0.271648*zlabels**2. + 0.0340072*zlabels**3. + 0.000441432*zlabels**4.)) + 42.
     mulabels[0] = 46.2
     mustep = 0.5
@@ -322,7 +322,7 @@ def unc_labeling(labels_indiv):
             new_labels.append("Milky Way Extinction")
 
         elif label_indiv.startswith("MB"):
-            new_labels.append("Absolute Magnitude $M_B$")
+            new_labels.append("Absolute Magnitude (for $h = 0.7$) $\scriptM$")
             
         elif label_indiv == "calibs_IG_extinction":
             new_labels.append("Intergalactic Dust")
@@ -362,8 +362,8 @@ def unc_labeling(labels_indiv):
             new_labels.append("$\\beta_R$")
         elif label_indiv == "alpha":
             new_labels.append("$\\alpha$")
-
-
+        elif label_indiv == "calibs_lensing_bias":
+            new_labels.append("Weak Lensing Bias")
         elif label_indiv == "delta_beta_R":
             new_labels.append("$\Delta \\beta_R$")
         elif label_indiv == "delta_h":
