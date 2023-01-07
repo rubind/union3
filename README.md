@@ -50,3 +50,9 @@ This merges the chains into one file, and unpacks the duplicated samples:
 ```python step1_make_new_samps.py```
 
 ```python step2_make_cov_mat.py```
+
+# For evaluating phase cuts:
+
+```set_up_LC_tests.py```
+
+```slurm_phase_testing.py```
