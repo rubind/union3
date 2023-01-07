@@ -45,6 +45,8 @@ For magnitude systems and instruments: edit the original_* files in $PATHMODEL. 
 
 # For updating the CMB compression:
 
+This merges the chains into one file, and unpacks the duplicated samples:
+
 ```python step1_make_new_samps.py```
 
 ```python step2_make_cov_mat.py```
