@@ -33,7 +33,9 @@ Union3_Photometry/NB99_also_contains_non_X-CALIBUR_magsys/AB_Landolt.py contains
 
 For magnitude systems and instruments: edit the original_* files in $PATHMODEL. Then run python_code/shiftfilters.py to make the files that are actually read in by SALT.
 
-# For regenerating the bulk-flow eigenvectors: from BulkFlow/Public/Run_Example2
+# For regenerating the bulk-flow eigenvectors:
+
+From BulkFlow/Public/Run_Example2:
 
 ```python step1_make_Union3.py```
 
