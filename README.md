@@ -51,6 +51,10 @@ This merges the chains into one file, and unpacks the duplicated samples:
 
 ```python step2_make_cov_mat.py```
 
+# For getting fidicial r_d for updating BAO:
+
+```python step2_standard_BAO.py```
+
 # For evaluating phase cuts:
 
 ```set_up_LC_tests.py```
