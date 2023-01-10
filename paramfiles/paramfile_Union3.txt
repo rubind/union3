@@ -11,8 +11,8 @@ sample_file		"None"
 
 min_redshift		0.01
 max_redshift		3.
-max_firstphase		6.
-min_lastphase		0.
+max_firstphase		100.
+min_lastphase		-100.
 max_color_uncertainty	0.2
 max_color		0.3
 max_MWEBV		0.3

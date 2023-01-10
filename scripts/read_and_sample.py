@@ -175,7 +175,7 @@ def read_data(params):
                            this_redshift_cmb <= params["max_redshift"][current_sample],
                            this_firstphase <= params["max_firstphase"],
                            this_lastphase >= params["min_lastphase"],
-                           this_firstphase + 10 < this_lastphase,
+                           #this_firstphase + 10 < this_lastphase,
                            this_colorerr < params["max_color_uncertainty"],
                            this_color < params["max_color"],
                            this_color > params["min_color"],
