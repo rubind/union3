@@ -273,6 +273,7 @@ def read_data(params):
                 
                 dparam_dzps, add_mag_electron = helper_functions.get_electron_scattering(the_data["z_CMB_list"][-1], params = params)
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
+                assert add_mag_electron < 0
                 the_data["mB_list"][-1] += add_mag_electron
 
                 dparam_dzps = helper_functions.get_lensing_bias(the_data["z_CMB_list"][-1], lensing_ifn)

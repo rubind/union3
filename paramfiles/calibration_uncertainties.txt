@@ -1,11 +1,35 @@
-('Fundamental', (3000.0, 4000.0)):									0.005
-('Fundamental', (4000.0, 6000.0)):									0.005
-('Fundamental', (6000.0, 8000.0)):									0.005
+('Fundamental', (3000.0, 4000.0)):									0.01
+('Fundamental', (4000.0, 6000.0)):									0.002
+('Fundamental', (6000.0, 8000.0)):									0.002
 ('Fundamental', (8000.0, 10000.0)):									0.005
 ('Fundamental', (10000.0, 100000.0)):									0.005
 
 "SALT_U_CAL":												0.01
 "SALT_I_CAL":												0.01
+
+"LANDOLT_U_CAL":											0.005
+"LANDOLT_B_CAL":											0.005
+"LANDOLT_V_CAL":											0.005
+"LANDOLT_R_CAL":											0.005
+"LANDOLT_I_CAL":											0.005
+
+"LANDOLT_U_LAM":											10
+"LANDOLT_B_LAM":											10
+"LANDOLT_V_LAM":											10
+"LANDOLT_R_LAM":											10
+"LANDOLT_I_LAM":											10
+
+"SMITH_u_CAL":												0.005
+"SMITH_g_CAL":												0.005
+"SMITH_r_CAL":												0.005
+"SMITH_i_CAL":												0.005
+"SMITH_z_CAL":												0.005
+
+"PS_g_CAL":												0.005
+"PS_r_CAL":												0.005
+"PS_i_CAL":												0.005
+"PS_z_CAL":												0.005
+
 
 ('Zeropoint', 'NB99|NB99_r5'):										0.01
 ('Zeropoint', 'NB99|NB99_r11'):										0.01

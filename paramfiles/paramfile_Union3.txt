@@ -27,7 +27,7 @@ MWEBV_zeropoint_EBV	0.005
 outl_frac		0.02
 calib_errs		
 n_x1c_star		1
-electron_coeff		[0.0039,0.001]
+electron_coeff		[0.0042,0.00042]
 IG_extinction_coeff	1.
 
 

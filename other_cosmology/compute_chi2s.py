@@ -150,6 +150,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w"])
         run_separate_contours = 1
+        run_inverse_ladder = 0
     elif model == "LCDM":
         run_settings = dict(contour_xs = np.linspace(0., 1, 45)**1.5,
                             contour_ys = np.linspace(0., 1.5, 45),
@@ -160,6 +161,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok"])
         run_separate_contours = 1
+        run_inverse_ladder = 0
     elif model == "flatLCDM":
         run_settings = dict(contour_xs = np.linspace(0., 0.5, 30),
                             contour_ys = np.linspace(0.5, 1.0, 31),
@@ -170,6 +172,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok"])
         run_separate_contours = 1
+        run_inverse_ladder = 0
     elif model == "flatw0wa":
         run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
                             contour_ys = np.linspace(-3., 2., 25),
@@ -180,6 +183,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w0", "wa"])
         run_separate_contours = 0
+        run_inverse_ladder = 1
     elif model == "w0wa":
         run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
                             contour_ys = np.linspace(-3., 2., 25),
@@ -190,6 +194,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w0", "wa"])
         run_separate_contours = 0
+        run_inverse_ladder = 1
     else:
         assert 0
 
@@ -240,6 +245,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         all_grids["BAO_fit"] = bestP
 
 
+
     run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0)
     bestP_all, bestF_all, bestC_all = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                                  miniscale = get_miniscale(run_settings, global_fit = 1),
@@ -266,15 +272,15 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
 
     run_settings.update(include_SNe = 1, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0)
-    bestP_SNCMB, bestF_SNCMB, bestC_SNCMB = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
-                                                       miniscale = get_miniscale(run_settings, global_fit = 1),
-                                                       passdata = run_settings,
-                                                       chi2fn = chi2fn, verbose = False)
-    print("bestP_SNCMB", bestP_SNCMB)
-    all_grids["SNCMB_chi2"] = bestF_SNCMB
-    all_grids["SNCMB_fit"] = bestP_SNCMB
-    all_grids["SNCMB_cmat"] = bestC_SNCMB
-    all_grids["SNCMB_minos"] = get_minos(bestP_SNCMB, bestF_SNCMB, run_settings)
+    bestP_SNeCMB, bestF_SNeCMB, bestC_SNeCMB = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
+                                                          miniscale = get_miniscale(run_settings, global_fit = 1),
+                                                           passdata = run_settings,
+                                                           chi2fn = chi2fn, verbose = False)
+    print("bestP_SNeCMB", bestP_SNeCMB)
+    all_grids["SNeCMB_chi2"] = bestF_SNeCMB
+    all_grids["SNeCMB_fit"] = bestP_SNeCMB
+    all_grids["SNeCMB_cmat"] = bestC_SNeCMB
+    all_grids["SNeCMB_minos"] = get_minos(bestP_SNeCMB, bestF_SNeCMB, run_settings)
 
 
 
@@ -293,15 +299,15 @@ def make_contours(z_list, mu_list, mu_invcov, model):
 
     
     run_settings.update(include_SNe = 1, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0)
-    bestP_SNBAO, bestF_SNBAO, bestC_SNBAO = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
+    bestP_SNeBAO, bestF_SNeBAO, bestC_SNeBAO = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                                           miniscale = get_miniscale(run_settings, global_fit = 1),
                                                           passdata = run_settings,
                                                           chi2fn = chi2fn, verbose = False)
-    print("bestP_SNBAO", bestP_SNBAO)
-    all_grids["SNBAO_chi2"] = bestF_SNBAO
-    all_grids["SNBAO_fit"] = bestP_SNBAO
-    all_grids["SNBAO_cmat"] = bestC_SNBAO
-    all_grids["SNBAO_minos"] = get_minos(bestP_SNBAO, bestF_SNBAO, run_settings)
+    print("bestP_SNeBAO", bestP_SNeBAO)
+    all_grids["SNeBAO_chi2"] = bestF_SNeBAO
+    all_grids["SNeBAO_fit"] = bestP_SNeBAO
+    all_grids["SNeBAO_cmat"] = bestC_SNeBAO
+    all_grids["SNeBAO_minos"] = get_minos(bestP_SNeBAO, bestF_SNeBAO, run_settings)
     
 
 
@@ -309,6 +315,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                                    [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 1, include_H0 = 0), "BAO_Omh2"],
                                    [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0), "BAO"],
                                    [dict(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0 = 0), "CMB"]]*run_separate_contours + [
+                                       [dict(include_SNe = 1, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0), "SNeBAO"]]*run_inverse_ladder + [
                                        [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 0), "SNeBAOCMB"],
                                        [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0 = 1), "SNeBAOCMBH0"]]:
 

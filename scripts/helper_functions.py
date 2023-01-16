@@ -186,11 +186,10 @@ def get_MWEBV_uncs(lightfl, res_der_fl, params):
     return dparam_dzps, extra_cmat
 
 def get_electron_scattering(redshift, params):
-    # Nominally 0.0039  0.001
+    # Nominally 0.0042  0.00042
     assert abs(params["electron_coeff"][0]) < 0.01
     assert abs(params["electron_coeff"][1]) < 0.01
     assert params["electron_coeff"][0] > -0.001
-    
 
     tau_electron = params["electron_coeff"][0] * (sqrt(0.3*(1 + redshift)**3. + 0.7) - 1.)
     dtau_electron = params["electron_coeff"][1] * (sqrt(0.3*(1 + redshift)**3. + 0.7) - 1.)
