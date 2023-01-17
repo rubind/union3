@@ -115,7 +115,11 @@ def get_params(paramfl):
 
 
 def get_dparam_dzps(res_der_fl, redshift):
-    wavebins = array([3000., 4000., 6000., 8000., 10000., 100000.]) # 4000 and 8000 for the breaks, roughly
+    wavebins = [(3000.0, 4000.0),
+                (4000.0, 5000.0),
+                (6000.0, 8000.0),
+                (8000.0, 100000.0),
+                (10000.0, 100000.0)] # 4000 and 8000 for the breaks, roughly, 10000 for STIS -> WFC3/NICMOS
 
     f = open(res_der_fl)
     lines = f.read().split('\n')
@@ -134,13 +138,14 @@ def get_dparam_dzps(res_der_fl, redshift):
             restlamb = float(parsed[2])
             obslamb = (1. + redshift)*restlamb
 
-            binind = where(wavebins > obslamb)[0][0] - 1
-            thekey = ("Fundamental", (wavebins[binind], wavebins[binind + 1]))
+            for wavebin in wavebins:
+                if (obslamb >= wavebin[0]) and (obslamb < wavebin[1]):
+                    thekey = ("Fundamental", wavebin)
 
-            if thekey in dparam_dzps:
-                dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
-            else:
-                dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+                    if thekey in dparam_dzps:
+                        dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+                    else:
+                        dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
 
 
             if restlamb < 4000:
@@ -158,8 +163,6 @@ def get_dparam_dzps(res_der_fl, redshift):
                     dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
                 else:
                     dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
-
-            
                 
 
     print("dparam_dzps ", dparam_dzps)

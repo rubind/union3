@@ -1,8 +1,9 @@
 ('Fundamental', (3000.0, 4000.0)):									0.01
-('Fundamental', (4000.0, 6000.0)):									0.002
+('Fundamental', (4000.0, 5000.0)):									0.005
 ('Fundamental', (6000.0, 8000.0)):									0.002
-('Fundamental', (8000.0, 10000.0)):									0.005
+('Fundamental', (8000.0, 100000.0)):									0.005
 ('Fundamental', (10000.0, 100000.0)):									0.005
+
 
 "SALT_U_CAL":												0.01
 "SALT_I_CAL":												0.01
@@ -29,6 +30,19 @@
 "PS_r_CAL":												0.005
 "PS_i_CAL":												0.005
 "PS_z_CAL":												0.005
+
+('Zeropoint', 'CNIa02|Bessell12_B'):									0.01
+('Zeropoint', 'CNIa02|Bessell12_V'):									0.01
+('Zeropoint', 'CNIa02|SDSS_g'):										0.01
+('Zeropoint', 'CNIa02|SDSS_r'):										0.01
+('Zeropoint', 'CNIa02|SDSS_i'):										0.01
+
+('Lambda', 'CNIa02|Bessell12_B'):									20
+('Lambda', 'CNIa02|Bessell12_V'):									20
+('Lambda', 'CNIa02|SDSS_g'):										20
+('Lambda', 'CNIa02|SDSS_r'):										20
+('Lambda', 'CNIa02|SDSS_i'):										20
+
 
 
 ('Zeropoint', 'NB99|NB99_r5'):										0.01
