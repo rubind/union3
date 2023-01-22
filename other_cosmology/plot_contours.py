@@ -38,17 +38,17 @@ def get_colors(key):
     assert 0, key
 
 
-def get_DETF(all_grids):
-    dx = all_grids["SNeBAOCMB"][0][1:] - all_grids["SNeBAOCMB"][0][:-1]
+def get_DETF(the_grid):
+    dx = the_grid[0][1:] - the_grid[0][:-1]
     assert np.isclose(dx, dx[0]).all()
-    dy = all_grids["SNeBAOCMB"][1][1:] - all_grids["SNeBAOCMB"][1][:-1]
+    dy = the_grid[1][1:] - the_grid[1][:-1]
     assert np.isclose(dy, dy[0]).all()
 
 
     plt.figure(2)
     
     for cut_val in np.linspace(6.15, 6.21, 100):
-        included_points = float((all_grids["SNeBAOCMB"][2] <= cut_val).sum())
+        included_points = float((the_grid[2] <= cut_val).sum())
         included_area = included_points*dx[0]*dy[0]
 
         plt.plot(cut_val, 1./included_area, '.', color = 'b')
@@ -56,7 +56,7 @@ def get_DETF(all_grids):
     plt.savefig("DETF_evaluation.pdf")
     plt.close()
         
-    included_points = float((all_grids["SNeBAOCMB"][2] <= 6.18007).sum())
+    included_points = float((the_grid[2] <= 6.18007).sum())
     included_area = included_points*dx[0]*dy[0]
     
     DETF_FoM = 1./included_area
@@ -188,7 +188,7 @@ def make_contours(all_grids, BAO_Omh2):
         assert 0
 
     all_txt = "All: " + str(all_grids["SNeBAOCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["SNeBAOCMB_cmat"]))) + '\n'
-    all_txt += "SN+CMB: " + str(all_grids["SNCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["SNCMB_cmat"]))) + '\n'
+    all_txt += "SN+CMB: " + str(all_grids["SNeCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["SNeCMB_cmat"]))) + '\n'
     all_txt += "BAO+CMB: " + str(all_grids["BAOCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["BAOCMB_cmat"])))
     all_txt += DETF_FoM_txt
     
@@ -197,8 +197,8 @@ def make_contours(all_grids, BAO_Omh2):
     
     
 def make_latex_table(all_grids):
-    keys_to_look_for = ["SNe_minos", "SNCMB_minos", "BAOCMB_minos", "SNBAO_minos", "SNeBAOCMB_minos", "SNeBAOCMBH0_minos"]
-    labels = dict(SNe_minos = "SNe", SNBAO_minos = "SNe+BAO+$\omega_b$", SNCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", SNeBAOCMB_minos = "SNe+BAO+CMB", SNeBAOCMBH0_minos = "SNe+BAO+CMB+$H_0$")
+    keys_to_look_for = ["SNe_minos", "SNeCMB_minos", "BAOCMB_minos", "SNeBAO_minos", "SNeBAOCMB_minos", "SNeBAOCMBH0_minos"]
+    labels = dict(SNe_minos = "SNe", SNeBAO_minos = "SNe+BAO+$\omega_b$", SNeCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", SNeBAOCMB_minos = "SNe+BAO+CMB", SNeBAOCMBH0_minos = "SNe+BAO+CMB+$H_0$")
     param_order = [["h"], ["Om"], ["Ok"], ["w", "w0"], ["wa"]]
     fmt_strs = ["%.3f", "%.3f", "%.3f", "%.3f", "%.2f"]
 
@@ -220,7 +220,14 @@ def make_latex_table(all_grids):
                     these_latex_lines += " & \\nodata "
                 elif found_one > 1:
                     assert 0, "Conflicting params found!"
-                    
+
+
+            print(all_grids.keys())
+            if key:
+                DETF_FoM = get_DETF(all_grids[key.replace("_minos", "_chi2")])
+                these_latex_lines += " & %.2f " % DETF_FoM
+            else:
+                these_latex_lines += " & \\nodata "
             these_latex_lines += ' \\\\ \n'
     return these_latex_lines
 
