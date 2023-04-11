@@ -13,6 +13,7 @@ from FileRead import readcol
 import time
 import os
 from DavidsNM import miniNM_new
+from helper_functions import bin_samples_in_redshift
 
 plt.rcParams["font.family"] = "serif"
 
@@ -321,6 +322,9 @@ def unc_labeling(labels_indiv):
         elif label_indiv.startswith("calibs_MWEBV_"):
             new_labels.append("Milky Way Extinction")
 
+        elif label_indiv.startswith("calibs_LANDOLT_") or label_indiv.startswith("calibs_SMITH_"):
+            new_labels.append("Landolt/Smith Calibration")
+            
         elif label_indiv.startswith("MB"):
             new_labels.append("Absolute Magnitude (for $h = 0.7$) $\scriptM$")
             
@@ -351,8 +355,12 @@ def unc_labeling(labels_indiv):
         elif label_indiv.startswith("tau_x1_") or label_indiv.startswith("R_x1_") or label_indiv.startswith("x1_star_"):
             new_labels.append("$x_1$ Population")
 
-        elif label_indiv.startswith("mBx1c_int_variance"):
+        elif label_indiv.startswith("mBx1c_int_variance") or label_indiv.startswith("sigma_int"):
             new_labels.append("Unexplained Scatter")
+
+        elif label_indiv.startswith("outl_"):
+            new_labels.append("Outlier Model")
+
             
         elif label_indiv.startswith("mobs_cut"):
             new_labels.append("Selection Effects")
@@ -370,7 +378,11 @@ def unc_labeling(labels_indiv):
             new_labels.append("$\delta(z = \infty)$")
         elif label_indiv == "delta_0":
             new_labels.append("$\delta(z = 0)$")
-            
+        elif label_indiv == "q0":
+            new_labels.append("$q_0$")
+        elif label_indiv == "j0":
+            new_labels.append("$j_0$")
+
         else:
             new_labels.append(label_indiv)
             
@@ -475,23 +487,45 @@ def get_label_dict():
     return label_dict
 
 
-def plot_sample_mag_limits():
-    plt.figure(figsize = (6,0.5*stan_data["n_samples"]))
+def plot_sample_mag_limits(the_data, stan_data):
+        
+    plt.figure(figsize = (6,0.3*stan_data["n_samples"]))
 
+    samp_bins = bin_samples_in_redshift(stan_data = stan_data, the_data = the_data)
+
+    offset = 0.2
+    
     for i in range(stan_data["n_samples"]):
+        params_ind = samp_bins["inds"][i]
+
         if stan_data["n_samples"] > 1:
-            mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"][:,i], [15.8655, 50, 84.1345])
+            mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"][:,params_ind], [15.8655, 50, 84.1345])
         else:
             mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"], [15.8655, 50., 84.1345])
-        plt.plot(mobs_165084, [i + 0.2]*3, color = 'k', label = (i == 0)*"Posterior")
-        plt.text(mean(mobs_165084[::2]),
-                      i - 0.2, label_dict["mobs_cuts"][i], ha = 'center')
-        plt.plot(mobs_165084[1], i + 0.2, '.', color = 'k')
             
-        plt.plot(the_data["est_mobs_cuts"][i], i + 0.4, '.', color = 'r')
-        plt.plot([the_data["est_mobs_cuts"][i] - 0.5, the_data["est_mobs_cuts"][i] + 0.5], [i + 0.4]*2, color = 'r', label = (i == 0)*"Prior")
-        print("PRIOR WIDTH HACK!!!!"*100)
+        plt.plot(mobs_165084, [i - offset]*3, color = samp_bins["colors"][i])
+        plt.plot(mobs_165084[1], i - offset, 'o', color = samp_bins["colors"][i])
+            
+        plt.plot(the_data["est_mobs_cuts"][params_ind], i + offset, '.', color = samp_bins["colors"][i])
+        plt.plot([the_data["est_mobs_cuts"][params_ind] - 0.5, the_data["est_mobs_cuts"][params_ind] + 0.5], [i + offset]*2, color = samp_bins["colors"][i])
 
+        if i > 0:
+            if samp_bins["cats"][i] != samp_bins["cats"][i-1]:
+                plt.axhline(i - 0.5, color = [0.5]*3, linewidth = 0.8)
+
+
+    xlim = plt.xlim()
+
+    for i in range(stan_data["n_samples"]):
+        params_ind = samp_bins["inds"][i]
+        plt.text(xlim[1] + 0.02*(xlim[1] - xlim[0]),
+                 i, samp_bins["short_labels"][i], ha = 'left', va = 'center', color = samp_bins["colors"][i])
+
+    
+    plt.errorbar(-10, -10, xerr = 1, fmt = ".", color = 'k', label = "Prior")
+    plt.errorbar(-10, -10, xerr = 1, fmt = "o", color = 'k', label = "Posterior")
+
+    plt.xlim(xlim)
     plt.ylim(-0.5, stan_data["n_samples"] - 0.5)
     plt.yticks([])
 
@@ -504,6 +538,58 @@ def plot_sample_mag_limits():
     plt.savefig(resdir + "Mag_limits.pdf", bbox_inches = 'tight')
     plt.close()
 
+
+def plot_sample_pop_params(the_data, stan_data):
+        
+    plt.figure(figsize = (6,0.3*stan_data["n_samples"]))
+
+    samp_bins = bin_samples_in_redshift(stan_data = stan_data, the_data = the_data)
+
+    offset = 0.2
+    
+    for i in range(stan_data["n_samples"]):
+        params_ind = samp_bins["inds"][i]
+
+        if stan_data["n_samples"] > 1:
+            mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"][:,params_ind], [15.8655, 50, 84.1345])
+        else:
+            mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"], [15.8655, 50., 84.1345])
+            
+        plt.plot(mobs_165084, [i - offset]*3, color = samp_bins["colors"][i])
+        plt.plot(mobs_165084[1], i - offset, 'o', color = samp_bins["colors"][i])
+            
+        plt.plot(the_data["est_mobs_cuts"][params_ind], i + offset, '.', color = samp_bins["colors"][i])
+        plt.plot([the_data["est_mobs_cuts"][params_ind] - 0.5, the_data["est_mobs_cuts"][params_ind] + 0.5], [i + offset]*2, color = samp_bins["colors"][i])
+
+        if i > 0:
+            if samp_bins["cats"][i] != samp_bins["cats"][i-1]:
+                plt.axhline(i, color = [0.5]*3, linewidth = 0.8)
+
+
+    xlim = plt.xlim()
+
+    for i in range(stan_data["n_samples"]):
+        params_ind = samp_bins["inds"][i]
+        plt.text(xlim[1] + 0.02*(xlim[1] - xlim[0]),
+                 i, samp_bins["short_labels"][i], ha = 'left', va = 'center', color = samp_bins["colors"][i])
+
+    
+    plt.errorbar(-10, -10, xerr = 1, fmt = ".", color = 'k', label = "Prior")
+    plt.errorbar(-10, -10, xerr = 1, fmt = "o", color = 'k', label = "Posterior")
+
+    plt.xlim(xlim)
+    plt.ylim(-0.5, stan_data["n_samples"] - 0.5)
+    plt.yticks([])
+
+    xticks, NA = plt.xticks()
+    for xtick in xticks:
+        plt.axvline(xtick, color = 'k', linestyle = ":")
+    
+    plt.legend(loc = 'best')
+    plt.xlabel("Limiting Mag (Observer-Frame)")
+    plt.savefig(resdir + "Mag_limits.pdf", bbox_inches = 'tight')
+    plt.close()
+    
 
 def count_outliers():
     if "outl_loglike_by_SN" not in fit_params:
@@ -591,7 +677,7 @@ make_mB_vs_z()
 show_x1color_pop(log_scale = 0)
 show_x1color_pop(log_scale = 1)
 
-plot_sample_mag_limits()
+plot_sample_mag_limits(the_data, stan_data)
 
 make_Hubble_diagram(0)
 make_Hubble_diagram(1)
@@ -608,7 +694,14 @@ else:
         
 
 
-unc_analysis("Om", ["MB", "alpha", "beta_B", "beta_R", "delta_beta_R", "delta_0", "delta_h", "mobs_cuts", "mobs_cut_sigmas", "c_star", "R_c", "tau_c", "calibs", "x1_star", "mBx1c_int_variance"])
+has_q0 = int("q0" in fit_params)
+for cosmo_key in ["Om"] + ["j0", "q0"]*has_q0:
+    print("Running ", cosmo_key)
+    unc_analysis(cosmo_key, ["MB", "alpha", "beta_B", "beta_R", "delta_beta_R", "delta_0", "delta_h",
+                             "mobs_cuts", "mobs_cut_sigmas", "sigma_int",
+                             "c_star", "R_c", "tau_c", "x1_star", "R_x1", "tau_x1",
+                             "calibs",  "mBx1c_int_variance", "outl_frac", "outl_mBx1c_uncertainties"] + ["j0"]*has_q0*(cosmo_key == "q0")
+                 )
 
 
 make_calib_corner(["MWEBV_multnorm", "MWEBV_addnorm"], "MWEBV_corner.pdf")

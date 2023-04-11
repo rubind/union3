@@ -81,17 +81,30 @@ def read_data(params):
     [lensing_z, lensing_mag] = readcol(os.environ["UNITY"] + "/paramfiles/lensing_bias.txt", 'ff')
     lensing_ifn = interp1d(lensing_z, lensing_mag, kind = 'linear')
 
-    f_cal = open(os.environ["UNITY"] + "/paramfiles/calibration_uncertainties.txt", 'r')
+    f_cal = open(params["calibration_uncertainties"].replace("$UNITY", os.environ["UNITY"]), 'r') #open(os.environ["UNITY"] + "/paramfiles/calibration_uncertainties.txt", 'r')
     lines = f_cal.read().split('\n')
     f_cal.close()
     calibration_uncertainties = {}
+    calibration_paths = {}
+    
     for line in lines:
         parsed = line.split(":")
-        if len(parsed) == 2:
+        if len(parsed) > 1:
             parsed = [item.strip() for item in parsed]
+
+            calibration_paths[eval(parsed[0])] = "None"
+
+            for possible_path in "LS":
+                if parsed[1].count(possible_path):
+                    calibration_paths[eval(parsed[0])] = possible_path
+                    parsed[1] = parsed[1].replace(possible_path, "")
+
+                
             calibration_uncertainties[eval(parsed[0])] = float(parsed[1])
     
 
+    print("calibration_paths", calibration_paths)
+    
     calibration_uncertainties["MWEBV_multnorm"] = 1.
     calibration_uncertainties["MWEBV_addnorm"] = 1.
     calibration_uncertainties["electron_scattering"] = 1.
@@ -336,9 +349,10 @@ def read_data(params):
                                                                                               [mBx1, x1x1, x1c],
                                                                                               [mBc, x1c, cc]]], dtype=float64) + extra_cmat   ), axis = 0)
 
-                dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat", this_redshift_helio)
+                dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat", this_redshift_helio, calibration_paths = calibration_paths)
                 
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties)
+                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind,
+                                                        uncertainties = calibration_uncertainties)
 
 
                 
@@ -393,7 +407,7 @@ def get_redshifts(redshifts):
     tmp_redshifts = sort(tmp_redshifts)
     redshifts_sort_fill = sort(concatenate((tmp_redshifts, 0.5*(tmp_redshifts[1:] + tmp_redshifts[:-1]))))
     
-    return redshifts, redshifts_sort_fill, unsort_inds, len(appended_redshifts)
+    return redshifts_sort_fill, unsort_inds, len(appended_redshifts)
 
 
 def get_redshift_coeffs(z_list, n_x1c_star, p_high_mass, separate_mass_x1c):
@@ -465,7 +479,11 @@ def zbins_chi2fn(P, alldata):
 """
 
 def get_equal_a_bins(z, n_to_add):
-    ministart = np.linspace(0, 1, 30 - n_to_add)
+    if z.max()/z.min() < 20:
+        ministart = np.linspace(0, 1, 4)
+        assert cosmo_model != 2
+    else:
+        ministart = np.linspace(0, 1, 30 - n_to_add)
 
     if n_to_add == 0:
         zbins = -1. + (   1 + z.max() + 0.001   )**ministart * (   1 + z.min() - 0.001   )**(1. - ministart)
@@ -655,7 +673,7 @@ else:
 
     obs_mBx1c_cov = the_data["mBx1c_cov_list"]
 
-    redshifts, redshifts_sort_fill, unsort_inds, nzadd = get_redshifts(the_data["z_CMB_list"])
+    redshifts_sort_fill, unsort_inds, nzadd = get_redshifts(the_data["z_CMB_list"])
 
     p_high_mass = 0.5*(1. + erf((np.array(the_data["mass"]) - 10.)/(2. * np.array(the_data["mass_err"]))))
     redshift_coeffs = get_redshift_coeffs(the_data["z_CMB_list"], params["n_x1c_star"], p_high_mass, params["separate_mass_x1c"])
@@ -672,7 +690,10 @@ else:
                  "p_high_mass": p_high_mass,
                  "do_host_mass": params["do_host_mass"], "fix_Om": params["fix_Om"], "MB_by_sample": params["MB_by_sample"], 
                  # The +1 here is for Stan's indexing, which is from 1 not 0
-                 "sample_list": the_data["sample_list"] + 1, "redshifts": redshifts, "redshifts_sort_fill": redshifts_sort_fill, "unsort_inds": unsort_inds,
+                 "sample_list": the_data["sample_list"] + 1,
+                 "zhelio": the_data["z_helio_list"],
+                 "redshifts": the_data["z_CMB_list"],
+                 "redshifts_sort_fill": redshifts_sort_fill, "unsort_inds": unsort_inds,
                  "obs_mBx1c": array(obs_mBx1c),
                  "obs_mBx1c_cov": array(obs_mBx1c_cov),
                  "do_blind": params["do_blind"],

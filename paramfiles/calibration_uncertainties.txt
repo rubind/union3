@@ -14,11 +14,11 @@
 "LANDOLT_R_CAL":											0.005
 "LANDOLT_I_CAL":											0.005
 
-"LANDOLT_U_LAM":											10
-"LANDOLT_B_LAM":											10
-"LANDOLT_V_LAM":											10
-"LANDOLT_R_LAM":											10
-"LANDOLT_I_LAM":											10
+"LANDOLT_U_LAM":											15
+"LANDOLT_B_LAM":											15
+"LANDOLT_V_LAM":											15
+"LANDOLT_R_LAM":											15
+"LANDOLT_I_LAM":											15
 
 "SMITH_u_CAL":												0.005
 "SMITH_g_CAL":												0.005
@@ -26,10 +26,12 @@
 "SMITH_i_CAL":												0.005
 "SMITH_z_CAL":												0.005
 
-"PS_g_CAL":												0.005
-"PS_r_CAL":												0.005
-"PS_i_CAL":												0.005
-"PS_z_CAL":												0.005
+"SMITH_u_LAM":												15
+"SMITH_g_LAM":												15
+"SMITH_r_LAM":												15
+"SMITH_i_LAM":												15
+"SMITH_z_LAM":												15
+
 
 ('Zeropoint', 'CNIa02|Bessell12_B'):									0.01
 ('Zeropoint', 'CNIa02|Bessell12_V'):									0.01
@@ -45,46 +47,83 @@
 
 
 
-('Zeropoint', 'NB99|NB99_r5'):										0.01
-('Zeropoint', 'NB99|NB99_r11'):										0.01
-('Zeropoint', 'NB99|NB99_b5'):										0.01
-('Zeropoint', 'NB99|NB99_b11'):										0.01
-('Zeropoint', 'NB99|NB99_i11'):										0.01
-('Zeropoint', 'NB99|NB99_v5'):										0.01
-('Zeropoint', 'NB99|NB99_v11'):										0.01
-('Zeropoint', 'NB99|NB99_v4'):										0.01
-('Zeropoint', 'NB99|NB99_b4'):										0.01
-('Zeropoint', 'NB99|NB99_b12'):										0.01
-('Zeropoint', 'NB99|NB99_i4'):										0.01
-('Zeropoint', 'NB99|NB99_v12'):										0.01
-('Zeropoint', 'NB99|NB99_r4'):										0.01
-('Zeropoint', 'NB99|NB99_r12'):										0.01
-('Zeropoint', 'NB99|NB99_v6'):										0.01
-('Zeropoint', 'NB99|NB99_i16'):										0.01
-('Zeropoint', 'NB99|NB99_r16'):										0.01
-('Zeropoint', 'NB99|NB99_i12'):										0.01
-('Zeropoint', 'NB99|NB99_b6'):										0.01
-('Zeropoint', 'NB99|NB99_i8'):										0.01
-('Lambda', 'NB99|NB99_r5'):										20
-('Lambda', 'NB99|NB99_r11'):										20
-('Lambda', 'NB99|NB99_b5'):										20
-('Lambda', 'NB99|NB99_b11'):										20
-('Lambda', 'NB99|NB99_i11'):										20
-('Lambda', 'NB99|NB99_v5'):										20
-('Lambda', 'NB99|NB99_v11'):										20
-('Lambda', 'NB99|NB99_v4'):										20
-('Lambda', 'NB99|NB99_b4'):										20
-('Lambda', 'NB99|NB99_b12'):										20
-('Lambda', 'NB99|NB99_i4'):										20
-('Lambda', 'NB99|NB99_v12'):										20
-('Lambda', 'NB99|NB99_r4'):										20
-('Lambda', 'NB99|NB99_r12'):										20
-('Lambda', 'NB99|NB99_v6'):										20
-('Lambda', 'NB99|NB99_i16'):										20
-('Lambda', 'NB99|NB99_r16'):										20
-('Lambda', 'NB99|NB99_i12'):										20
-('Lambda', 'NB99|NB99_b6'):										20
-('Lambda', 'NB99|NB99_i8'):										20
+('Zeropoint', 'NB99|NB99_b4'):										0.01L
+('Zeropoint', 'NB99|NB99_b12'):										0.01L
+('Zeropoint', 'NB99|NB99_b5'):										0.01L
+('Zeropoint', 'NB99|NB99_b6'):										0.01L
+('Zeropoint', 'NB99|NB99_b11'):										0.01L
+('Zeropoint', 'NB99|NB99_b7'):										0.01L
+('Zeropoint', 'NB99|NB99_b10'):										0.01L
+('Zeropoint', 'NB99|NB99_b8'):										0.01L
+('Zeropoint', 'NB99|NB99_b1'):										0.01L
+
+('Zeropoint', 'NB99|NB99_v5'):										0.01L
+('Zeropoint', 'NB99|NB99_v11'):										0.01L
+('Zeropoint', 'NB99|NB99_v12'):										0.01L
+('Zeropoint', 'NB99|NB99_v6'):										0.01L
+('Zeropoint', 'NB99|NB99_v4'):										0.01L
+('Zeropoint', 'NB99|NB99_v1'):										0.01L
+('Zeropoint', 'NB99|NB99_v7'):										0.01L
+('Zeropoint', 'NB99|NB99_v8'):										0.01L
+('Zeropoint', 'NB99|NB99_v10'):										0.01L
+
+('Zeropoint', 'NB99|NB99_r5'):										0.01L
+('Zeropoint', 'NB99|NB99_r4'):										0.01L
+('Zeropoint', 'NB99|NB99_r12'):										0.01L
+('Zeropoint', 'NB99|NB99_r16'):										0.01L
+('Zeropoint', 'NB99|NB99_r8'):										0.01L
+('Zeropoint', 'NB99|NB99_r11'):										0.01L
+('Zeropoint', 'NB99|NB99_r7'):										0.01L
+('Zeropoint', 'NB99|NB99_r10'):										0.01L
+('Zeropoint', 'NB99|NB99_r1'):										0.01L
+
+('Zeropoint', 'NB99|NB99_i11'):										0.01L
+('Zeropoint', 'NB99|NB99_i4'):										0.01L
+('Zeropoint', 'NB99|NB99_i16'):										0.01L
+('Zeropoint', 'NB99|NB99_i12'):										0.01L
+('Zeropoint', 'NB99|NB99_i8'):										0.01L
+('Zeropoint', 'NB99|NB99_i7'):										0.01L
+('Zeropoint', 'NB99|NB99_i1'):										0.01L
+('Zeropoint', 'NB99|NB99_i10'):										0.01L
+
+('Lambda', 'NB99|NB99_b10'):										20L
+('Lambda', 'NB99|NB99_b8'):										20L
+('Lambda', 'NB99|NB99_b1'):										20L
+('Lambda', 'NB99|NB99_b5'):										20L
+('Lambda', 'NB99|NB99_b11'):										20L
+('Lambda', 'NB99|NB99_b6'):										20L
+('Lambda', 'NB99|NB99_b4'):										20L
+('Lambda', 'NB99|NB99_b12'):										20L
+('Lambda', 'NB99|NB99_b7'):										20L
+
+('Lambda', 'NB99|NB99_v5'):										20L
+('Lambda', 'NB99|NB99_v11'):										20L
+('Lambda', 'NB99|NB99_v4'):										20L
+('Lambda', 'NB99|NB99_v12'):										20L
+('Lambda', 'NB99|NB99_v6'):										20L
+('Lambda', 'NB99|NB99_v8'):										20L
+('Lambda', 'NB99|NB99_v10'):										20L
+('Lambda', 'NB99|NB99_v1'):										20L
+('Lambda', 'NB99|NB99_v7'):										20L
+
+('Lambda', 'NB99|NB99_r5'):										20L
+('Lambda', 'NB99|NB99_r4'):										20L
+('Lambda', 'NB99|NB99_r12'):										20L
+('Lambda', 'NB99|NB99_r16'):										20L
+('Lambda', 'NB99|NB99_r8'):										20L
+('Lambda', 'NB99|NB99_r11'):										20L
+('Lambda', 'NB99|NB99_r1'):										20L
+('Lambda', 'NB99|NB99_r10'):										20L
+('Lambda', 'NB99|NB99_r7'):										20L
+
+('Lambda', 'NB99|NB99_i11'):										20L
+('Lambda', 'NB99|NB99_i4'):										20L
+('Lambda', 'NB99|NB99_i16'):										20L
+('Lambda', 'NB99|NB99_i12'):										20L
+('Lambda', 'NB99|NB99_i8'):										20L
+('Lambda', 'NB99|NB99_i10'):										20L
+('Lambda', 'NB99|NB99_i1'):										20L
+('Lambda', 'NB99|NB99_i7'):										20L
 
 
 ('Zeropoint', 'SDSS|SDSS_u'):										0.01
@@ -100,16 +139,16 @@
 
 
 
-('Zeropoint', 'LCOGT|LCOGT_B'):										0.01
-('Zeropoint', 'LCOGT|LCOGT_V'):										0.01
-('Zeropoint', 'LCOGT|LCOGT_g'):										0.01
-('Zeropoint', 'LCOGT|LCOGT_r'):										0.01
-('Zeropoint', 'LCOGT|LCOGT_i'):										0.01
-('Lambda', 'LCOGT|LCOGT_B'):										20.
-('Lambda', 'LCOGT|LCOGT_V'):										20.
-('Lambda', 'LCOGT|LCOGT_g'):										20.
-('Lambda', 'LCOGT|LCOGT_r'):										20.
-('Lambda', 'LCOGT|LCOGT_i'):										20.
+('Zeropoint', 'LCOGT|LCOGT_B'):										0.01L
+('Zeropoint', 'LCOGT|LCOGT_V'):										0.01L
+('Zeropoint', 'LCOGT|LCOGT_g'):										0.01S
+('Zeropoint', 'LCOGT|LCOGT_r'):										0.01S
+('Zeropoint', 'LCOGT|LCOGT_i'):										0.01S
+('Lambda', 'LCOGT|LCOGT_B'):										20.L
+('Lambda', 'LCOGT|LCOGT_V'):										20.L
+('Lambda', 'LCOGT|LCOGT_g'):										20.S
+('Lambda', 'LCOGT|LCOGT_r'):										20.S
+('Lambda', 'LCOGT|LCOGT_i'):										20.S
 
 
 ('Zeropoint', 'PS|PS_g'):										0.01
@@ -122,14 +161,14 @@
 ('Lambda', 'PS|PS_i'):											10.0
 ('Lambda', 'PS|PS_z'):											10.0
 
-('Zeropoint', 'SWOPE|SWOPE_B'):										0.01
-('Zeropoint', 'SWOPE|SWOPE_V-LC-3014'):									0.01
-('Zeropoint', 'SWOPE|SWOPE_V-LC-3009'):									0.01
-('Zeropoint', 'SWOPE|SWOPE_V-LC-9844'):									0.01
-('Zeropoint', 'SWOPE|SWOPE_u'):										0.01
-('Zeropoint', 'SWOPE|SWOPE_g'):										0.01
-('Zeropoint', 'SWOPE|SWOPE_r'):										0.01
-('Zeropoint', 'SWOPE|SWOPE_i'):										0.01
+('Zeropoint', 'SWOPE|SWOPE_B'):										0.01L
+('Zeropoint', 'SWOPE|SWOPE_V-LC-3014'):									0.01L
+('Zeropoint', 'SWOPE|SWOPE_V-LC-3009'):									0.01L
+('Zeropoint', 'SWOPE|SWOPE_V-LC-9844'):									0.01L
+('Zeropoint', 'SWOPE|SWOPE_u'):										0.01S
+('Zeropoint', 'SWOPE|SWOPE_g'):										0.01S
+('Zeropoint', 'SWOPE|SWOPE_r'):										0.01S
+('Zeropoint', 'SWOPE|SWOPE_i'):										0.01S
 ('Lambda', 'SWOPE|SWOPE_B'):										10.
 ('Lambda', 'SWOPE|SWOPE_V-LC-3014'):									10.
 ('Lambda', 'SWOPE|SWOPE_V-LC-3009'):									10.
@@ -140,221 +179,222 @@
 ('Lambda', 'SWOPE|SWOPE_i'):										10.
 
 
-('Zeropoint', 'LOSS|LOSS_K1_B'):									0.01
-('Zeropoint', 'LOSS|LOSS_K3_B'):									0.01
-('Zeropoint', 'LOSS|LOSS_K4_B'):									0.01
-('Zeropoint', 'LOSS|LOSS_N1_B'):									0.01
-('Zeropoint', 'LOSS|LOSS_N2_B'):									0.01
-('Zeropoint', 'LOSS|LOSS_K1_V'):									0.01
-('Zeropoint', 'LOSS|LOSS_K3_V'):									0.01
-('Zeropoint', 'LOSS|LOSS_K4_V'):									0.01
-('Zeropoint', 'LOSS|LOSS_N1_V'):									0.01
-('Zeropoint', 'LOSS|LOSS_N2_V'):									0.01
-('Zeropoint', 'LOSS|LOSS_K1_R'):									0.01
-('Zeropoint', 'LOSS|LOSS_K3_R'):									0.01
-('Zeropoint', 'LOSS|LOSS_K4_R'):									0.01
-('Zeropoint', 'LOSS|LOSS_N2_R'):									0.01
-('Zeropoint', 'LOSS|LOSS_N1_R'):									0.01
-('Zeropoint', 'LOSS|LOSS_K1_I'):									0.01
-('Zeropoint', 'LOSS|LOSS_K3_I'):									0.01
-('Zeropoint', 'LOSS|LOSS_K4_I'):									0.01
-('Zeropoint', 'LOSS|LOSS_N1_I'):									0.01
-('Zeropoint', 'LOSS|LOSS_N2_I'):									0.01
-('Lambda', 'LOSS|LOSS_K1_B'):										0.01
-('Lambda', 'LOSS|LOSS_K3_B'):										0.01
-('Lambda', 'LOSS|LOSS_K4_B'):										0.01
-('Lambda', 'LOSS|LOSS_N1_B'):										20.
-('Lambda', 'LOSS|LOSS_N2_B'):										20.
-('Lambda', 'LOSS|LOSS_K1_V'):										20.
-('Lambda', 'LOSS|LOSS_K3_V'):										20.
-('Lambda', 'LOSS|LOSS_K4_V'):										20.
-('Lambda', 'LOSS|LOSS_N1_V'):										20.
-('Lambda', 'LOSS|LOSS_N2_V'):										20.
-('Lambda', 'LOSS|LOSS_K1_R'):										20.
-('Lambda', 'LOSS|LOSS_K3_R'):										20.
-('Lambda', 'LOSS|LOSS_K4_R'):										20.
-('Lambda', 'LOSS|LOSS_N1_R'):										20.
-('Lambda', 'LOSS|LOSS_N2_R'):										20.
-('Lambda', 'LOSS|LOSS_K1_I'):										20.
-('Lambda', 'LOSS|LOSS_K3_I'):										20.
-('Lambda', 'LOSS|LOSS_K4_I'):										20.
-('Lambda', 'LOSS|LOSS_N1_I'):										20.
-('Lambda', 'LOSS|LOSS_N2_I'):										20.
+('Zeropoint', 'LOSS|LOSS_K1_B'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K2_B'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K3_B'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K4_B'):									0.01L
+('Zeropoint', 'LOSS|LOSS_N1_B'):									0.01L
+('Zeropoint', 'LOSS|LOSS_N2_B'):									0.01L
+
+('Zeropoint', 'LOSS|LOSS_K1_V'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K2_V'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K3_V'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K4_V'):									0.01L
+('Zeropoint', 'LOSS|LOSS_N1_V'):									0.01L
+('Zeropoint', 'LOSS|LOSS_N2_V'):									0.01L
+
+('Zeropoint', 'LOSS|LOSS_K1_R'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K2_R'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K3_R'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K4_R'):									0.01L
+('Zeropoint', 'LOSS|LOSS_N2_R'):									0.01L
+('Zeropoint', 'LOSS|LOSS_N1_R'):									0.01L
+
+('Zeropoint', 'LOSS|LOSS_K1_I'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K2_I'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K3_I'):									0.01L
+('Zeropoint', 'LOSS|LOSS_K4_I'):									0.01L
+('Zeropoint', 'LOSS|LOSS_N1_I'):									0.01L
+('Zeropoint', 'LOSS|LOSS_N2_I'):									0.01L
+
+('Lambda', 'LOSS|LOSS_K1_B'):										20.L
+('Lambda', 'LOSS|LOSS_K2_B'):										20.L
+('Lambda', 'LOSS|LOSS_K3_B'):										20.L
+('Lambda', 'LOSS|LOSS_K4_B'):										20.L
+('Lambda', 'LOSS|LOSS_N1_B'):										20.L
+('Lambda', 'LOSS|LOSS_N2_B'):										20.L
+
+('Lambda', 'LOSS|LOSS_K1_V'):										20.L
+('Lambda', 'LOSS|LOSS_K2_V'):										20.L
+('Lambda', 'LOSS|LOSS_K3_V'):										20.L
+('Lambda', 'LOSS|LOSS_K4_V'):										20.L
+('Lambda', 'LOSS|LOSS_N1_V'):										20.L
+('Lambda', 'LOSS|LOSS_N2_V'):										20.L
+
+('Lambda', 'LOSS|LOSS_K1_R'):										20.L
+('Lambda', 'LOSS|LOSS_K2_R'):										20.L
+('Lambda', 'LOSS|LOSS_K3_R'):										20.L
+('Lambda', 'LOSS|LOSS_K4_R'):										20.L
+('Lambda', 'LOSS|LOSS_N1_R'):										20.L
+('Lambda', 'LOSS|LOSS_N2_R'):										20.L
+
+('Lambda', 'LOSS|LOSS_K1_I'):										20.L
+('Lambda', 'LOSS|LOSS_K2_I'):										20.L
+('Lambda', 'LOSS|LOSS_K3_I'):										20.L
+('Lambda', 'LOSS|LOSS_K4_I'):										20.L
+('Lambda', 'LOSS|LOSS_N1_I'):										20.L
+('Lambda', 'LOSS|LOSS_N2_I'):										20.L
 
 
 
-('Zeropoint', 'CalanTololo|Bessell12_B'):								0.03
-('Zeropoint', 'CalanTololo|Bessell12_V'):								0.02
-('Zeropoint', 'CalanTololo|Bessell12_R'):								0.03
-('Zeropoint', 'CalanTololo|Bessell12_I'):								0.03
-('Lambda', 'CalanTololo|Bessell12_B'):									10
-('Lambda', 'CalanTololo|Bessell12_V'):									10
-('Lambda', 'CalanTololo|Bessell12_R'):									10
-('Lambda', 'CalanTololo|Bessell12_I'):									10
+('Zeropoint', 'CalanTololo|Bessell12_B'):								0.03L
+('Zeropoint', 'CalanTololo|Bessell12_V'):								0.02L
+('Zeropoint', 'CalanTololo|Bessell12_R'):								0.03L
+('Zeropoint', 'CalanTololo|Bessell12_I'):								0.03L
+('Lambda', 'CalanTololo|Bessell12_B'):									10L
+('Lambda', 'CalanTololo|Bessell12_V'):									10L
+('Lambda', 'CalanTololo|Bessell12_R'):									10L
+('Lambda', 'CalanTololo|Bessell12_I'):									10L
 
-('Zeropoint', 'Krisciunas|Bessell12_U'):                                                                0.05
-('Zeropoint', 'Krisciunas|Bessell12_B'):								0.03
-('Zeropoint', 'Krisciunas|Bessell12_V'):								0.02
-('Zeropoint', 'Krisciunas|Bessell12_R'):								0.03
-('Zeropoint', 'Krisciunas|Bessell12_I'):								0.03
-('Lambda', 'Krisciunas|Bessell12_U'):                                                                   10
-('Lambda', 'Krisciunas|Bessell12_B'):									10
-('Lambda', 'Krisciunas|Bessell12_V'):									10
-('Lambda', 'Krisciunas|Bessell12_R'):									10
-('Lambda', 'Krisciunas|Bessell12_I'):									10
+('Zeropoint', 'Krisciunas|Bessell12_U'):                                                                0.05L
+('Zeropoint', 'Krisciunas|Bessell12_B'):								0.03L
+('Zeropoint', 'Krisciunas|Bessell12_V'):								0.02L
+('Zeropoint', 'Krisciunas|Bessell12_R'):								0.03L
+('Zeropoint', 'Krisciunas|Bessell12_I'):								0.03L
+('Lambda', 'Krisciunas|Bessell12_U'):                                                                   10L
+('Lambda', 'Krisciunas|Bessell12_B'):									10L
+('Lambda', 'Krisciunas|Bessell12_V'):									10L
+('Lambda', 'Krisciunas|Bessell12_R'):									10L
+('Lambda', 'Krisciunas|Bessell12_I'):									10L
 
-('Zeropoint', 'Knop|Bessell12_R'):									0.02
-('Zeropoint', 'Knop|Bessell12_I'):									0.02
+('Zeropoint', 'Knop|Bessell12_R'):									0.02L
+('Zeropoint', 'Knop|Bessell12_I'):									0.02L
 ('Lambda', 'Knop|Bessell12_R'):										10
 ('Lambda', 'Knop|Bessell12_I'):										10
 
 
 
-('Zeropoint', 'CfA34_FLWO|CfA3_MC_B'):									0.01
-('Zeropoint', 'CfA34_FLWO|CfA3_MC_V'):									0.01
-('Zeropoint', "CfA34_FLWO|CfA3_MC_r'"):									0.01
-('Zeropoint', "CfA34_FLWO|CfA3_MC_i'"):									0.01
-('Lambda', 'CfA34_FLWO|CfA3_MC_B'):									20
-('Lambda', 'CfA34_FLWO|CfA3_MC_V'):									20
-('Lambda', "CfA34_FLWO|CfA3_MC_r'"):									20
-('Lambda', "CfA34_FLWO|CfA3_MC_i'"):									20
+('Zeropoint', 'CfA34_FLWO|CfA3_MC_B'):									0.01L
+('Zeropoint', 'CfA34_FLWO|CfA3_KC_B_1'):								0.01L
+('Zeropoint', 'CfA34_FLWO|CfA4_KC_B_1'):								0.01L
+('Zeropoint', 'CfA34_FLWO|CfA4_KC_B_2'):								0.01L
 
-('Zeropoint', "CfA34_FLWO|CfA3_KC_r'_1"):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA3_KC_B_1'):								0.01
-('Zeropoint', "CfA34_FLWO|CfA3_KC_i'_1"):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA3_KC_V_1'):								0.01
-('Lambda', "CfA34_FLWO|CfA3_KC_r'_1"):									20
-('Lambda', 'CfA34_FLWO|CfA3_KC_B_1'):									20
-('Lambda', "CfA34_FLWO|CfA3_KC_i'_1"):									20
-('Lambda', 'CfA34_FLWO|CfA3_KC_V_1'):									20
-('Zeropoint', "CfA34_FLWO|CfA4_KC_i'_1"):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA4_KC_B_1'):								0.01
-('Zeropoint', "CfA34_FLWO|CfA4_KC_r'_1"):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA4_KC_V_1'):								0.01
-('Lambda', "CfA34_FLWO|CfA4_KC_i'_1"):									20
-('Lambda', 'CfA34_FLWO|CfA4_KC_B_1'):									20
-('Lambda', "CfA34_FLWO|CfA4_KC_r'_1"):									20
-('Lambda', 'CfA34_FLWO|CfA4_KC_V_1'):									20
-('Zeropoint', "CfA34_FLWO|CfA4_KC_r'_2"):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA4_KC_B_2'):								0.01
-('Zeropoint', "CfA34_FLWO|CfA4_KC_i'_2"):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA4_KC_V_2'):								0.01
-('Lambda', "CfA34_FLWO|CfA4_KC_r'_2"):									20
-('Lambda', 'CfA34_FLWO|CfA4_KC_B_2'):									20
-('Lambda', "CfA34_FLWO|CfA4_KC_i'_2"):									20
-('Lambda', 'CfA34_FLWO|CfA4_KC_V_2'):									20
-('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_B_thick'):								0.01
-('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_I_thick'):								0.01
-('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_V_thick'):								0.01
-('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_R_thick'):								0.01
-('Lambda', 'CfA1_FLWO|CfA1_FLWO_B_thick'):								20
-('Lambda', 'CfA1_FLWO|CfA1_FLWO_I_thick'):								20
-('Lambda', 'CfA1_FLWO|CfA1_FLWO_V_thick'):								20
-('Lambda', 'CfA1_FLWO|CfA1_FLWO_R_thick'):								20
-('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_R_thin'):								0.01
-('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_I_thin'):								0.01
-('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_B_thin'):								0.01
-('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_V_thin'):								0.01
-('Lambda', 'CfA1_FLWO|CfA1_FLWO_R_thin'):								20
-('Lambda', 'CfA1_FLWO|CfA1_FLWO_I_thin'):								20
-('Lambda', 'CfA1_FLWO|CfA1_FLWO_B_thin'):								20
-('Lambda', 'CfA1_FLWO|CfA1_FLWO_V_thin'):								20
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_V'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_I'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_R'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_U'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_B'):								0.01
-('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_V'):									20
-('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_I'):									20
-('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_R'):									20
-('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_U'):									20
-('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_B'):									20
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_R'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_B'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_U'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_V'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_I'):								0.01
-('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_R'):								20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_B'):								20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_U'):								20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_V'):								20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_I'):								20
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_R'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_V'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_B'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_I'):								0.01
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_R'):								20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_V'):								20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_B'):								20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_I'):								20
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_U'):								0.01
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_U'):								20
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_U'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_U'):								0.01
-('Zeropoint', 'NB99|NB99_r8'):										0.01
-('Zeropoint', 'LOSS|LOSS_K2_R'):									0.01
-('Zeropoint', 'NB99|NB99_b1'):										0.01
-('Zeropoint', 'NB99|NB99_r1'):										0.01
-('Zeropoint', 'NB99|NB99_i10'):										0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_B'):								0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_R'):								0.01
-('Zeropoint', 'NB99|NB99_i1'):										0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_V'):								0.01
-('Zeropoint', 'NB99|NB99_b10'):										0.01
-('Zeropoint', 'NB99|NB99_b8'):										0.01
-('Zeropoint', 'LOSS|LOSS_K2_B'):									0.01
-('Zeropoint', 'NB99|NB99_i7'):										0.01
-('Zeropoint', 'NB99|NB99_v8'):										0.01
-('Zeropoint', 'NB99|NB99_v10'):										0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_R'):								0.01
-('Zeropoint', 'NB99|NB99_r10'):										0.01
-('Zeropoint', 'NB99|NB99_v1'):										0.01
-('Zeropoint', 'NB99|NB99_v7'):										0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_V'):								0.01
-('Zeropoint', 'LOSS|LOSS_K2_I'):									0.01
-('Zeropoint', 'NB99|NB99_r7'):										0.01
-('Zeropoint', 'LOSS|LOSS_K2_V'):									0.01
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_B'):								0.01
-('Zeropoint', 'NB99|NB99_b7'):										0.01
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_U'):								20
-('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_U'):								20
-('Lambda', 'LOSS|LOSS_K2_R'):										20
-('Lambda', 'NB99|NB99_r8'):										20
-('Lambda', 'NB99|NB99_b1'):										20
-('Lambda', 'NB99|NB99_r1'):										20
-('Lambda', 'NB99|NB99_i10'):										20
-('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_B'):								20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_R'):								20
-('Lambda', 'NB99|NB99_i1'):										20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_V'):								20
-('Lambda', 'NB99|NB99_b10'):										20
-('Lambda', 'NB99|NB99_b8'):										20
-('Lambda', 'LOSS|LOSS_K2_B'):										20
-('Lambda', 'NB99|NB99_i7'):										20
-('Lambda', 'NB99|NB99_v8'):										20
-('Lambda', 'NB99|NB99_v10'):										20
-('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_R'):								20
-('Lambda', 'NB99|NB99_r10'):										20
-('Lambda', 'NB99|NB99_v1'):										20
-('Lambda', 'NB99|NB99_v7'):										20
-('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_V'):								20
-('Lambda', 'LOSS|LOSS_K2_I'):										20
-('Lambda', 'NB99|NB99_r7'):										20
-('Lambda', 'LOSS|LOSS_K2_V'):										20
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_B'):								20
-('Lambda', 'NB99|NB99_b7'):										20
-('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_I'):								0.01
-('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_I'):								20
-('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_I'):								0.01
-('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_I'):								20
-('Zeropoint', 'CfA34_FLWO|CfA34_4Sh_Harris_R'):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA34_4Sh_Harris_I'):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA34_4Sh_Harris_B'):								0.01
-('Zeropoint', 'CfA34_FLWO|CfA34_4Sh_Harris_V'):								0.01
-('Lambda', 'CfA34_FLWO|CfA34_4Sh_Harris_R'):								20
-('Lambda', 'CfA34_FLWO|CfA34_4Sh_Harris_I'):								20
-('Lambda', 'CfA34_FLWO|CfA34_4Sh_Harris_B'):								20
-('Lambda', 'CfA34_FLWO|CfA34_4Sh_Harris_V'):								20
+('Zeropoint', 'CfA34_FLWO|CfA3_MC_V'):									0.01L
+('Zeropoint', 'CfA34_FLWO|CfA3_KC_V_1'):								0.01L
+('Zeropoint', 'CfA34_FLWO|CfA4_KC_V_1'):								0.01L
+('Zeropoint', 'CfA34_FLWO|CfA4_KC_V_2'):								0.01L
+
+('Zeropoint', "CfA34_FLWO|CfA3_MC_r'"):									0.01S
+('Zeropoint', "CfA34_FLWO|CfA3_KC_r'_1"):								0.01S
+('Zeropoint', "CfA34_FLWO|CfA4_KC_r'_1"):								0.01S
+('Zeropoint', "CfA34_FLWO|CfA4_KC_r'_2"):								0.01S
+
+('Zeropoint', "CfA34_FLWO|CfA3_MC_i'"):									0.01S
+('Zeropoint', "CfA34_FLWO|CfA3_KC_i'_1"):								0.01S
+('Zeropoint', "CfA34_FLWO|CfA4_KC_i'_1"):								0.01S
+('Zeropoint', "CfA34_FLWO|CfA4_KC_i'_2"):								0.01S
+
+('Lambda', 'CfA34_FLWO|CfA3_MC_B'):									20L
+('Lambda', 'CfA34_FLWO|CfA3_KC_B_1'):									20L
+('Lambda', 'CfA34_FLWO|CfA4_KC_B_1'):									20L
+('Lambda', 'CfA34_FLWO|CfA4_KC_B_2'):									20L
+
+('Lambda', 'CfA34_FLWO|CfA3_MC_V'):									20L
+('Lambda', 'CfA34_FLWO|CfA3_KC_V_1'):									20L
+('Lambda', 'CfA34_FLWO|CfA4_KC_V_1'):									20L
+('Lambda', 'CfA34_FLWO|CfA4_KC_V_2'):									20L
+
+('Lambda', "CfA34_FLWO|CfA3_MC_r'"):									20S
+('Lambda', "CfA34_FLWO|CfA3_KC_r'_1"):									20S
+('Lambda', "CfA34_FLWO|CfA4_KC_r'_1"):									20S
+('Lambda', "CfA34_FLWO|CfA4_KC_r'_2"):									20S
+
+('Lambda', "CfA34_FLWO|CfA3_MC_i'"):									20S
+('Lambda', "CfA34_FLWO|CfA3_KC_i'_1"):									20S
+('Lambda', "CfA34_FLWO|CfA4_KC_i'_1"):									20S
+('Lambda', "CfA34_FLWO|CfA4_KC_i'_2"):									20S
+
+('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_B_thick'):								0.01L
+('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_B_thin'):								0.01L
+
+('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_V_thick'):								0.01L
+('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_V_thin'):								0.01L
+
+('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_R_thick'):								0.01L
+('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_R_thin'):								0.01L
+
+('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_I_thick'):								0.01L
+('Zeropoint', 'CfA1_FLWO|CfA1_FLWO_I_thin'):								0.01L
+
+('Lambda', 'CfA1_FLWO|CfA1_FLWO_B_thick'):								20L
+('Lambda', 'CfA1_FLWO|CfA1_FLWO_B_thin'):								20L
+
+('Lambda', 'CfA1_FLWO|CfA1_FLWO_V_thick'):								20L
+('Lambda', 'CfA1_FLWO|CfA1_FLWO_V_thin'):								20L
+
+('Lambda', 'CfA1_FLWO|CfA1_FLWO_R_thick'):								20L
+('Lambda', 'CfA1_FLWO|CfA1_FLWO_R_thin'):								20L
+
+('Lambda', 'CfA1_FLWO|CfA1_FLWO_I_thick'):								20L
+('Lambda', 'CfA1_FLWO|CfA1_FLWO_I_thin'):								20L
+
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_U'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_U'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_U'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_U'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_U'):								0.01L
+
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_B'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_B'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_B'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_B'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_B'):								0.01L
+('Zeropoint', 'CfA34_FLWO|CfA34_4Sh_Harris_B'):								0.01L
+
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_V'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_V'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_V'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_V'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_V'):								0.01L
+('Zeropoint', 'CfA34_FLWO|CfA34_4Sh_Harris_V'):								0.01L
+
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_R'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_R'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_R'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_R'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_R'):								0.01L
+('Zeropoint', 'CfA34_FLWO|CfA34_4Sh_Harris_R'):								0.01L
+
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_SAO_I'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh1_SAO_I'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_SAO_I'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_4Sh3_Harris_I'):								0.01L
+('Zeropoint', 'CfA2_FLWO|CfA2_AC_Harris_I'):								0.01L
+('Zeropoint', 'CfA34_FLWO|CfA34_4Sh_Harris_I'):								0.01L
+
+('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_U'):									20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_U'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_U'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_U'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_U'):								20L
+
+('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_B'):									20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_B'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_B'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_B'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_B'):								20L
+('Lambda', 'CfA34_FLWO|CfA34_4Sh_Harris_B'):								20L
+
+('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_V'):									20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_V'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_V'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_V'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_V'):								20L
+('Lambda', 'CfA34_FLWO|CfA34_4Sh_Harris_V'):								20L
+
+('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_R'):									20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_R'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_R'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_R'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_R'):								20L
+('Lambda', 'CfA34_FLWO|CfA34_4Sh_Harris_R'):								20L
+
+('Lambda', 'CfA2_FLWO|CfA2_AC_SAO_I'):									20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh1_SAO_I'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_SAO_I'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_4Sh3_Harris_I'):								20L
+('Lambda', 'CfA2_FLWO|CfA2_AC_Harris_I'):								20L
+('Lambda', 'CfA34_FLWO|CfA34_4Sh_Harris_I'):								20L
 
 
 ('Zeropoint', 'DECam|DECam_g'):										0.01
@@ -367,10 +407,10 @@
 ('Lambda', 'DECam|DECam_i'):										10.
 
 
-('Zeropoint', 'MOSAICII|MOSAICII_I'):									0.01
-('Zeropoint', 'MOSAICII|MOSAICII_R'):									0.01
-('Lambda', 'MOSAICII|MOSAICII_I'):									10.
+('Zeropoint', 'MOSAICII|MOSAICII_R'):									0.01L
+('Zeropoint', 'MOSAICII|MOSAICII_I'):									0.01L
 ('Lambda', 'MOSAICII|MOSAICII_R'):									10.
+('Lambda', 'MOSAICII|MOSAICII_I'):									10.
 
 
 ('Zeropoint', 'WFPC2PC|WFPC2PC_F850LP'):								0.01
@@ -395,8 +435,9 @@
 ('Lambda', 'FORS1|FORS1_I'):										10
 
 
-('Zeropoint', 'ACSWF|F850LP'):										0.01
+('Zeropoint', 'ACSWF|F625W'):										0.01
 ('Zeropoint', 'ACSWF|F775W'):										0.01
+('Zeropoint', 'ACSWF|F850LP'):										0.01
 ('Zeropoint', 'WFC3|WFC3_f160w'):									0.01
 ('Zeropoint', 'WFC3|WFC3_f125w'):									0.01
 ('Zeropoint', 'ACSWF|F814W'):										0.01
@@ -405,6 +446,7 @@
 ('Zeropoint', 'WFC3|WFC3_f139m'):									0.01
 ('Zeropoint', 'WFC3|WFC3_f140w'):									0.01
 ('Zeropoint', 'WFC3|WFC3_f153m'):									0.01
+('Lambda', 'ACSWF|F625W'):										10
 ('Lambda', 'ACSWF|F775W'):										10
 ('Lambda', 'ACSWF|F814W'):										10
 ('Lambda', 'ACSWF|F850LP'):										10

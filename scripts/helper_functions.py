@@ -114,13 +114,26 @@ def get_params(paramfl):
 
 
 
-def get_dparam_dzps(res_der_fl, redshift):
+def get_dparam_dzps(res_der_fl, redshift, calibration_paths):
     wavebins = [(3000.0, 4000.0),
                 (4000.0, 5000.0),
                 (6000.0, 8000.0),
                 (8000.0, 100000.0),
                 (10000.0, 100000.0)] # 4000 and 8000 for the breaks, roughly, 10000 for STIS -> WFC3/NICMOS
 
+    Landolt_Smith_bins = dict(L = {"LANDOLT_U": (3000, 4000),
+                                   "LANDOLT_B": (4000, 5000),
+                                   "LANDOLT_V": (5000, 6000),
+                                   "LANDOLT_R": (6000, 7500),
+                                   "LANDOLT_I": (7500, 9000)},
+                              S = {"SMITH_u": (3000, 4000),
+                                   "SMITH_g": (4000, 5500),
+                                   "SMITH_r": (5500, 7000),
+                                   "SMITH_i": (7000, 8000),
+                                   "SMITH_z": (8000, 10000)}
+                              )
+    
+    
     f = open(res_der_fl)
     lines = f.read().split('\n')
     f.close()
@@ -129,11 +142,32 @@ def get_dparam_dzps(res_der_fl, redshift):
     for line in lines:
         parsed = line.split(None)
         if parsed.count("All") and (parsed.count("Zeropoint") or parsed.count("Lambda")):
+            restlamb = float(parsed[2])
+            obslamb = (1. + redshift)*restlamb
+
             parsed = line.split(None)
             assert parsed[3] == "All", "Weird format for " + res_der_fl
-            
-            dparam_dzps[(parsed[0], parsed[1][parsed[1].find("|")+1:])] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
 
+            the_key = (parsed[0], parsed[1][parsed[1].find("|")+1:])
+            dparam_dzps[the_key] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+
+
+            for Landolt_or_Smith in "LS":
+                if calibration_paths[the_key] == Landolt_or_Smith:
+                    for LSkey in Landolt_Smith_bins[Landolt_or_Smith]:
+                        if (Landolt_Smith_bins[Landolt_or_Smith][LSkey][0] < obslamb) and (Landolt_Smith_bins[Landolt_or_Smith][LSkey][1] > obslamb):
+                            if parsed.count("Zeropoint"):
+                                key_to_write = LSkey + "_CAL"
+                            else:
+                                key_to_write = LSkey + "_LAM"
+
+                            if key_to_write in dparam_dzps:
+                                dparam_dzps[key_to_write] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+                            else:
+                                dparam_dzps[key_to_write] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+
+                                                    
+            
         if parsed.count("Zeropoint") and parsed.count("All"):
             restlamb = float(parsed[2])
             obslamb = (1. + redshift)*restlamb
@@ -146,8 +180,7 @@ def get_dparam_dzps(res_der_fl, redshift):
                         dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
                     else:
                         dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
-
-
+                        
             if restlamb < 4000:
                 thekey = "SALT_U_CAL"
                 
@@ -165,7 +198,12 @@ def get_dparam_dzps(res_der_fl, redshift):
                     dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
                 
 
-    print("dparam_dzps ", dparam_dzps)
+
+    for key in dparam_dzps:
+        print("dparam_dzps", key, dparam_dzps[key])
+        
+
+    
     return dparam_dzps
 
 def get_MWEBV_uncs(lightfl, res_der_fl, params):
@@ -471,4 +509,70 @@ def summarize_parameters(fit_params, thekeys = None, on_screen = 1):
     if on_screen:
         print(txt)
     return txt
+
+################################################# Plotting Functions ###################################################
+
+def short_year(txt):
+    for i in range(1800, 2200):
+        txt = txt.replace(str(i), str(i)[2:])
+    return txt
+
+
+
+
+def bin_samples_in_redshift(stan_data, the_data, redshift_bins = np.array([0.01, 0.15, 0.95, 1.65])):
+    f = open(os.environ["UNITY"] + "/paramfiles/sample_names_colors.txt", 'r')
+    lines = f.read()
+    f.close()
+
+    for i in range(20):
+        lines = lines.replace("\t\t", "\t").replace(" \t", "\t").replace("\t ", "\t").replace("  ", " ")
+    
+    lines = lines.split('\n')
+
+    for i in range(len(lines))[::-1]:
+        if lines[i].count('\t') == 2:
+            lines[i] = lines[i].split('\t')
+        else:
+            if len(lines[i].split(None)) > 1:
+                print("Skipping ", lines[i])
+            del lines[i]
+
+    assert np.min(stan_data["sample_list"]) == 1
+    assert np.max(stan_data["sample_list"]) == stan_data["n_samples"]
+
+    samp_bins = dict(cats = [], colors = [], labels = [], short_labels = [], inds = [])
+
+    for samp_cat_target in range(len(redshift_bins)):
+        for i in range(stan_data["n_samples"]):
+            inds = where(stan_data["sample_list"] == i + 1)
+            zmax = max(stan_data["redshifts"][inds])
+            samp_cat = argmin(abs(zmax - redshift_bins))
+            
+            if samp_cat == samp_cat_target:
+                ind = [item[0] for item in lines].index(the_data["sample_names"][i].split("/")[-1])
+
+                samp_bins["cats"].append(samp_cat)
+                samp_bins["labels"].append(
+                    lines[ind][1].replace("_", "\n"))
+                short_label = lines[ind][1].replace("_", " ")
+                short_label = short_label.split(None)
+                print("short_label", short_label)
+                
+                for j in range(1, len(short_label))[::-1]:
+                    if short_label[j][-1] == "+":
+                        if short_label[j][0] == "(":
+                            offset = 1
+                        else:
+                            offset = 0
+                            
+                        short_label[j] = short_label[j][:offset+1] + short_year(short_label[j+1])
+                        del short_label[j+1]
+                        
+                short_label = " ".join([short_year(item) for item in short_label])
+                
+                samp_bins["short_labels"].append(short_label)
+                samp_bins["colors"].append(eval(lines[ind][2]))
+                samp_bins["inds"].append(i)
+    return samp_bins
 
