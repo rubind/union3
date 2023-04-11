@@ -63,8 +63,8 @@ def make_dataset(wd):
     for z in zlist:
         p = dict(z = z,
                  t0 = np.random.uniform(dates[0] + params["cadence"]*2, dates[-1] - params["cadence"]*2),
-                 x1 = np.random.normal(0., 1.),
-                 c = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*0.07,
+                 x1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
+                 c = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"],
                  delta_m = np.random.normal()*np.sqrt(params["gray_sig_unexplained"]**2. + (0.055*z)**2.),
                  mass = 10. + np.random.normal())
 
@@ -248,7 +248,7 @@ source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_ve
 nonSALTkeys = ["MB", "mass", "delta_m"]
 
 params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = ndataset, cadence = 4.,
-              Rx1 = 0.5, Rc = 0.05, tau_c = 0.07,
+              Rx1 = 0.5, tau_x1 = -0.8, Rc = 0.05, tau_c = 0.07,
               gray_sig_unexplained = 0.12, alpha = 0.15,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, delta_h = 0.5, MB = -19.1)
 
@@ -262,10 +262,33 @@ f.close()
 
 
 f = open("simLCs/mag_limits.txt", 'w')
+for dataset_ind in range(ndataset):
+    f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/MEGACAMJLA_i_selection.txt    23.0            0.5\n" % dataset_ind)
 f.close()
 
 f = open("simLCs/calibration_uncertainties.txt", 'w')
+f.write("""
+('Fundamental', (3000.0, 4000.0)):                                                                      0.0001
+('Fundamental', (4000.0, 5000.0)):                                                                      0.0001
+('Fundamental', (6000.0, 8000.0)):                                                                      0.0001
+('Fundamental', (8000.0, 100000.0)):                                                                    0.0001
+('Fundamental', (10000.0, 100000.0)):                                                                   0.0001
 
+
+"SALT_U_CAL":                                                                                           0.0001
+"SALT_I_CAL":                                                                                           0.0001
+
+('Zeropoint', 'SDSS|SDSS_u'):0.01
+('Zeropoint', 'SDSS|SDSS_g'): 0.005
+('Zeropoint', 'SDSS|SDSS_r'): 0.005
+('Zeropoint', 'SDSS|SDSS_i'): 0.005
+('Zeropoint', 'SDSS|SDSS_z'): 0.005
+('Lambda', 'SDSS|SDSS_u'):    0.1
+('Lambda', 'SDSS|SDSS_g'):    0.1
+('Lambda', 'SDSS|SDSS_r'):    0.1
+('Lambda', 'SDSS|SDSS_i'):    0.1
+('Lambda', 'SDSS|SDSS_z'):    0.1
+""")
 f.close()
 
 f = open("simLCs/weird_sn_list.txt", 'w')
