@@ -227,7 +227,7 @@ def set_up_UNITY(wd, dataset_ind):
     f = open(wd + "paramfile.txt", 'w')
     f.write("""
 do_blind		0
-filenamelist		["../dataset_%03i_v1.txt]
+filenamelist		["../dataset_%03i_v1.txt"]
 
 weird_sn_list		"../weird_sn_list.txt"
 mag_cut			"../mag_cuts.txt"
@@ -285,6 +285,7 @@ separate_mass_x1c	1
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
+export UNION=../
 """)
     f.write("cd " + pwd + "/" + wd + '\n')
     f.write("python $UNITY/scripts/read_and_sample.py paramfile.txt 1 > log.txt\n")
@@ -317,7 +318,7 @@ for param in params:
 f.close()
 
 
-f = open("simLCs/mag_limits.txt", 'w')
+f = open("simLCs/mag_cuts.txt", 'w')
 for dataset_ind in range(ndataset):
     f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/MEGACAMJLA_i_selection.txt    23.0            0.5\n" % dataset_ind)
 f.close()
