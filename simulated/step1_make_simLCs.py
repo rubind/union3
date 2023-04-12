@@ -117,7 +117,7 @@ def make_dataset(wd):
 
     print("total observed_SNe", sum(observed_SNe))
 
-    p_wd = wd + "/SN_params/"
+    p_wd = UNITYdirectory instead wd + "/SN_params/"
     subprocess.getoutput("mkdir -p " + p_wd)
 
     cal_offsets = {}
