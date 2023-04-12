@@ -354,6 +354,8 @@ f.close()
 
 
 f_UNITY = open("simLCs/run_UNITY.sh", 'w')
+f_UNITY.write("cd " + pwd + "/simLCs\n")
+f_UNITY.write("python $PATHMODEL/python_code/cutfits.py dataset*\n")
 
 for dataset_ind in tqdm.trange(ndataset):
     wd = "simLCs/dataset_%03i/" % dataset_ind
