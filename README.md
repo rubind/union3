@@ -27,6 +27,10 @@ From the Union3 directory, run:
 
 where 4 is the number of LC fits to do at once.
 
+```python $PATHMODEL/python_code/cutfits.py```
+
+For making the v1 files of SNe that pass cuts. Note that cutfits.py takes arguments if you only want to check some directories but not others.
+
 # For updating filters or magnitude systems (magsys):
 
 Union3_Photometry/NB99_also_contains_non_X-CALIBUR_magsys/AB_Landolt.py contains the color-transformed magnitude systems.
@@ -62,3 +66,7 @@ This merges the chains into one file, and unpacks the duplicated samples:
 ```set_up_LC_tests.py```
 
 ```slurm_phase_testing.py```
+
+# For doing simulated-data testing:
+
+```simulated/step1_make_simLCs.py 1 1```
