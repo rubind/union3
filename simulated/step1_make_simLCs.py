@@ -117,7 +117,8 @@ def make_dataset(wd):
 
     print("total observed_SNe", sum(observed_SNe))
 
-    p_wd = UNITYdirectory instead wd + "/SN_params/"
+
+    p_wd = wd.replace("dataset_", "UNITY_") + "/SN_params/"
     subprocess.getoutput("mkdir -p " + p_wd)
 
     cal_offsets = {}
@@ -367,11 +368,7 @@ for dataset_ind in tqdm.trange(ndataset):
     set_up_UNITY(wd, dataset_ind)
 
 
-    f = open("simLCs/mag_limits.txt", 'a')
-    f.write("dataset_%03i_v1.txt  \n")
-    f.close()
-    
 
-    f_UNITY.write("cd " + wd + '\n')
+    f_UNITY.write("cd " + pwd + "/" + wd + '\n')
     f_UNITY.write("sbatch run.sh\n")
 f_UNITY.close()
