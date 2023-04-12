@@ -486,7 +486,7 @@ def get_equal_a_bins(z, n_to_add):
         ministart = np.linspace(0, 1, 30 - n_to_add)
 
     if n_to_add == 0:
-        zbins = -1. + (   1 + z.max() + 0.001   )**ministart * (   1 + z.min() - 0.001   )**(1. - ministart)
+        zbins = -1. + (   1 + z.max() + 0.002   )**ministart * (   1 + z.min() - 0.001   )**(1. - ministart)
         return zbins
     else:
         highest_X = np.sort(stan_data["redshifts"])
@@ -494,7 +494,7 @@ def get_equal_a_bins(z, n_to_add):
         zbins = -1. + (   1 + highest_X[-10*n_to_add - 1]   )**ministart * (   1 + z.min() - 0.001   )**(1. - ministart)
 
         for i in range(n_to_add):
-            zbins = np.append(zbins, highest_X[-10*n_to_add + (i + 1)*10 - 1] + 0.001)
+            zbins = np.append(zbins, highest_X[-10*n_to_add + (i + 1)*10 - 1] + 0.002)
         zbins[-1] += 0.001
         
         return zbins
