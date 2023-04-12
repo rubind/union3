@@ -222,6 +222,8 @@ def make_dataset(wd):
             
 
 def set_up_UNITY(wd, dataset_ind):
+    
+
     f = open(wd + "paramfile.txt", 'w')
     f.write("""
 do_blind		0
@@ -271,6 +273,25 @@ include_pec_cov		0
 separate_mass_x1c	1
     """ % (dataset_ind))
     f.close()
+
+    f = open(wd + "run.sh", 'w')
+    f.write("""#!/bin/bash
+#SBATCH --job-name=example
+#SBATCH --partition=shared
+#SBATCH --time=0-12:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=6G # Memory per node my job requires
+#SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
+#SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
+source ~/.bash_profile
+""")
+    f.write("cd " + pwd + "/" + wd + '\n')
+    f.write("python $UNITY/scripts/read_and_sample.py paramfile.txt 1 > log.txt\n")
+
+    f.close()
+
+pwd = subprocess.getoutput("pwd")
 
 
 ndataset = int(sys.argv[1])
@@ -330,6 +351,8 @@ f = open("simLCs/weird_sn_list.txt", 'w')
 f.close()
 
 
+f_UNITY = open("simLCs/run_UNITY.sh", 'w')
+
 for dataset_ind in tqdm.trange(ndataset):
     wd = "simLCs/dataset_%03i/" % dataset_ind
     subprocess.getoutput("mkdir " + wd)
@@ -340,9 +363,14 @@ for dataset_ind in tqdm.trange(ndataset):
     wd = "simLCs/UNITY_%03i/" % dataset_ind
     subprocess.getoutput("mkdir " + wd)
 
+    set_up_UNITY(wd, dataset_ind)
+
+
     f = open("simLCs/mag_limits.txt", 'a')
     f.write("dataset_%03i_v1.txt  \n")
     f.close()
     
-    
-    """set_up_UNITY(wd) make sure unblind is true"""
+
+    f_UNITY.write("cd " + wd + '\n')
+    f_UNITY.write("sbatch run.sh\n")
+f_UNITY.close()
