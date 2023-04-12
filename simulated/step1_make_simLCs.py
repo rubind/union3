@@ -50,8 +50,6 @@ def make_dataset(wd):
 
     dates = np.arange(params["n_visit"], dtype=np.float64)*params["cadence"]
 
-
-    source = sncosmo.SALT2Source(modeldir=os.environ["PATHMODEL"] + "/salt2-4/")
     model = sncosmo.Model(source=source)
 
     zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"]))
@@ -76,7 +74,7 @@ def make_dataset(wd):
 
 
     observed_SNe = np.zeros(nsne, dtype=np.int16)
-        
+    
     for night in dates:
         all_mags = []
         
@@ -103,10 +101,13 @@ def make_dataset(wd):
     plt.close()
 
     peak_mags = []
+    SNe_x0s = []
+    
     for i in range(nsne):
         model = get_SNCosmo_model(all_SNe[i], source)
         peak_mags.append(model.bandmag("sdssi", "ab", all_SNe[i]["t0"]))
-    
+        SNe_x0s.append(model.get("x0"))
+        
     peak_mags = np.array(peak_mags)
     plt.hist(peak_mags[np.where(observed_SNe)], alpha = 0.5)
     plt.hist(peak_mags[np.where(1 - observed_SNe)], alpha = 0.5)
@@ -121,15 +122,17 @@ def make_dataset(wd):
 
     cal_offsets = {}
     for band in "griz":
-        cal_offsets[band] = np.random.normal()*0.005
+        cal_offsets[band] = np.random.normal()*0.005*add_noise_and_calibration
     
     for i in range(nsne):
 
         f = open(p_wd + "/params_%04i.dat" % i, 'w')
         for key in all_SNe[i]:
             f.write(key + "  " + str(all_SNe[i][key]) + '\n')
+        f.write("x0 " + str(SNe_x0s[i]) + '\n')
         f.write("peak_mag " + str(peak_mags[i]) + '\n')
         f.write("observed  " + str(observed_SNe[i]) + '\n')
+        
         f.close()
         
         
@@ -155,12 +158,41 @@ def make_dataset(wd):
 
             for band in ['sdssg', 'sdssr', 'sdssi', 'sdssz']:
                 try:
-                    fluxes, fluxcov = model.bandfluxcov(band, dates, zp = 27.5, zpsys = "ab")
+                    fluxes = model.bandflux(band, dates, zp = 27.5, zpsys = "ab")
+                    fluxcov = np.diag((fluxes*0.001)**2.)
+
+                    #source.set(x1 = all_SNe[i]["x1"], c = all_SNe[i]["c"])
+                    #r_cov = source.bandflux_rcov(band = np.array([rest_frame_bands[item] for item in trimmed_lc_data["lc2fl"]]),
+                    #phase = (trimmed_lc_data["date"] - P[0])/(1. + other_data["z_heliocentric"]))
+                    #cov_mat = np.outer(the_model, the_model)*r_cov
+
+                    #rcov = source.rcov_()
+
+                    """
+                    fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab")
+
+                    print("fluxes", fluxes)
+
+                    somewaves = np.arange(3500., 11000.)
+                    import Spectra
+                    eval_band = Spectra.Spectra(instrument = "SDSS", band = "SDSS_" + band[-1]).transmission_fn(somewaves)
+                    snflux = model.flux(all_SNe[i]["t0"], somewaves)
+
+                    plt.plot(somewaves, eval_band)
+                    plt.plot(somewaves, snflux/snflux.max())
+                    plt.savefig("tmp.pdf")
+
+                    snABflux = (snflux*somewaves*eval_band).sum() / (eval_band*0.108848062/somewaves).sum()
+                    print(snABflux*10.**(0.4*27.5))
+                    """
+                    
+                    
+                    
                     good_band = 1
                 except:
                     print("Couldn't get band", all_SNe[i]["z"], band)
                     good_band = 0
-
+                
                     
                 #print(fluxes)
                 #print(fluxcov)
@@ -168,8 +200,8 @@ def make_dataset(wd):
                     for j in range(len(fluxcov)):
                         fluxcov[j,j] = np.clip(fluxcov[j,j], 0., fluxes[j]**2.)
 
-                    model_fluxes = np.random.multivariate_normal(mean = fluxes, cov = fluxcov)
-                    obs_fluxes = model_fluxes + np.random.normal(size = len(model_fluxes))*obs_err
+                    model_fluxes = np.random.multivariate_normal(mean = fluxes, cov = fluxcov*(add_noise_and_calibration*0.999 + 0.001))
+                    obs_fluxes = model_fluxes + np.random.normal(size = len(model_fluxes))*obs_err*add_noise_and_calibration
                     
                     f = open(this_wd + "/lc2fit_" + band + ".dat", 'w')
                     f.write("""#Date :
@@ -183,7 +215,7 @@ def make_dataset(wd):
         """)
                     for j in range(len(obs_fluxes)):
                         if np.abs(dates[j] - all_SNe[i]["t0"]) < 100:
-                            towrite = [dates[j], obs_fluxes[j], obs_err, 27.5 + cal_offsets[band[-1]]]
+                            towrite = [dates[j], obs_fluxes[j], obs_err*(add_noise_and_calibration*0.99 + 0.01), 27.5 + cal_offsets[band[-1]]*add_noise_and_calibration]
                             towrite = [str(item) for item in towrite]
                             f.write("  ".join(towrite) + '\n')
                     f.close()
@@ -212,6 +244,7 @@ max_MWEBV		0.3
 min_color		-0.3
 remap_x1		[0.,0.]
 
+
 # Units of c:
 pec_vel_disp		0.001
 # Units of magnitudes per redshift
@@ -222,11 +255,11 @@ n_x1c_star		1
 electron_coeff		[0.0042,0.00042]
 IG_extinction_coeff	0.01
 
-
+    
 do_twoalphabeta		0
 threeD_unexplained	1
 
-
+    
 iter			2500
 n_jobs			4
 chains			4
@@ -241,6 +274,8 @@ separate_mass_x1c	1
 
 
 ndataset = int(sys.argv[1])
+add_noise_and_calibration = float(sys.argv[2])
+
 
 salt2_version = "salt3-22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
