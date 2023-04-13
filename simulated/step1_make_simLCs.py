@@ -157,23 +157,15 @@ def make_dataset(wd):
 
             model = get_SNCosmo_model(all_SNe[i], source)
 
+            these_dates = dates[np.where(np.abs(dates - all_SNe[i]["t0"]) < 50*(1 + all_SNe[i]["z"]))]
+            
             for band in ['sdssg', 'sdssr', 'sdssi', 'sdssz']:
                 rest_frame_band = sncosmo.Bandpass(SDSS_obs_frame[band[-1]].wave/(1 + all_SNe[i]["z"]), SDSS_obs_frame[band[-1]].trans)
 
-                
+                  
                 try:
-                    fluxes = model.bandflux(band, dates, zp = 27.5, zpsys = "ab")
+                    fluxes = model.bandflux(band, these_dates, zp = 27.5, zpsys = "ab")
 
-                    source.set(x1 = all_SNe[i]["x1"], c = all_SNe[i]["c"])
-                    r_cov = source.bandflux_rcov(band = np.array([rest_frame_bands[item] for item in trimmed_lc_data["lc2fl"]]),
-                                                 phase = (dates - all_SNe[i]["t0"])/(1. + all_SNe[i]["z"]))
-                    
-                    cov_mat = np.outer(fluxes, fluxes)*r_cov
-
-                    #rcov = source.rcov_()
-                    #fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab") # For SALT2, not SALT3
-                                        
-                    
                     good_band = 1
                 except:
                     print("Couldn't get band", all_SNe[i]["z"], band)
@@ -183,8 +175,16 @@ def make_dataset(wd):
                 #print(fluxes)
                 #print(fluxcov)
                 if good_band:
-                    for j in range(len(fluxcov)):
-                        fluxcov[j,j] = np.clip(fluxcov[j,j], 0., fluxes[j]**2.)
+                    
+                    source.set(x1 = all_SNe[i]["x1"], c = all_SNe[i]["c"])
+                    r_cov = source.bandflux_rcov(band = np.array([rest_frame_band]*len(these_dates)),
+                                                 phase = (these_dates - all_SNe[i]["t0"])/(1. + all_SNe[i]["z"]))
+
+                    r_cov = np.clip(r_cov, -1, 1)
+                    fluxcov = np.outer(fluxes, fluxes)*r_cov
+                    #rcov = source.rcov_()
+                    #fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab") # For SALT2, not SALT3
+                    
 
                     model_fluxes = np.random.multivariate_normal(mean = fluxes, cov = fluxcov*(add_noise_and_calibration*0.999 + 0.001))
                     obs_fluxes = model_fluxes + np.random.normal(size = len(model_fluxes))*obs_err*add_noise_and_calibration
@@ -200,10 +200,9 @@ def make_dataset(wd):
         @MAGSYS AB
         """)
                     for j in range(len(obs_fluxes)):
-                        if np.abs(dates[j] - all_SNe[i]["t0"]) < 100:
-                            towrite = [dates[j], obs_fluxes[j], obs_err*(add_noise_and_calibration*0.99 + 0.01), 27.5 + cal_offsets[band[-1]]*add_noise_and_calibration]
-                            towrite = [str(item) for item in towrite]
-                            f.write("  ".join(towrite) + '\n')
+                        towrite = [dates[j], obs_fluxes[j], obs_err*(add_noise_and_calibration*0.99 + 0.01), 27.5 + cal_offsets[band[-1]]*add_noise_and_calibration]
+                        towrite = [str(item) for item in towrite]
+                        f.write("  ".join(towrite) + '\n')
                     f.close()
             
 

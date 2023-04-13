@@ -92,9 +92,9 @@ for i, keys in enumerate([("redshift", "delta_c"),
                           ("true_x1", "delta_x1")]):
     
     plt.subplot(4,3,i+1)
-    plt.scatter(all_dat[keys[0]], all_dat[keys[1]], label = "Mean %.3f Median %.3f RMS %.3f" % (np.mean(all_dat[keys[1]]),
-                                                                                                np.median(all_dat[keys[1]]),
-                                                                                                np.std(all_dat[keys[1]], ddof=1)))
+    plt.scatter(all_dat[keys[0]], all_dat[keys[1]], label = "Mean %.3f +- %.3f Median %.3f RMS %.3f" % (np.mean(all_dat[keys[1]]), np.std(all_dat[keys[1]], ddof=1)/np.sqrt(float(len(all_dat[keys[1]]))),
+                                                                                                        np.median(all_dat[keys[1]]),
+                                                                                                        np.std(all_dat[keys[1]], ddof=1)))
     plt.axhline(0)
     plt.legend(loc = 'best')
     
