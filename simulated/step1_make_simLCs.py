@@ -166,7 +166,8 @@ def make_dataset(wd):
 
                     source.set(x1 = all_SNe[i]["x1"], c = all_SNe[i]["c"])
                     r_cov = source.bandflux_rcov(band = np.array([rest_frame_bands[item] for item in trimmed_lc_data["lc2fl"]]),
-                                                 phase = (dates - all_SNe[i]["t0"])/(1. + all_SNe[i]["z"])
+                                                 phase = (dates - all_SNe[i]["t0"])/(1. + all_SNe[i]["z"]))
+                    
                     cov_mat = np.outer(fluxes, fluxes)*r_cov
 
                     #rcov = source.rcov_()
