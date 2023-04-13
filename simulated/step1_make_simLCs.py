@@ -158,36 +158,20 @@ def make_dataset(wd):
             model = get_SNCosmo_model(all_SNe[i], source)
 
             for band in ['sdssg', 'sdssr', 'sdssi', 'sdssz']:
+                rest_frame_band = sncosmo.Bandpass(SDSS_obs_frame[band[-1]].wave/(1 + all_SNe[i]["z"]), SDSS_obs_frame[band[-1]].trans)
+
+                
                 try:
                     fluxes = model.bandflux(band, dates, zp = 27.5, zpsys = "ab")
-                    fluxcov = np.diag((fluxes*0.001)**2.)
 
-                    #source.set(x1 = all_SNe[i]["x1"], c = all_SNe[i]["c"])
-                    #r_cov = source.bandflux_rcov(band = np.array([rest_frame_bands[item] for item in trimmed_lc_data["lc2fl"]]),
-                    #phase = (trimmed_lc_data["date"] - P[0])/(1. + other_data["z_heliocentric"]))
-                    #cov_mat = np.outer(the_model, the_model)*r_cov
+                    source.set(x1 = all_SNe[i]["x1"], c = all_SNe[i]["c"])
+                    r_cov = source.bandflux_rcov(band = np.array([rest_frame_bands[item] for item in trimmed_lc_data["lc2fl"]]),
+                                                 phase = (dates - all_SNe[i]["t0"])/(1. + all_SNe[i]["z"])
+                    cov_mat = np.outer(fluxes, fluxes)*r_cov
 
                     #rcov = source.rcov_()
-
-                    """
-                    fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab")
-
-                    print("fluxes", fluxes)
-
-                    somewaves = np.arange(3500., 11000.)
-                    import Spectra
-                    eval_band = Spectra.Spectra(instrument = "SDSS", band = "SDSS_" + band[-1]).transmission_fn(somewaves)
-                    snflux = model.flux(all_SNe[i]["t0"], somewaves)
-
-                    plt.plot(somewaves, eval_band)
-                    plt.plot(somewaves, snflux/snflux.max())
-                    plt.savefig("tmp.pdf")
-
-                    snABflux = (snflux*somewaves*eval_band).sum() / (eval_band*0.108848062/somewaves).sum()
-                    print(snABflux*10.**(0.4*27.5))
-                    """
-                    
-                    
+                    #fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab") # For SALT2, not SALT3
+                                        
                     
                     good_band = 1
                 except:
@@ -304,6 +288,10 @@ salt2_version = "salt3-22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
 
 nonSALTkeys = ["MB", "mass", "delta_m"]
+
+SDSS_obs_frame = {}
+for filt in "griz":
+    SDSS_obs_frame[filt] = sncosmo.get_bandpass("sdss" + filt)
 
 params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = ndataset, cadence = 4.,
               Rx1 = 0.5, tau_x1 = -0.8, Rc = 0.05, tau_c = 0.07,
