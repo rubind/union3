@@ -206,7 +206,7 @@ def make_dataset(wd):
                     f.close()
             
 
-def set_up_UNITY(wd, dataset_ind):
+def set_up_UNITY(wd, dataset_ind, threeDint):
     
 
     f = open(wd + "paramfile.txt", 'w')
@@ -236,15 +236,15 @@ remap_x1		[0.,0.]
 pec_vel_disp		0.001
 # Units of magnitudes per redshift
 lensing_disp		0.055
-MWEBV_zeropoint_EBV	0.005
+MWEBV_zeropoint_EBV	0.0001
 outl_frac		0.02
 n_x1c_star		1
 electron_coeff		[0.0042,0.00042]
-IG_extinction_coeff	0.01
+IG_extinction_coeff	0.001
 
     
 do_twoalphabeta		0
-threeD_unexplained	1
+threeD_unexplained	%i
 
     
 iter			2500
@@ -256,7 +256,7 @@ fix_Om			0
 MB_by_sample		0
 include_pec_cov		0
 separate_mass_x1c	1
-    """ % (dataset_ind))
+    """ % (dataset_ind, threeDint))
     f.close()
 
     f = open(wd + "run.sh", 'w')
@@ -282,6 +282,8 @@ pwd = subprocess.getoutput("pwd")
 
 ndataset = int(sys.argv[1])
 add_noise_and_calibration = float(sys.argv[2])
+prefixname = sys.argv[3]
+skew_dist = int(sys.argv[4])
 
 
 salt2_version = "salt3-22"
@@ -294,25 +296,25 @@ for filt in "griz":
     SDSS_obs_frame[filt] = sncosmo.get_bandpass("sdss" + filt)
 
 params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = ndataset, cadence = 4.,
-              Rx1 = 0.5, tau_x1 = -0.8, Rc = 0.05, tau_c = 0.07,
+              Rx1 = 0.5, tau_x1 = -0.8*skew_dist, Rc = 0.05, tau_c = 0.07*skew_dist,
               gray_sig_unexplained = 0.12, alpha = 0.15,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, delta_h = 0.5, MB = -19.1)
 
-subprocess.getoutput("rm -fr simLCs")
-subprocess.getoutput("mkdir simLCs")
+subprocess.getoutput("rm -fr " + prefixname)
+subprocess.getoutput("mkdir " + prefixname)
 
-f = open("simLCs/params.dat", 'w')
+f = open(prefixname + "/params.dat", 'w')
 for param in params:
     f.write(param + "  " + str(params[param]) + '\n')
 f.close()
 
 
-f = open("simLCs/mag_cuts.txt", 'w')
+f = open(prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(ndataset):
     f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/MEGACAMJLA_i_selection.txt    23.0            0.5\n" % dataset_ind)
 f.close()
 
-f = open("simLCs/calibration_uncertainties.txt", 'w')
+f = open(prefixname + "/calibration_uncertainties.txt", 'w')
 f.write("""
 ('Fundamental', (3000.0, 4000.0)):                                                                      0.0001
 ('Fundamental', (4000.0, 5000.0)):                                                                      0.0001
@@ -337,28 +339,28 @@ f.write("""
 """)
 f.close()
 
-f = open("simLCs/weird_sn_list.txt", 'w')
+f = open(prefixname + "/weird_sn_list.txt", 'w')
 f.close()
 
 
-f_UNITY = open("simLCs/run_UNITY.sh", 'w')
-f_UNITY.write("cd " + pwd + "/simLCs\n")
+f_UNITY = open(prefixname + "/run_UNITY.sh", 'w')
+f_UNITY.write("cd " + pwd + "/" + prefixname + "\n")
 f_UNITY.write("python $PATHMODEL/python_code/cutfits.py dataset*\n")
 
 for dataset_ind in tqdm.trange(ndataset):
-    wd = "simLCs/dataset_%03i/" % dataset_ind
+    wd = prefixname + "/dataset_%03i/" % dataset_ind
     subprocess.getoutput("mkdir " + wd)
-
-    make_dataset(wd)
-
     
-    wd = "simLCs/UNITY_%03i/" % dataset_ind
-    subprocess.getoutput("mkdir " + wd)
+    make_dataset(wd)
+        
+    for threeDint in [0,1]:
+        wd = prefixname + "/UNITY%s_%03i/" % ("_1D"*(1 - threeDint), dataset_ind)
+        subprocess.getoutput("mkdir " + wd)
+        
+        set_up_UNITY(wd, dataset_ind, threeDint = threeDint)
 
-    set_up_UNITY(wd, dataset_ind)
 
 
-
-    f_UNITY.write("cd " + pwd + "/" + wd + '\n')
-    f_UNITY.write("sbatch run.sh\n")
+        f_UNITY.write("cd " + pwd + "/" + wd + '\n')
+        f_UNITY.write("sbatch run.sh\n")
 f_UNITY.close()
