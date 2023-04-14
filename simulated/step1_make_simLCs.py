@@ -296,7 +296,8 @@ for filt in "griz":
     SDSS_obs_frame[filt] = sncosmo.get_bandpass("sdss" + filt)
 
 params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = ndataset, cadence = 4.,
-              Rx1 = 0.5, tau_x1 = -0.8*skew_dist, Rc = 0.05, tau_c = 0.07*skew_dist,
+              Rx1 = 0.5 + 0.45*(1 - skew_dist), tau_x1 = -0.8*skew_dist,
+              Rc = 0.05 + 0.035*(1 - skew_dist), tau_c = 0.07*skew_dist,
               gray_sig_unexplained = 0.12, alpha = 0.15,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, delta_h = 0.5, MB = -19.1)
 
@@ -344,8 +345,22 @@ f.close()
 
 
 f_UNITY = open(prefixname + "/run_UNITY.sh", 'w')
+
+
+f_UNITY.write("""#!/bin/bash
+#SBATCH --job-name=runU
+#SBATCH --partition=shared
+#SBATCH --time=0-01:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=6G # Memory per node my job requires
+#SBATCH --error=runU-%A.err # %A - filled with jobid, where to write the stderr
+#SBATCH --output=runU-%A.out # %A - filled with jobid, wher to write the stdout
+source ~/.bash_profile
+""")
+
 f_UNITY.write("cd " + pwd + "/" + prefixname + "\n")
-f_UNITY.write("python $PATHMODEL/python_code/cutfits.py dataset*\n")
+f_UNITY.write("python $PATHMODEL/python_code/cut_fits.py dataset*\n")
 
 for dataset_ind in tqdm.trange(ndataset):
     wd = prefixname + "/dataset_%03i/" % dataset_ind
