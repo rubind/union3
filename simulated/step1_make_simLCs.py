@@ -219,7 +219,7 @@ def make_dataset(wd):
                     f.close()
             
 
-def set_up_UNITY(wd, dataset_ind, threeDint):
+def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection):
     
 
     f = open(wd + "paramfile.txt", 'w')
@@ -229,9 +229,9 @@ filenamelist		["../dataset_%03i_v1.txt"]
 
 weird_sn_list		"../weird_sn_list.txt"
 mag_cut			%s
-stan_code		"$UNITY/scripts/stan_code_simple.txt"
+stan_code		%s
 sample_file		"None"
-calibration_uncertainties		"../calibration_uncertainties.txt"
+calibration_uncertainties		%s
 
 
 min_redshift		0.01
@@ -253,7 +253,7 @@ MWEBV_zeropoint_EBV	0.0001
 outl_frac		0.02
 n_x1c_star		1
 electron_coeff		[0.0042,0.00042]
-IG_extinction_coeff	0.001
+IG_extinction_coeff	0.0001
 
     
 do_twoalphabeta		0
@@ -269,7 +269,11 @@ fix_Om			0
 MB_by_sample		0
 include_pec_cov		0
 separate_mass_x1c	1
-    """ %(dataset_ind, '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]), threeDint))
+    """ %(dataset_ind,
+          '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
+          '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_nosel.txt"'*noselection,
+          '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
+          1 - oneDint))
     f.close()
 
     f = open(wd + "run.sh", 'w')
@@ -348,18 +352,46 @@ f.write("""
 "SALT_U_CAL":                                                                                           0.0001
 "SALT_I_CAL":                                                                                           0.0001
 
-('Zeropoint', 'SDSS|SDSS_u'):0.01
+('Zeropoint', 'SDSS|SDSS_u'): 0.005
 ('Zeropoint', 'SDSS|SDSS_g'): 0.005
 ('Zeropoint', 'SDSS|SDSS_r'): 0.005
 ('Zeropoint', 'SDSS|SDSS_i'): 0.005
 ('Zeropoint', 'SDSS|SDSS_z'): 0.005
-('Lambda', 'SDSS|SDSS_u'):    0.1
-('Lambda', 'SDSS|SDSS_g'):    0.1
-('Lambda', 'SDSS|SDSS_r'):    0.1
-('Lambda', 'SDSS|SDSS_i'):    0.1
-('Lambda', 'SDSS|SDSS_z'):    0.1
+('Lambda', 'SDSS|SDSS_u'):    0.01
+('Lambda', 'SDSS|SDSS_g'):    0.01
+('Lambda', 'SDSS|SDSS_r'):    0.01
+('Lambda', 'SDSS|SDSS_i'):    0.01
+('Lambda', 'SDSS|SDSS_z'):    0.01
 """)
 f.close()
+
+
+f = open(prefixname + "/calibration_uncertainties_small.txt", 'w')
+f.write("""
+('Fundamental', (3000.0, 4000.0)):                                                                      0.0001
+('Fundamental', (4000.0, 5000.0)):                                                                      0.0001
+('Fundamental', (6000.0, 8000.0)):                                                                      0.0001
+('Fundamental', (8000.0, 100000.0)):                                                                    0.0001
+('Fundamental', (10000.0, 100000.0)):                                                                   0.0001
+
+
+"SALT_U_CAL":                                                                                           0.0001
+"SALT_I_CAL":                                                                                           0.0001
+
+('Zeropoint', 'SDSS|SDSS_u'): 0.0001
+('Zeropoint', 'SDSS|SDSS_g'): 0.0001
+('Zeropoint', 'SDSS|SDSS_r'): 0.0001
+('Zeropoint', 'SDSS|SDSS_i'): 0.0001
+('Zeropoint', 'SDSS|SDSS_z'): 0.0001
+('Lambda', 'SDSS|SDSS_u'):    0.01
+('Lambda', 'SDSS|SDSS_g'):    0.01
+('Lambda', 'SDSS|SDSS_r'):    0.01
+('Lambda', 'SDSS|SDSS_i'):    0.01
+('Lambda', 'SDSS|SDSS_z'):    0.01
+""")
+f.close()
+
+
 
 f = open(prefixname + "/weird_sn_list.txt", 'w')
 f.close()
@@ -389,13 +421,11 @@ for dataset_ind in tqdm.trange(ndataset):
     
     make_dataset(wd)
         
-    for threeDint in [0,1]:
-        wd = prefixname + "/UNITY%s_%03i/" % ("_1D"*(1 - threeDint), dataset_ind)
+    for oneDint, nocal, noselection in ([0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]):
+        wd = prefixname + "/UNITY%s%s%s_%03i/" % ("_1D"*oneDint, "_nocal"*nocal, "_nosel"*noselection, dataset_ind)
         subprocess.getoutput("mkdir " + wd)
         
-        set_up_UNITY(wd, dataset_ind, threeDint = threeDint)
-
-
+        set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection)
 
         f_UNITY.write("cd " + pwd + "/" + wd + '\n')
         f_UNITY.write("sbatch run.sh\n")
