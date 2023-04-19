@@ -43,6 +43,13 @@ def get_SNCosmo_model(these_params, source):
     return sncosmo_model
 
 
+def approxmB(model, date):
+    x0 = model.get("x0")
+    t0 = model.get("t0")
+
+    return -2.5*np.log10(x0 * np.exp(  -0.5*((date - t0)/10.)**2.  )
+                         )
+
 
 def make_dataset(wd):
 
@@ -81,9 +88,12 @@ def make_dataset(wd):
         for i in range(nsne):
             if observed_SNe[i] == 0 and np.abs(night - all_SNe[i]["t0"]) < 50:
                 model = get_SNCosmo_model(all_SNe[i], source)
-                all_mags.append(model.bandmag("sdssi", "ab", night))
+                if params["obs_mag_selection"]:
+                    all_mags.append(model.bandmag("sdssi", "ab", night))
+                else:
+                    all_mags.append(approxmB(model, night))
             else:
-                all_mags.append(100.)
+                all_mags.append(1e20)
                 
         all_mags = np.array(all_mags)
         print("all_mags", all_mags)
@@ -105,7 +115,10 @@ def make_dataset(wd):
     
     for i in range(nsne):
         model = get_SNCosmo_model(all_SNe[i], source)
-        peak_mags.append(model.bandmag("sdssi", "ab", all_SNe[i]["t0"]))
+        if params["obs_mag_selection"]:
+            peak_mags.append(model.bandmag("sdssi", "ab", all_SNe[i]["t0"]))
+        else:
+            peak_mags.append(approxmB(model, all_SNe[i]["t0"]))
         SNe_x0s.append(model.get("x0"))
         
     peak_mags = np.array(peak_mags)
@@ -215,7 +228,7 @@ do_blind		0
 filenamelist		["../dataset_%03i_v1.txt"]
 
 weird_sn_list		"../weird_sn_list.txt"
-mag_cut			"../mag_cuts.txt"
+mag_cut			%s
 stan_code		"$UNITY/scripts/stan_code_simple.txt"
 sample_file		"None"
 calibration_uncertainties		"../calibration_uncertainties.txt"
@@ -256,7 +269,7 @@ fix_Om			0
 MB_by_sample		0
 include_pec_cov		0
 separate_mass_x1c	1
-    """ % (dataset_ind, threeDint))
+    """ %(dataset_ind, '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]), threeDint))
     f.close()
 
     f = open(wd + "run.sh", 'w')
@@ -284,6 +297,7 @@ ndataset = int(sys.argv[1])
 add_noise_and_calibration = float(sys.argv[2])
 prefixname = sys.argv[3]
 skew_dist = int(sys.argv[4])
+obs_mag_selection = int(sys.argv[5])
 
 
 salt2_version = "salt3-22"
@@ -296,6 +310,7 @@ for filt in "griz":
     SDSS_obs_frame[filt] = sncosmo.get_bandpass("sdss" + filt)
 
 params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = ndataset, cadence = 4.,
+              obs_mag_selection = obs_mag_selection,
               Rx1 = 0.5 + 0.45*(1 - skew_dist), tau_x1 = -0.8*skew_dist,
               Rc = 0.05 + 0.035*(1 - skew_dist), tau_c = 0.07*skew_dist,
               gray_sig_unexplained = 0.12, alpha = 0.15,
@@ -314,6 +329,12 @@ f = open(prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(ndataset):
     f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/MEGACAMJLA_i_selection.txt    23.0            0.5\n" % dataset_ind)
 f.close()
+
+f = open(prefixname + "/mag_cuts_x0.txt", 'w')
+for dataset_ind in range(ndataset):
+    f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    23.0            0.5\n" % dataset_ind)
+f.close()
+
 
 f = open(prefixname + "/calibration_uncertainties.txt", 'w')
 f.write("""
