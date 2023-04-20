@@ -13,10 +13,10 @@ def fmt(val, unc):
 pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]"]
 
 for matchstr, description in [
-        ("UNITY_stan_code_simple_copy2???/log.txt", "Default"),
-        ("UNITY_stan_code_simple_nosel*/log.txt", "No Selection Effects"),
-        ("stan_code_simple_tight_calib*/log.txt", "No Calib"),
-        ("UNITY_stan_code_simple_copy???/log.txt", "One beta"),
+        ("UNITY_nosel_???/log.txt", "No Selection Effects"),
+        ("UNITY_???/log.txt", "Nominal UNITY1.5 Model"),
+        ("UNITY_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
+        ("UNITY_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 ]:
     logs = glob.glob(matchstr)
     

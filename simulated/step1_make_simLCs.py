@@ -73,7 +73,12 @@ def make_dataset(wd):
                  delta_m = np.random.normal()*np.sqrt(params["gray_sig_unexplained"]**2. + (0.055*z)**2.),
                  mass = 10. + np.random.normal())
 
-        mabs = params["MB"] + p["delta_m"] - params["alpha"]*p["x1"] + 3.1*p["c"] - params["delta"]*(p["mass"] > 10.)*1.9*params["delta_h"]/(1. + 0.9*10.**(0.95*p["z"]))
+
+        relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
+        relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
+
+        delta_z = params["delta"]*(relative_step_z*params["delta_h"] + params["delta_h"])
+        mabs = params["MB"] + p["delta_m"] - params["alpha"]*p["x1"] + 3.1*p["c"] - params["delta"]*(p["mass"] > 10.)*relative_step_z
         p["MB"] = mabs
 
         all_SNe.append(p)
@@ -256,7 +261,7 @@ electron_coeff		[0.0042,0.00042]
 IG_extinction_coeff	0.0001
 
     
-do_twoalphabeta		0
+do_twoalphabeta		1
 threeD_unexplained	%i
 
     
@@ -331,7 +336,7 @@ f.close()
 
 f = open(prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(ndataset):
-    f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/MEGACAMJLA_i_selection.txt    23.0            0.5\n" % dataset_ind)
+    f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/SDSS_i_selection.txt    23.0            0.5\n" % dataset_ind)
 f.close()
 
 f = open(prefixname + "/mag_cuts_x0.txt", 'w')
