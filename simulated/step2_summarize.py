@@ -10,7 +10,9 @@ def fmt(val, unc):
     return "%.3f +- %.3f" % (val, unc)
 
 
-pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]"]
+pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int[1]", "sig_int_vector[1,1]", "sig_int_vector[1,2]", "sig_int_vector[1,3]"]
+
+all_txt_grid = []
 
 for matchstr, description in [
         ("UNITY_nosel_???/log.txt", "No Selection Effects"),
@@ -44,4 +46,18 @@ for matchstr, description in [
         
         towrite.append(fmt(the_mean, the_std/sqrtn))
 
-    print(" & ".join(towrite))
+    all_txt_grid.append(towrite)
+    
+
+for i in range(len(all_txt_grid[0])):
+    towrite = ""
+    
+    for j in range(len(all_txt_grid)):
+        towrite += all_txt_grid[j][i]
+
+        if j != len(all_txt_grid) -1:
+            towrite += " & "
+    towrite += "\\\\"
+    print(towrite)
+    
+frac intint
