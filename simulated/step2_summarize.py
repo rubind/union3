@@ -60,4 +60,3 @@ for i in range(len(all_txt_grid[0])):
     towrite += "\\\\"
     print(towrite)
     
-frac intint
