@@ -7,10 +7,23 @@ except:
 import numpy as np
 
 def fmt(val, unc):
-    return "%.3f +- %.3f" % (val, unc)
+    return "$%.3f \pm %.3f$" % (val, unc)
 
 
-pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int\[1\]", "sig_int_vector\[1,1\]", "sig_int_vector\[1,2\]", "sig_int_vector\[1,3\]"]
+pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int\[1\]", "mBx1c_int_variance\[1\]", "mBx1c_int_variance\[2\]", "mBx1c_int_variance\[3\]"]
+
+labels = {"Om": "$\Omega_m$", "alpha": "$\alpha$",
+          "beta_B": "$\beta_B$",
+          "beta_R_low": "$\beta_{RL}$",
+          "beta_R_high": "$\beta_{RH}$",
+          "delta_0": "$\delta(0)$",
+          "delta_h": "$\delta(\infty)/\delta(0)$",
+          "mobs_cuts\[1\]": "$m_{50}$",
+          "mobs_cut_sigmas\[1\]": "$\sigma_m$",
+          "sigma_int\[1\]": "\sigma^{\mathrm{unexpl}}$",
+          "mBx1c_int_variance\[1\]": "$f^{\m_B}$",
+          "mBx1c_int_variance\[2\]": "$f^{\x_1}$",
+          "mBx1c_int_variance\[3\]": "$f^{\c}$"}
 
 all_txt_grid = []
 
@@ -50,7 +63,7 @@ for matchstr, description in [
     
 
 for i in range(len(all_txt_grid[0])):
-    towrite = ""
+    towrite = labels[pars[i]] + " & "
     
     for j in range(len(all_txt_grid)):
         towrite += all_txt_grid[j][i]
