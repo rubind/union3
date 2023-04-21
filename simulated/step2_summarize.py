@@ -10,7 +10,7 @@ def fmt(val, unc):
     return "%.3f +- %.3f" % (val, unc)
 
 
-pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int[1]", "sig_int_vector[1,1]", "sig_int_vector[1,2]", "sig_int_vector[1,3]"]
+pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int\[1\]", "sig_int_vector\[1,1\]", "sig_int_vector\[1,2\]", "sig_int_vector\[1,3\]"]
 
 all_txt_grid = []
 
