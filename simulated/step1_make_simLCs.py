@@ -224,7 +224,7 @@ def make_dataset(wd):
                     f.close()
             
 
-def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection):
+def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop):
     
 
     f = open(wd + "paramfile.txt", 'w')
@@ -256,7 +256,7 @@ pec_vel_disp		0.001
 lensing_disp		0.055
 MWEBV_zeropoint_EBV	0.0001
 outl_frac		0.02
-n_x1c_star		1
+n_x1c_star		%i
 electron_coeff		[0.0042,0.00042]
 IG_extinction_coeff	0.0001
 
@@ -278,7 +278,7 @@ separate_mass_x1c	1
           '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
           '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
           '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
-          1 - oneDint))
+          1 + twopop, 1 - oneDint))
     f.close()
 
     f = open(wd + "run.sh", 'w')
@@ -426,11 +426,11 @@ for dataset_ind in tqdm.trange(ndataset):
     
     make_dataset(wd)
         
-    for oneDint, nocal, noselection in ([0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]):
-        wd = prefixname + "/UNITY%s%s%s_%03i/" % ("_1D"*oneDint, "_nocal"*nocal, "_nosel"*noselection, dataset_ind)
+    for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]):
+        wd = prefixname + "/UNITY%s%s%s%s_%03i/" % ("_1D"*oneDint, "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, dataset_ind)
         subprocess.getoutput("mkdir " + wd)
         
-        set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection)
+        set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop)
 
         f_UNITY.write("cd " + pwd + "/" + wd + '\n')
         f_UNITY.write("sbatch run.sh\n")
