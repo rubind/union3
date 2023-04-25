@@ -806,10 +806,14 @@ try:
     if sc != smfl_lines:
         print("Okay. Need to recompile!")
         raise_time
+
+    fit = sm.sampling(data=stan_data,
+                      iter=10, chains=1, n_jobs = 1, refresh = 1, init = init_fn, sample_file = params["sample_file"])
+        
 except:
     sm = pystan.StanModel(file=smfl)
     pickle.dump((sm, smfl_lines), open(smpfl, 'wb'))
-    
+
 
 fit = sm.sampling(data=stan_data,
                   iter=params["iter"], chains=params["chains"], n_jobs = params["n_jobs"], refresh = 10, init = init_fn, sample_file = params["sample_file"])
