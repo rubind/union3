@@ -419,11 +419,10 @@ def plot_coeffs(z_list, redshift_coeffs):
         for j in range(len(redshift_coeffs[0])):
             plt.plot(z_list[i], redshift_coeffs[i][j], '.', color = "C" + str(j))
 
-    assert np.min(np.max(redshift_coeffs, axis = 1) - np.min(redshift_coeffs, axis = 1)) > 0
-
     plt.savefig("redshift_coeffs.pdf")
     plt.close()
 
+    assert np.min(np.max(redshift_coeffs, axis = 1) - np.min(redshift_coeffs, axis = 1)) > 0
 
 def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_type):
     """redshift_coeff_type could be ("a", 1) or ("a", 3) for a population that varies with a(t)
