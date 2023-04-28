@@ -479,7 +479,7 @@ def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_t
             print("set_ind", set_ind, "mean_z", mean_z, "j", j)
 
             if separate_mass_x1c:
-                redshift_coeffs[:,j] += (set_list == set_ind)*p_high_mass[i]
+                redshift_coeffs[:,j] += (set_list == set_ind)*p_high_mass
                 redshift_coeffs[:,n_z + j] += (set_list == set_ind)*(1. - p_high_mass)
             else:
                 redshift_coeffs[:,j] += (set_list == set_ind)*1.
