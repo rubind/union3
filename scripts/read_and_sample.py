@@ -414,12 +414,13 @@ def get_redshifts(redshifts):
 
 
 def plot_coeffs(z_list, redshift_coeffs):
-    assert np.min(np.max(redshift_coeffs, axis = 1) - np.min(redshift_coeffs, axis = 1)) > 0
-    
     plt.figure(2)
     for i in range(len(redshift_coeffs)):
         for j in range(len(redshift_coeffs[0])):
             plt.plot(z_list[i], redshift_coeffs[i][j], '.', color = "C" + str(j))
+
+    assert np.min(np.max(redshift_coeffs, axis = 1) - np.min(redshift_coeffs, axis = 1)) > 0
+
     plt.savefig("redshift_coeffs.pdf")
     plt.close()
 
