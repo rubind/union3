@@ -410,43 +410,79 @@ def get_redshifts(redshifts):
     return redshifts_sort_fill, unsort_inds, len(appended_redshifts)
 
 
-def get_redshift_coeffs(z_list, n_x1c_star, p_high_mass, separate_mass_x1c):
-    actual_n_x1c_star = n_x1c_star*(1 + separate_mass_x1c)
-    
-    a_list = 1./(1. + np.array(z_list))
-    a_nodes = np.linspace(min(a_list) - 1e-5, max(a_list) + 1e-5, n_x1c_star)
-    
-    redshift_coeffs = [[] for i in range(actual_n_x1c_star)]
+################################################# Redshift Coefficients for Population ###################################################
 
-    for i in range(len(z_list)):
-        if n_x1c_star > 1:
-            for j in range(n_x1c_star):
-                coeffs = zeros(n_x1c_star, dtype=float64)
+
+def plot_coeffs(z_list, redshift_coeffs):
+    assert np.min(np.max(redshift_coeffs, axis = 1) - np.min(redshift_coeffs, axis = 1)) > 0
+    
+    plt.figure(2)
+    for i in range(len(redshift_coeffs)):
+        for j in range(len(redshift_coeffs[0])):
+            plt.plot(z_list[i], redshift_coeffs[i][j], '.', color = "C" + str(j))
+    plt.savefig("redshift_coeffs.pdf")
+    plt.close()
+
+
+def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_type):
+    """redshift_coeff_type could be ("a", 1) or ("a", 3) for a population that varies with a(t)
+    redshift_coeff_type could be ("sample", [0.0, 0.4, 1.0]) for a population that is allowed to be different low-z, mid-z, high-z"""
+
+    z_list = np.array(z_list)
+    set_list = np.array(set_list)
+    
+    try:
+        n_z = int(redshift_coeff_type[1])
+    except:
+        n_z = len(redshift_coeff_type[1])
+    
+    actual_n_x1c_star = n_z*(1 + separate_mass_x1c)
+
+    redshift_coeffs = np.zeros([len(z_list), actual_n_x1c_star], dtype=np.float64)
+
+    if n_z == 1:
+        if separate_mass_x1c:
+            redshift_coeffs[:,0] = p_high_mass
+            redshift_coeffs[:,1] = 1 - p_high_mass
+        else:
+            redshift_coeffs += 1
+
+        plot_coeffs(z_list, redshift_coeffs)
+        return redshift_coeffs
+
+    if redshift_coeff_type[0] == "a":
+        a_list = 1./(1. + np.array(z_list))
+        a_nodes = np.linspace(min(a_list) - 1e-5, max(a_list) + 1e-5, n_x1c_star)
+    
+        for i in range(len(z_list)):
+            for j in range(n_z):
+                coeffs = zeros(n_z, dtype=float64)
                 coeffs[j] = 1
-            
+
                 ifn = interp1d(a_nodes, coeffs, kind = 'linear')
 
                 if separate_mass_x1c:
-                    redshift_coeffs[j].append(ifn(a_list[i])*p_high_mass[i])
-                    redshift_coeffs[n_x1c_star + j].append(ifn(a_list[i])*(1. - p_high_mass[i]))
+                    redshift_coeffs[i,j] = ifn(a_list[i])*p_high_mass[i]
+                    redshift_coeffs[i,n_z + j] = ifn(a_list[i])*(1. - p_high_mass[i])
                 else:
-                    redshift_coeffs[j].append(ifn(a_list[i]))
+                    redshift_coeffs[i,j] = ifn(a_list[i])
 
-        else:
+    if redshift_coeff_type[0] == "sample":
+        for set_ind in np.unique(set_list):
+            mean_z = np.mean(z_list[np.where(set_list == set_ind)])
+            j = np.argmin(np.abs(np.array(redshift_coeff_type[1]) - mean_z))
+
             if separate_mass_x1c:
-                redshift_coeffs[0].append(p_high_mass[i])
-                redshift_coeffs[1].append(1. - p_high_mass[i])
+                redshift_coeffs[:,j] += (set_list == set_ind)*p_high_mass[i]
+                redshift_coeffs[:,n_z + j] += (set_list == set_ind)*(1. - p_high_mass)
             else:
-                redshift_coeffs[0].append(1.)
+                redshift_coeffs[:,j] += (set_list == set_ind)
 
-    plt.figure(2)
-    for i in range(len(z_list)):
-        for j in range(actual_n_x1c_star):
-            plt.plot(z_list[i], redshift_coeffs[j][i], '.', color = "C" + str(j))
-    plt.savefig("redshift_coeffs.pdf")
-    plt.close()
     
-    return transpose(array(redshift_coeffs))
+    plot_coeffs(z_list, redshift_coeffs)
+    return redshift_coeffs
+
+################################################# Binned mu ###################################################
 
 
 def zcount(z, zmin, zmax):
@@ -675,15 +711,20 @@ else:
 
     redshifts_sort_fill, unsort_inds, nzadd = get_redshifts(the_data["z_CMB_list"])
 
-    p_high_mass = 0.5*(1. + erf((np.array(the_data["mass"]) - 10.)/(2. * np.array(the_data["mass_err"]))))
-    redshift_coeffs = get_redshift_coeffs(the_data["z_CMB_list"], params["n_x1c_star"], p_high_mass, params["separate_mass_x1c"])
+    p_high_mass = 0.5*(1. + erf((np.array(the_data["mass"]) - 10.)/(np.sqrt(2.) * np.array(the_data["mass_err"]))))
+
+    redshift_coeffs = get_redshift_coeffs(z_list = the_data["z_CMB_list"],
+                                          p_high_mass = p_high_mass,
+                                          separate_mass_x1c = params["separate_mass_x1c"],
+                                          redshift_coeff_type = params["redshift_coeff_type"])
+    
     
     stan_data = {"n_sne": n_sne, "nzadd": nzadd,
                  "n_samples": len(the_data["sample_names"]),
                  "redshift_coeffs": redshift_coeffs,
                  "n_calib": len(the_data["calib_names"]),
                  "d_mBx1c_d_calib": the_data["d_mBx1c_dcalib_list"],
-                 "n_x1c_star": params["n_x1c_star"]*(1 + params["separate_mass_x1c"]), # 3 = 3 scale-factor nodes
+                 "n_x1c_star": len(redshift_coeffs[0]), # 3 = 3 scale-factor nodes
                  "threeD_unexplained": params["threeD_unexplained"],
                  "mass": the_data["mass"],
                  "mass_err": the_data["mass_err"],

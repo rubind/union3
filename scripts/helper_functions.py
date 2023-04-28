@@ -58,7 +58,7 @@ def get_params(paramfl):
     keys = ["filenamelist", "weird_sn_list", "mag_cut", "calibration_uncertainties",
             "iter", "chains", "n_jobs",
             "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color", "min_color", "max_MWEBV",
-            "min_redshift", "max_redshift", "n_x1c_star",
+            "min_redshift", "max_redshift", "redshift_coeff_type",
             "do_blind", "do_twoalphabeta", "separate_mass_x1c", "outl_frac", "remap_x1",
             "stan_code", "pec_vel_disp", "lensing_disp", "MWEBV_zeropoint_EBV", "electron_coeff", "IG_extinction_coeff",
             "sample_file",
