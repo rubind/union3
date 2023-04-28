@@ -469,15 +469,20 @@ def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_t
 
 
     elif redshift_coeff_type[0] == "sample":
+        zs_to_match = np.array([float(item) for item in redshift_coeff_type[1:]])
+        print("zs_to_match", zs_to_match)
+        
         for set_ind in np.unique(set_list):
             mean_z = np.mean(z_list[np.where(set_list == set_ind)])
-            j = np.argmin(np.abs(np.array(redshift_coeff_type[1]) - mean_z))
+            
+            j = np.argmin(np.abs(zs_to_match - mean_z))
+            print("set_ind", set_ind, "mean_z", mean_z, "j", j)
 
             if separate_mass_x1c:
                 redshift_coeffs[:,j] += (set_list == set_ind)*p_high_mass[i]
                 redshift_coeffs[:,n_z + j] += (set_list == set_ind)*(1. - p_high_mass)
             else:
-                redshift_coeffs[:,j] += set_list == set_ind
+                redshift_coeffs[:,j] += (set_list == set_ind)*1.
     else:
         assert 0, "Unknown redshift_coeff_type " + str(redshift_coeff_type)
     
