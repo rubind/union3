@@ -467,6 +467,8 @@ def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_t
                 else:
                     redshift_coeffs[i,j] = ifn(a_list[i])
 
+
+    set_list = np.array(the_data["sample_list"])
     if redshift_coeff_type[0] == "sample":
         for set_ind in np.unique(set_list):
             mean_z = np.mean(z_list[np.where(set_list == set_ind)])
@@ -476,7 +478,7 @@ def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_t
                 redshift_coeffs[:,j] += (set_list == set_ind)*p_high_mass[i]
                 redshift_coeffs[:,n_z + j] += (set_list == set_ind)*(1. - p_high_mass)
             else:
-                redshift_coeffs[:,j] += (set_list == set_ind)
+                redshift_coeffs[:,j] += set_list == set_ind
 
     
     plot_coeffs(z_list, redshift_coeffs)
