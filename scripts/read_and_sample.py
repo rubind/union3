@@ -429,8 +429,8 @@ def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_t
     redshift_coeff_type could be ("sample", [0.0, 0.4, 1.0]) for a population that is allowed to be different low-z, mid-z, high-z"""
 
     z_list = np.array(z_list)
-    set_list = np.array(set_list)
-    
+    set_list = np.array(the_data["sample_list"])
+
     try:
         n_z = int(redshift_coeff_type[1])
     except:
@@ -468,7 +468,6 @@ def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_t
                     redshift_coeffs[i,j] = ifn(a_list[i])
 
 
-    set_list = np.array(the_data["sample_list"])
     if redshift_coeff_type[0] == "sample":
         for set_ind in np.unique(set_list):
             mean_z = np.mean(z_list[np.where(set_list == set_ind)])
