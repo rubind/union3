@@ -436,10 +436,10 @@ def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_t
     z_list = np.array(z_list)
     set_list = np.array(the_data["sample_list"])
 
-    try:
+    if redshift_coeff_type[1].count("."):
+        n_z = len(redshift_coeff_type[1:])
+    else:
         n_z = int(redshift_coeff_type[1])
-    except:
-        n_z = len(redshift_coeff_type[1])
     
     actual_n_x1c_star = n_z*(1 + separate_mass_x1c)
 
@@ -457,7 +457,7 @@ def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_t
 
     if redshift_coeff_type[0] == "a":
         a_list = 1./(1. + np.array(z_list))
-        a_nodes = np.linspace(min(a_list) - 1e-5, max(a_list) + 1e-5, n_x1c_star)
+        a_nodes = np.linspace(min(a_list) - 1e-5, max(a_list) + 1e-5, n_z)
     
         for i in range(len(z_list)):
             for j in range(n_z):

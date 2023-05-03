@@ -3,6 +3,7 @@ import glob
 import matplotlib.pyplot as plt
 import numpy as np
 from subprocess import getoutput
+import tqdm
 
 def get_dmu(band, resfl):
     cmd = "grep Zeropoint " + resfl.replace("result_salt2.dat", "result_deriv.dat") + " | grep 'AB|SDSS|SDSS_" + band + "'"
@@ -27,7 +28,7 @@ all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                redshift = [])
 
 
-for resfl in glob.glob("dataset_*/*/res*salt2.dat"):
+for resfl in tqdm.tqdm(glob.glob("dataset_*/*/res*salt2.dat")):
     obs_c = read_param(resfl, "Color")
     if obs_c != None:
         obs_sig_c = read_param(resfl, "Color", ind = 2)

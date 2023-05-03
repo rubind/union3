@@ -23,63 +23,73 @@ def dobin(xs, ys, xbins):
     return 0.5*(xbins[1:] + xbins[:-1]), ybins, sigybins
 
 
-all_mags = []
-all_obs = []
-all_dm = []
-all_z = []
-
-if len(sys.argv) > 1:
-    globstr = "UNITY_?00"
-else:
-    globstr = "UNITY_???"
-
-for fl in tqdm.tqdm(glob.glob(globstr + "/SN_params/*")):
-    all_mags.append(read_param(fl, "peak_mag"))
-    all_obs.append(read_param(fl, "observed"))
-    all_dm.append(read_param(fl, "delta_m"))
-    all_z.append(read_param(fl, "z"))
-
-all_mags = np.array(all_mags)
-all_obs = np.array(all_obs)
-all_dm = np.array(all_dm)
-all_z = np.array(all_z)
-
-
-zbins = np.arange(all_z.min(), all_z.max() + 0.05, 0.05)
-magbins = np.arange(all_mags.min(), all_mags.max() + 0.1, 0.1)
-
 fig = plt.figure(figsize = (8, 6))
 
-plt.subplot(2,2,2)
-x,y, NA=dobin(all_z, all_obs, zbins)
-plt.plot(x, y, '.', color = 'b')
-plt.ylabel("Selection Probability")
-plt.xlabel("Redshift")
-plt.xlim(0,1)
-plt.ylim(0,1)
+for lowhigh in "LH":
+    pltcolor = dict(L = 'b', H = 'r')[lowhigh]
+    datalabel = dict(L = 'Low-$z$', H = 'High-$z$')[lowhigh]
+    
+    all_mags = []
+    all_obs = []
+    all_dm = []
+    all_z = []
 
-plt.subplot(2,2,1)
-x,y,NA =dobin(all_mags, all_obs, magbins)
-plt.plot(x, y, '.', color = 'b')
-plt.ylabel("Selection Probability")
-plt.xlabel("Peak $i$ Magnitude")
-plt.ylim(0,1)
+    if len(sys.argv) > 1:
+        globstr = "UNITY_" + lowhigh + "_?00"
+    else:
+        globstr = "UNITY_" + lowhigh + "_???"
 
-inds = np.where(all_obs == 1)
+    for fl in tqdm.tqdm(glob.glob(globstr + "/SN_params/*")):
+        all_mags.append(read_param(fl, "peak_mag"))
+        all_obs.append(read_param(fl, "observed"))
+        all_dm.append(read_param(fl, "delta_m"))
+        all_z.append(read_param(fl, "z"))
 
-plt.subplot(2,2,3)
-plt.hist(all_z, bins = zbins, color = 'w', edgecolor='black', label = "All SNe")
-plt.hist(all_z[inds], bins = zbins, color = 'b', label = "SNe Selected")
-plt.legend(loc = 'best')
-plt.ylabel("Number of SNe")
-plt.xlabel("Redshift")
+    all_mags = np.array(all_mags)
+    all_obs = np.array(all_obs)
+    all_dm = np.array(all_dm)
+    all_z = np.array(all_z)
 
-plt.subplot(2,2,4)
-inds = np.where(all_obs == 1)
 
-print("all_dm[inds]", all_dm[inds])
-x,y, sigy=dobin(all_z[inds], all_dm[inds], zbins)
-plt.errorbar(x, y, yerr = sigy, fmt = '.', color = 'b')
+    if lowhigh == "H":
+        zbins = np.arange(all_z.min(), all_z.max() + 0.05, 0.05)
+    else:
+        zbins = np.arange(all_z.min(), all_z.max() + 0.005, 0.005)
+
+    magbins = np.arange(all_mags.min(), all_mags.max() + 0.1, 0.1)
+
+
+    plt.subplot(2,2,2)
+    x,y, NA=dobin(all_z, all_obs, zbins)
+    plt.plot(x, y, '.', color = pltcolor)
+    plt.ylabel("Selection Probability")
+    plt.xlabel("Redshift")
+    plt.xlim(0,1)
+    plt.ylim(0,1)
+
+    plt.subplot(2,2,1)
+    x,y,NA =dobin(all_mags, all_obs, magbins)
+    plt.plot(x, y, '.', color = pltcolor)
+    plt.ylabel("Selection Probability")
+    plt.xlabel("Peak $i$ Magnitude")
+    plt.ylim(0,1)
+
+    inds = np.where(all_obs == 1)
+
+    plt.subplot(2,2,3)
+    #plt.hist(all_z, bins = zbins, color = 'w', edgecolor='black', label = "All " + datalabel + " SNe")
+    plt.hist(all_z, bins = zbins, color = pltcolor, label = "All " + datalabel + " SNe", alpha = 0.3)
+    plt.hist(all_z[inds], bins = zbins, color = pltcolor, label = datalabel + " SNe Selected")
+    plt.legend(loc = 'best')
+    plt.ylabel("Number of SNe per Bin")
+    plt.xlabel("Redshift")
+
+    plt.subplot(2,2,4)
+    inds = np.where(all_obs == 1)
+
+    print("all_dm[inds]", all_dm[inds])
+    x,y, sigy=dobin(all_z[inds], all_dm[inds], zbins)
+    plt.errorbar(x, y, yerr = sigy, fmt = '.', color = pltcolor)
 
 
 cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)

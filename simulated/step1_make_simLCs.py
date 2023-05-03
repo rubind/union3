@@ -80,7 +80,7 @@ def make_dataset(wd, cal_offsets):
                  t0 = np.random.uniform(dates[0] + params["cadence"]*2, dates[-1] - params["cadence"]*2),
                  x1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
                  c = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"],
-                 delta_m = np.random.normal()*np.sqrt(params["gray_sig_unexplained"]**2. + (0.055*z)**2.),
+                 delta_m = np.random.normal()*np.sqrt(params["gray_sig_unexplained"]**2. + (0.055*z)**2. + (0.00217/z)**2.),
                  mass = 10. + np.random.normal())
 
 
@@ -238,8 +238,8 @@ def make_dataset(wd, cal_offsets):
             
 
 def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low):
-    dataset_list = ["../dataset_L_%03i_v1.txt"]*include_low + ["../dataset_H_%03i_v1.txt"]
-    dataset_list = str(dataset_list)
+    dataset_list = ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind]
+    dataset_list = str(dataset_list).replace(" ", "")
 
     if twopop:
         population_model = "a 2"
