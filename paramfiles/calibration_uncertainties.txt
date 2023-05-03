@@ -126,11 +126,11 @@
 ('Lambda', 'NB99|NB99_i7'):										20L
 
 
-('Zeropoint', 'SDSS|SDSS_u'):										0.01
-('Zeropoint', 'SDSS|SDSS_g'):										0.01
-('Zeropoint', 'SDSS|SDSS_r'):										0.01
-('Zeropoint', 'SDSS|SDSS_i'):										0.01
-('Zeropoint', 'SDSS|SDSS_z'):										0.01
+('Zeropoint', 'SDSS|SDSS_u'):										0.006
+('Zeropoint', 'SDSS|SDSS_g'):										0.004
+('Zeropoint', 'SDSS|SDSS_r'):										0.003
+('Zeropoint', 'SDSS|SDSS_i'):										0.006
+('Zeropoint', 'SDSS|SDSS_z'):										0.008
 ('Lambda', 'SDSS|SDSS_u'):										10
 ('Lambda', 'SDSS|SDSS_g'):										10
 ('Lambda', 'SDSS|SDSS_r'):										10

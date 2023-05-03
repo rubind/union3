@@ -67,7 +67,7 @@ def make_dataset(wd, cal_offsets):
     model = sncosmo.Model(source=source)
 
     if is_low_z:
-        zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=500.))
+        zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=2000.))
     else:
         zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"]))
     print("len(zlist)", len(zlist))
