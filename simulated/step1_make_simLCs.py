@@ -51,15 +51,25 @@ def approxmB(model, date):
                          )
 
 
-def make_dataset(wd):
+def make_dataset(wd, cal_offsets):
+    is_low_z = wd.count("_L_")
+    if is_low_z:
+        assert wd.count("_H_") == 0
 
-    obs_err = 5. 
+    if is_low_z:
+        obs_err = 80. # Depth of 21.0 at 5 sigma
+    else:
+        obs_err = 5. # Depth of 24.0 at 5 sigma
+        
 
     dates = np.arange(params["n_visit"], dtype=np.float64)*params["cadence"]
 
     model = sncosmo.Model(source=source)
 
-    zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"]))
+    if is_low_z:
+        zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=500.))
+    else:
+        zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"]))
     print("len(zlist)", len(zlist))
 
     nsne = len(zlist)
@@ -94,7 +104,10 @@ def make_dataset(wd):
             if observed_SNe[i] == 0 and np.abs(night - all_SNe[i]["t0"]) < 50:
                 model = get_SNCosmo_model(all_SNe[i], source)
                 if params["obs_mag_selection"]:
-                    all_mags.append(model.bandmag("sdssi", "ab", night))
+                    if is_low_z:
+                        all_mags.append(model.bandmag("sdssr", "ab", night))
+                    else:
+                        all_mags.append(model.bandmag("sdssi", "ab", night))
                 else:
                     all_mags.append(approxmB(model, night))
             else:
@@ -121,7 +134,10 @@ def make_dataset(wd):
     for i in range(nsne):
         model = get_SNCosmo_model(all_SNe[i], source)
         if params["obs_mag_selection"]:
-            peak_mags.append(model.bandmag("sdssi", "ab", all_SNe[i]["t0"]))
+            if is_low_z:
+                peak_mags.append(model.bandmag("sdssr", "ab", all_SNe[i]["t0"]))
+            else:
+                peak_mags.append(model.bandmag("sdssi", "ab", all_SNe[i]["t0"]))
         else:
             peak_mags.append(approxmB(model, all_SNe[i]["t0"]))
         SNe_x0s.append(model.get("x0"))
@@ -139,9 +155,6 @@ def make_dataset(wd):
     p_wd = wd.replace("dataset_", "UNITY_") + "/SN_params/"
     subprocess.getoutput("mkdir -p " + p_wd)
 
-    cal_offsets = {}
-    for band in "griz":
-        cal_offsets[band] = np.random.normal()*0.005*add_noise_and_calibration
     
     for i in range(nsne):
 
@@ -224,13 +237,23 @@ def make_dataset(wd):
                     f.close()
             
 
-def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop):
-    
+def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low):
+    dataset_list = ["../dataset_L_%03i_v1.txt"]*include_low + ["../dataset_H_%03i_v1.txt"]
+    dataset_list = str(dataset_list)
+
+    if twopop:
+        population_model = "a 2"
+    else:
+        if include_low:
+            population_model = "sample 0.5 0.0"
+        else:
+            population_model = "sample 0.5"
+
 
     f = open(wd + "paramfile.txt", 'w')
     f.write("""
 do_blind		0
-filenamelist		["../dataset_%03i_v1.txt"]
+filenamelist		%s
 
 weird_sn_list		"../weird_sn_list.txt"
 mag_cut			%s
@@ -256,7 +279,7 @@ pec_vel_disp		0.001
 lensing_disp		0.055
 MWEBV_zeropoint_EBV	0.0001
 outl_frac		0.02
-n_x1c_star		%i
+redshift_coeff_type     %s
 electron_coeff		[0.0042,0.00042]
 IG_extinction_coeff	0.0001
 
@@ -274,21 +297,21 @@ fix_Om			0
 MB_by_sample		0
 include_pec_cov		0
 separate_mass_x1c	1
-    """ %(dataset_ind,
-          '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
-          '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
-          '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
-          1 + twopop, 1 - oneDint))
+    """ % (dataset_list,
+           '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
+           '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
+           '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
+           population_model, 1 - oneDint))
     f.close()
 
     f = open(wd + "run.sh", 'w')
     f.write("""#!/bin/bash
 #SBATCH --job-name=example
 #SBATCH --partition=shared
-#SBATCH --time=0-12:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=0-""" + str(12 + 6*include_low) + """:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=6G # Memory per node my job requires
+#SBATCH --mem=12G # Memory per node my job requires
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
@@ -336,11 +359,13 @@ f.close()
 
 f = open(prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(ndataset):
-    f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/SDSS_i_selection.txt    23.0            0.5\n" % dataset_ind)
+    f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/SDSS_r_selection.txt    18.0            0.5\n" % dataset_ind)
+    f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/SDSS_i_selection.txt    23.0            0.5\n" % dataset_ind)
 f.close()
 
 f = open(prefixname + "/mag_cuts_x0.txt", 'w')
 for dataset_ind in range(ndataset):
+    f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    23.0            0.5\n" % dataset_ind)
 f.close()
 
@@ -421,17 +446,28 @@ f_UNITY.write("cd " + pwd + "/" + prefixname + "\n")
 f_UNITY.write("python $PATHMODEL/python_code/cut_fits.py dataset*\n")
 
 for dataset_ind in tqdm.trange(ndataset):
-    wd = prefixname + "/dataset_%03i/" % dataset_ind
-    subprocess.getoutput("mkdir " + wd)
-    
-    make_dataset(wd)
-        
-    for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]):
-        wd = prefixname + "/UNITY%s%s%s%s_%03i/" % ("_1D"*oneDint, "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, dataset_ind)
-        subprocess.getoutput("mkdir " + wd)
-        
-        set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop)
+    cal_offsets = {}
+    for band in "griz":
+        cal_offsets[band] = np.random.normal()*0.005*add_noise_and_calibration
 
-        f_UNITY.write("cd " + pwd + "/" + wd + '\n')
-        f_UNITY.write("sbatch run.sh\n")
+
+    wd = prefixname + "/dataset_H_%03i/" % dataset_ind
+    subprocess.getoutput("mkdir " + wd)
+    make_dataset(wd, cal_offsets = cal_offsets)
+    
+    wd = prefixname + "/dataset_L_%03i/" % dataset_ind
+    subprocess.getoutput("mkdir " + wd)
+    make_dataset(wd, cal_offsets = cal_offsets)
+
+
+    for include_low in [0, 1]:
+        for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]):
+            wd = prefixname + "/UNITY%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
+                                                          "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, dataset_ind)
+            subprocess.getoutput("mkdir " + wd)
+            
+            set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low)
+            
+            f_UNITY.write("cd " + pwd + "/" + wd + '\n')
+            f_UNITY.write("sbatch run.sh\n")
 f_UNITY.close()
