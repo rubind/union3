@@ -27,7 +27,7 @@ all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                redshift = [])
 
 
-for resfl in glob.glob("dataset_000/*/res*salt2.dat"):
+for resfl in glob.glob("dataset_*/*/res*salt2.dat"):
     obs_c = read_param(resfl, "Color")
     if obs_c != None:
         obs_sig_c = read_param(resfl, "Color", ind = 2)
