@@ -427,23 +427,26 @@ f = open(prefixname + "/weird_sn_list.txt", 'w')
 f.close()
 
 
-f_UNITY = open(prefixname + "/run_UNITY.sh", 'w')
 
+f_UNITY = []
 
-f_UNITY.write("""#!/bin/bash
-#SBATCH --job-name=runU
-#SBATCH --partition=shared
-#SBATCH --time=0-01:00:00 ## time format is DD-HH:MM:SS
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=6G # Memory per node my job requires
-#SBATCH --error=runU-%A.err # %A - filled with jobid, where to write the stderr
-#SBATCH --output=runU-%A.out # %A - filled with jobid, wher to write the stdout
-source ~/.bash_profile
-""")
+for include_low in [0, 1]:
+    f_UNITY.append(open(prefixname + "/run_UNITY" + "_low"*include_low + ".sh", 'w'))
 
-f_UNITY.write("cd " + pwd + "/" + prefixname + "\n")
-f_UNITY.write("python $PATHMODEL/python_code/cut_fits.py dataset*\n")
+    f_UNITY[include_low].write("""#!/bin/bash
+    #SBATCH --job-name=runU
+    #SBATCH --partition=shared
+    #SBATCH --time=0-01:00:00 ## time format is DD-HH:MM:SS
+    #SBATCH --nodes=1
+    #SBATCH --cpus-per-task=2
+    #SBATCH --mem=6G # Memory per node my job requires
+    #SBATCH --error=runU-%A.err # %A - filled with jobid, where to write the stderr
+    #SBATCH --output=runU-%A.out # %A - filled with jobid, wher to write the stdout
+    source ~/.bash_profile
+    """)
+
+    f_UNITY[include_low].write("cd " + pwd + "/" + prefixname + "\n")
+    f_UNITY[include_low].write("python $PATHMODEL/python_code/cut_fits.py dataset*\n")
 
 for dataset_ind in tqdm.trange(ndataset):
     cal_offsets = {}
@@ -468,6 +471,8 @@ for dataset_ind in tqdm.trange(ndataset):
             
             set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low)
             
-            f_UNITY.write("cd " + pwd + "/" + wd + '\n')
-            f_UNITY.write("sbatch run.sh\n")
-f_UNITY.close()
+            f_UNITY[include_low].write("cd " + pwd + "/" + wd + '\n')
+            f_UNITY[include_low].write("sbatch run.sh\n")
+
+f_UNITY[0].close()
+f_UNITY[1].close()
