@@ -57,7 +57,7 @@ def make_dataset(wd, cal_offsets):
         assert wd.count("_H_") == 0
 
     if is_low_z:
-        obs_err = 80. # Depth of 21.0 at 5 sigma
+        obs_err = 200. # Depth of 20.0 at 5 sigma
     else:
         obs_err = 5. # Depth of 24.0 at 5 sigma
         
