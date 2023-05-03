@@ -7,6 +7,7 @@ weird_sn_list		"$UNITY/paramfiles/weird_sn_list.txt"
 mag_cut			"$UNITY/paramfiles/mag_cuts.txt"
 stan_code		"$UNITY/scripts/stan_code_simple.txt"
 sample_file		"None"
+calibration_uncertainties    "$UNITY/paramfiles/calibration_uncertainties.txt"
 
 
 min_redshift		0.01
@@ -25,8 +26,10 @@ pec_vel_disp		0.001
 lensing_disp		0.055
 MWEBV_zeropoint_EBV	0.005
 outl_frac		0.02
-calib_errs		
-n_x1c_star		1
+
+
+redshift_coeff_type     sample 0.0 0.4 1.0
+
 electron_coeff		[0.0042,0.00042]
 IG_extinction_coeff	1.
 

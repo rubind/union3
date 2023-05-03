@@ -459,8 +459,8 @@
 ('Lambda', 'ACSWF|F850LP_3pix'):									10
 
 
-('Zeropoint', 'NICMOS2|F160W'):										0.01
-('Zeropoint', 'NICMOS2|F110W_faint'):									0.01
+('Zeropoint', 'NICMOS2|F160W'):										0.023
+('Zeropoint', 'NICMOS2|F110W_faint'):									0.022
 ('Zeropoint', 'ACSWF|F606W'):										0.01
 ('Lambda', 'NICMOS2|F160W'):										10
 ('Lambda', 'NICMOS2|F110W_faint'):									10
