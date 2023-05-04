@@ -222,14 +222,14 @@ def make_dataset(wd, cal_offsets):
                     
                     f = open(this_wd + "/lc2fit_" + band + ".dat", 'w')
                     f.write("""#Date :
-        #Flux :
-        #Fluxerr :
-        #ZP :
-        #end :
-        @INSTRUMENT SDSS
-        @BAND SDSS_""" + band[-1]  + """
-        @MAGSYS AB
-        """)
+#Flux :
+#Fluxerr :
+#ZP :
+#end :
+@INSTRUMENT SDSS
+@BAND SDSS_""" + band[-1]  + """
+@MAGSYS AB
+""")
                     for j in range(len(obs_fluxes)):
                         towrite = [dates[j], obs_fluxes[j], obs_err*(add_noise_and_calibration*0.99 + 0.01), 27.5 + cal_offsets[band[-1]]*add_noise_and_calibration]
                         towrite = [str(item) for item in towrite]
@@ -297,7 +297,7 @@ fix_Om			0
 MB_by_sample		0
 include_pec_cov		0
 separate_mass_x1c	1
-    """ % (dataset_list,
+""" % (dataset_list,
            '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
            '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
            '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
@@ -434,16 +434,16 @@ for include_low in [0, 1]:
     f_UNITY.append(open(prefixname + "/run_UNITY" + "_low"*include_low + ".sh", 'w'))
 
     f_UNITY[include_low].write("""#!/bin/bash
-    #SBATCH --job-name=runU
-    #SBATCH --partition=shared
-    #SBATCH --time=0-01:00:00 ## time format is DD-HH:MM:SS
-    #SBATCH --nodes=1
-    #SBATCH --cpus-per-task=2
-    #SBATCH --mem=6G # Memory per node my job requires
-    #SBATCH --error=runU-%A.err # %A - filled with jobid, where to write the stderr
-    #SBATCH --output=runU-%A.out # %A - filled with jobid, wher to write the stdout
-    source ~/.bash_profile
-    """)
+#SBATCH --job-name=runU
+#SBATCH --partition=shared
+#SBATCH --time=0-01:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=6G # Memory per node my job requires
+#SBATCH --error=runU-%A.err # %A - filled with jobid, where to write the stderr
+#SBATCH --output=runU-%A.out # %A - filled with jobid, wher to write the stdout
+source ~/.bash_profile
+""")
 
     f_UNITY[include_low].write("cd " + pwd + "/" + prefixname + "\n")
     f_UNITY[include_low].write("python $PATHMODEL/python_code/cut_fits.py dataset*\n")
