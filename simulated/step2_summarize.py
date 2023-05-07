@@ -6,6 +6,7 @@ except:
 
 import numpy as np
 from FileRead import read_param
+import sys
 
 def fmt(val, unc, mean_unc):
     return "$%.3f \pm %.3f \pm %.3f$" % (val, unc, mean_unc)
@@ -13,7 +14,11 @@ def fmt(val, unc, mean_unc):
 
 pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int\[1\]", "mBx1c_int_variance\[1\]", "mBx1c_int_variance\[2\]", "mBx1c_int_variance\[3\]"]
 
-            
+try:
+    suffix = sys.argv[1]
+except:
+    print("Needs suffix like LH")
+    assert 0
 
 labels = {"Om": "$\Omega_m$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
           "beta_B": "$\\beta_B$",
@@ -46,10 +51,10 @@ for x1c	in ["x1", "c"]:
 all_txt_grid = []
 
 for matchstr, description in [
-        ("UNITY_nosel_???/log.txt", "No Selection Effects"),
-        ("UNITY_???/log.txt", "Nominal UNITY1.5 Model"),
-        ("UNITY_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
-        ("UNITY_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
+        ("UNITY" + suffix + "_nosel_???/log.txt", "No Selection Effects"),
+        ("UNITY" + suffix + "_???/log.txt", "Nominal UNITY1.5 Model"),
+        ("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
+        ("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 ]:
     logs = glob.glob(matchstr)
     
