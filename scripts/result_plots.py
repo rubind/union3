@@ -367,13 +367,13 @@ def unc_labeling(labels_indiv):
         elif label_indiv == "beta_B":
             new_labels.append("$\\beta_B$")
         elif label_indiv == "beta_R":
-            new_labels.append("$\\beta_R$")
+            new_labels.append("$\\beta_R \equiv 0.5(\\betaRH + \\betaRL)$")
         elif label_indiv == "alpha":
             new_labels.append("$\\alpha$")
         elif label_indiv == "calibs_lensing_bias":
             new_labels.append("Weak Lensing Bias")
         elif label_indiv == "delta_beta_R":
-            new_labels.append("$\Delta \\beta_R$")
+            new_labels.append("$\Delta \\beta_R \equiv \\betaRH - \\betaRL$")
         elif label_indiv == "delta_h":
             new_labels.append("$\delta(z = \infty)$")
         elif label_indiv == "delta_0":

@@ -79,6 +79,8 @@ def read_data(params):
 
 
     [lensing_z, lensing_mag] = readcol(os.environ["UNITY"] + "/paramfiles/lensing_bias.txt", 'ff')
+    lensing_mag = 0.5*(0.055*lensing_z)**2.
+    print("LENSING HACK!!!!!")
     lensing_ifn = interp1d(lensing_z, lensing_mag, kind = 'linear')
 
     f_cal = open(params["calibration_uncertainties"].replace("$UNITY", os.environ["UNITY"]), 'r') #open(os.environ["UNITY"] + "/paramfiles/calibration_uncertainties.txt", 'r')

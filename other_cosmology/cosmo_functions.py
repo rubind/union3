@@ -233,7 +233,8 @@ def get_Hinv(z_list, cosmo):
     
     elif cosmo["model"] == "flatw0wa" or cosmo["model"] == "w0wa":
         return 1./np.sqrt(
-            omega_r*(1. + z_list)**4. + cosmo["O_m"]*(1. + z_list)**3. + cosmo["O_k"]*(1. + z_list)**2. + (1. - cosmo["O_m"] - cosmo["O_k"] - omega_r)*np.exp(-3.0*cosmo["w_a"]*z_list/(1. + z_list))*(1. + z_list)**(3.0*(1.0 + cosmo["w_0"] + cosmo["w_a"]))
+            omega_r*(1. + z_list)**4. + cosmo["O_m"]*(1. + z_list)**3. + cosmo["O_k"]*(1. + z_list)**2.
+            + (1. - cosmo["O_m"] - cosmo["O_k"] - omega_r)*np.exp(-3.0*cosmo["w_a"]*z_list/(1. + z_list))*(1. + z_list)**(3.0*(1.0 + cosmo["w_0"] + cosmo["w_a"]))
             )
 
     elif cosmo["model"] == "binnedrho":

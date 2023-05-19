@@ -50,6 +50,56 @@ def approxmB(model, date):
     return -2.5*np.log10(x0 * np.exp(  -0.5*((date - t0)/10.)**2.  )
                          )
 
+def get_observed_SNe_mag_limited(nsne, dates, all_SNe, model):
+    observed_SNe = np.zeros(nsne, dtype=np.int16)
+    
+    for night in dates:
+        all_mags = []
+        
+        for i in range(nsne):
+            if observed_SNe[i] == 0 and np.abs(night - all_SNe[i]["t0"]) < 50:
+                model = get_SNCosmo_model(all_SNe[i], source)
+                if params["obs_mag_selection"]:
+                    if is_low_z:
+                        all_mags.append(model.bandmag("sdssr", "ab", night))
+                    else:
+                        all_mags.append(model.bandmag("sdssi", "ab", night))
+                else:
+                    all_mags.append(approxmB(model, night))
+            else:
+                all_mags.append(1e20)
+                
+        all_mags = np.array(all_mags)
+        print("all_mags", all_mags)
+                                
+        inds = np.argsort(all_mags)
+
+        for i in range(params["nsnepernight"]):
+            observed_SNe[inds[i]] = 1
+    return observed_SNe
+
+
+def get_observed_SNe_volume_limited(nsne, dates, all_SNe, model):
+    observed_SNe = np.zeros(nsne, dtype=np.int16)
+    
+    for night in dates:
+        all_mags = []
+        
+        for i in range(nsne):
+            if observed_SNe[i] == 0 and np.abs(night - all_SNe[i]["t0"]) < 50:
+                all_mags.append(5*np.log10(all_SNe[i]["z"]))
+            else:
+                all_mags.append(1e20)
+
+        all_mags = np.array(all_mags)
+        print("all_mags", all_mags)
+        
+        inds = np.argsort(all_mags)
+
+        for i in range(params["nsnepernight"]):
+            observed_SNe[inds[i]] = 1
+    return observed_SNe
+
 
 def make_dataset(wd, cal_offsets):
     is_low_z = wd.count("_L_")
@@ -95,31 +145,10 @@ def make_dataset(wd, cal_offsets):
 
 
 
-    observed_SNe = np.zeros(nsne, dtype=np.int16)
-    
-    for night in dates:
-        all_mags = []
-        
-        for i in range(nsne):
-            if observed_SNe[i] == 0 and np.abs(night - all_SNe[i]["t0"]) < 50:
-                model = get_SNCosmo_model(all_SNe[i], source)
-                if params["obs_mag_selection"]:
-                    if is_low_z:
-                        all_mags.append(model.bandmag("sdssr", "ab", night))
-                    else:
-                        all_mags.append(model.bandmag("sdssi", "ab", night))
-                else:
-                    all_mags.append(approxmB(model, night))
-            else:
-                all_mags.append(1e20)
-                
-        all_mags = np.array(all_mags)
-        print("all_mags", all_mags)
-                                
-        inds = np.argsort(all_mags)
-
-        for i in range(params["nsnepernight"]):
-            observed_SNe[inds[i]] = 1
+    if params["volume_limited"] == 0:
+        observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model)
+    else:
+        observed_SNe = get_observed_SNe_volume_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model)
 
     
     plt.hist([all_SNe[i]["z"] for i in range(nsne) if observed_SNe[i] == 1], alpha = 0.5, label = str(sum(observed_SNe)))
