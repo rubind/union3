@@ -31,7 +31,7 @@ all_c_star = []
 all_mobs_cuts = []
 
 for dr in tqdm.tqdm(drs):
-    the_data, stan_data, params = pickle.load(gzip.open(dr + "/inputs_Nearby_sim_SDSS_sim_SNLS_sim.pickle", "rb"))
+    the_data, stan_data, params = pickle.load(gzip.open(dr + "/inputs__.pickle", "rb"))
 
     for key in the_data:
         print(key)
