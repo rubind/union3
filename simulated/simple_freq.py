@@ -64,7 +64,7 @@ for dr in tqdm.tqdm(drs):
     try:
         this_Om = float(subprocess.getoutput("grep 'Om ' " + dr + "/log.txt").split(None)[1])
         all_UNITY_Oms.append(this_Om)
-        all_freq_Oms.append(0.3 + P[1])
+        all_freq_Oms.append(P[1])
         all_drs.append(dr)
         all_beta_B.append(float(subprocess.getoutput("grep beta_B " + dr + "/log.txt").split(None)[1]))
 
