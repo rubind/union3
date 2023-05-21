@@ -21,7 +21,7 @@ def pullfn(P, passdata):
 
 prefix = sys.argv[1]
 
-drs = glob.glob(prefix + "*/input*pickle")
+drs = glob.glob(prefix + "_???/input*pickle")
 drs = [item.split("/")[0] for item in drs]
 
 all_freq_Oms = []
