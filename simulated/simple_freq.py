@@ -8,6 +8,7 @@ from DavidsNM import miniLM_new
 import glob
 import tqdm
 from astropy.cosmology import FlatLambdaCDM
+import sys
 
 
 def pullfn(P, passdata):
@@ -18,7 +19,9 @@ def pullfn(P, passdata):
     return obs_mus - (P[0] + mu)
     
 
-drs = glob.glob("UNITYLH_???/input*pickle")
+prefix = sys.argv[1]
+
+drs = glob.glob(prefix + "*/input*pickle")
 drs = [item.split("/")[0] for item in drs]
 
 all_freq_Oms = []
@@ -92,7 +95,7 @@ plt.axvline(np.mean(all_UNITY_Oms), color = 'b', label = "%.4f +- %.4f" % (np.me
 plt.title("all_freq_Oms %.3f all_UNITY_Oms %.3f average %.3f\ndiff %.4f +- %.4f" % (np.std(all_freq_Oms), np.std(all_UNITY_Oms), np.std(0.5*(all_freq_Oms + all_UNITY_Oms)),
                                                                                     np.mean(all_freq_Oms - all_UNITY_Oms), np.std(all_freq_Oms - all_UNITY_Oms)/np.sqrt(len(all_freq_Oms)) ))
 plt.legend(loc = 'best')
-plt.savefig("Om_vs_Om.pdf")
+plt.savefig("Om_vs_Om_" + prefix + ".pdf")
 plt.close()
 
 plt.hist(np.array(all_sig_int))
