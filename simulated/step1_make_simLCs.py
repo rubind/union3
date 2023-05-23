@@ -12,6 +12,7 @@ import pickle
 import os
 import sys
 from astropy.cosmology import FlatLambdaCDM
+import argparse
 
 
 def get_SNCosmo_model(these_params, source):
@@ -246,8 +247,9 @@ def make_dataset(wd, cal_offsets):
                     #fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab") # For SALT2, not SALT3
                     
 
-                    model_fluxes = np.random.multivariate_normal(mean = fluxes, cov = fluxcov*(add_noise_and_calibration*0.999 + 0.001))
-                    obs_fluxes = model_fluxes + np.random.normal(size = len(model_fluxes))*obs_err*add_noise_and_calibration
+                    model_fluxes = fluxes + np.random.multivariate_normal(mean = fluxes*0.,
+                                                                                cov = fluxcov*(opts.addnoise*0.999 + 0.001))
+                    obs_fluxes = model_fluxes + np.random.normal(size = len(model_fluxes))*obs_err*opts.addnoise
                     
                     f = open(this_wd + "/lc2fit_" + band + ".dat", 'w')
                     f.write("""#Date :
@@ -260,7 +262,7 @@ def make_dataset(wd, cal_offsets):
 @MAGSYS AB
 """)
                     for j in range(len(obs_fluxes)):
-                        towrite = [dates[j], obs_fluxes[j], obs_err*(add_noise_and_calibration*0.99 + 0.01), 27.5 + cal_offsets[band[-1]]*add_noise_and_calibration]
+                        towrite = [dates[j], obs_fluxes[j], obs_err*(opts.addnoise*0.99 + 0.01), 27.5 + cal_offsets[band[-1]]]
                         towrite = [str(item) for item in towrite]
                         f.write("  ".join(towrite) + '\n')
                     f.close()
@@ -354,12 +356,16 @@ export UNION=../
 pwd = subprocess.getoutput("pwd")
 
 
-ndataset = int(sys.argv[1])
-add_noise_and_calibration = float(sys.argv[2])
-prefixname = sys.argv[3]
-skew_dist = int(sys.argv[4])
-obs_mag_selection = int(sys.argv[5])
-volume_limited = int(sys.argv[6])
+parser = argparse.ArgumentParser()
+parser.add_argument('--ndataset', help='N datasets', type = int)
+parser.add_argument('--addnoise', help='Add Noise', type = int)
+parser.add_argument('--addcalibration', help='Add Calibration', type = int)
+parser.add_argument('--prefixname', help='Prefix Name for Directory', type = str)
+parser.add_argument('--skewdist', help='x1 and c distributions have skew', type = int)
+parser.add_argument('--volumelimited', help='volume-limited, not magnitude-limited datasets')
+parser.add_argument('--obsmagselection', help="If magnitude-limited, select based on observer-frame magntiudes, not rest-frame x0", type=int)
+
+opts = parser.parse_args()
 
 
 salt2_version = "salt3-22"
@@ -371,36 +377,36 @@ SDSS_obs_frame = {}
 for filt in "griz":
     SDSS_obs_frame[filt] = sncosmo.get_bandpass("sdss" + filt)
 
-params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = ndataset, cadence = 4.,
-              obs_mag_selection = obs_mag_selection, volume_limited = volume_limited,
-              Rx1 = 0.5 + 0.45*(1 - skew_dist), tau_x1 = -0.8*skew_dist,
-              Rc = 0.05 + 0.035*(1 - skew_dist), tau_c = 0.07*skew_dist,
+params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4.,
+              obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited,
+              Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
+              Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
               gray_sig_unexplained = 0.12, alpha = 0.15,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, delta_h = 0.5, MB = -19.1)
 
-subprocess.getoutput("rm -fr " + prefixname)
-subprocess.getoutput("mkdir " + prefixname)
+subprocess.getoutput("rm -fr " + opts.prefixname)
+subprocess.getoutput("mkdir " + opts.prefixname)
 
-f = open(prefixname + "/params.dat", 'w')
+f = open(opts.prefixname + "/params.dat", 'w')
 for param in params:
     f.write(param + "  " + str(params[param]) + '\n')
 f.close()
 
 
-f = open(prefixname + "/mag_cuts.txt", 'w')
-for dataset_ind in range(ndataset):
+f = open(opts.prefixname + "/mag_cuts.txt", 'w')
+for dataset_ind in range(opts.ndataset):
     f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/SDSS_r_selection.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/SDSS_i_selection.txt    23.0            0.5\n" % dataset_ind)
 f.close()
 
-f = open(prefixname + "/mag_cuts_x0.txt", 'w')
-for dataset_ind in range(ndataset):
+f = open(opts.prefixname + "/mag_cuts_x0.txt", 'w')
+for dataset_ind in range(opts.ndataset):
     f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    23.0            0.5\n" % dataset_ind)
 f.close()
 
 
-f = open(prefixname + "/calibration_uncertainties.txt", 'w')
+f = open(opts.prefixname + "/calibration_uncertainties.txt", 'w')
 f.write("""
 ('Fundamental', (3000.0, 4000.0)):                                                                      0.0001
 ('Fundamental', (4000.0, 5000.0)):                                                                      0.0001
@@ -426,7 +432,7 @@ f.write("""
 f.close()
 
 
-f = open(prefixname + "/calibration_uncertainties_small.txt", 'w')
+f = open(opts.prefixname + "/calibration_uncertainties_small.txt", 'w')
 f.write("""
 ('Fundamental', (3000.0, 4000.0)):                                                                      0.0001
 ('Fundamental', (4000.0, 5000.0)):                                                                      0.0001
@@ -453,7 +459,7 @@ f.close()
 
 
 
-f = open(prefixname + "/weird_sn_list.txt", 'w')
+f = open(opts.prefixname + "/weird_sn_list.txt", 'w')
 f.close()
 
 
@@ -461,7 +467,7 @@ f.close()
 f_UNITY = []
 
 for include_low in [0, 1]:
-    f_UNITY.append(open(prefixname + "/run_UNITY" + "_low"*include_low + ".sh", 'w'))
+    f_UNITY.append(open(opts.prefixname + "/run_UNITY" + "_low"*include_low + ".sh", 'w'))
 
     f_UNITY[include_low].write("""#!/bin/bash
 #SBATCH --job-name=runU
@@ -475,27 +481,27 @@ for include_low in [0, 1]:
 source ~/.bash_profile
 """)
 
-    f_UNITY[include_low].write("cd " + pwd + "/" + prefixname + "\n")
+    f_UNITY[include_low].write("cd " + pwd + "/" + opts.prefixname + "\n")
     f_UNITY[include_low].write("python $PATHMODEL/python_code/cut_fits.py dataset*\n")
 
-for dataset_ind in tqdm.trange(ndataset):
+for dataset_ind in tqdm.trange(opts.ndataset):
     cal_offsets = {}
     for band in "griz":
-        cal_offsets[band] = np.random.normal()*0.005*add_noise_and_calibration
+        cal_offsets[band] = np.random.normal()*0.005*opts.addcalibration
 
 
-    wd = prefixname + "/dataset_H_%03i/" % dataset_ind
+    wd = opts.prefixname + "/dataset_H_%03i/" % dataset_ind
     subprocess.getoutput("mkdir " + wd)
     make_dataset(wd, cal_offsets = cal_offsets)
     
-    wd = prefixname + "/dataset_L_%03i/" % dataset_ind
+    wd = opts.prefixname + "/dataset_L_%03i/" % dataset_ind
     subprocess.getoutput("mkdir " + wd)
     make_dataset(wd, cal_offsets = cal_offsets)
 
 
     for include_low in [0, 1]:
         for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]):
-            wd = prefixname + "/UNITY%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
+            wd = opts.prefixname + "/UNITY%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
                                                           "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, dataset_ind)
             subprocess.getoutput("mkdir " + wd)
             
