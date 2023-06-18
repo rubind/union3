@@ -667,7 +667,7 @@ def init_fn():
             "blind_values": [0.]*n_samples,
             
             "true_cB": random.random(size = n_sne)*0.02 - 0.01 + clip(the_data["c_list"]/2., -0.2, 1.0),
-            "true_cR": random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0),
+            "true_cR": random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0), #"true_cR_unit": random.random(size = nsne)*0.5 + 0.5, #random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0),
             "true_x1": random.random(size = n_sne)*0.2 - 0.1 + the_data["x1_list"],
 
             "x1_star": random.random(size = stan_data["n_x1c_star"])*0.5,

@@ -10,17 +10,26 @@ import tqdm
 from astropy.cosmology import FlatLambdaCDM
 import sys
 
-def dobin(xs, ys):
-    xbins = 10.**np.linspace(np.log10(min(xs)*0.999),
-                             np.log10(max(xs)*1.001), 51)
+def dobin(xs, ys, meanbin):
+    #xbins = 10.**np.linspace(np.log10(min(xs)*0.999),
+    #                         np.log10(max(xs)*1.001), 21)
 
+    xbins = scoreatpercentile(xs, np.linspace(0, 100, 36))
+    xbins[0] *= 0.9999
+    xbins[-1] *= 1.0001
+    
     binx = []
     biny = []
     
     for i in range(len(xbins) - 1):
         inds = np.where((xs > xbins[i])*(xs <= xbins[i+1]))
-        binx.append(np.median(xs[inds]))
-        biny.append(np.median(ys[inds]))
+
+        if meanbin:
+            binx.append(np.mean(xs[inds]))
+            biny.append(np.mean(ys[inds]))
+        else:
+            binx.append(np.median(xs[inds]))
+            biny.append(np.median(ys[inds]))
 
     return binx, biny
                     
@@ -66,7 +75,7 @@ for dr in tqdm.tqdm(drs):
     obs_mus = the_data["mB_list"] + 0.15*the_data["x1_list"] - 3.1*the_data["c_list"]
 
     tmpcosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
-    obs_HRs = obs_mus - cosmo.distmod(the_data["z_CMB_list"]).value
+    obs_HRs = obs_mus - tmpcosmo.distmod(the_data["z_CMB_list"]).value
 
     all_zs.extend(the_data["z_CMB_list"])
     all_HRs.extend(obs_HRs)
@@ -132,11 +141,33 @@ plt.close()
 all_zs = np.array(all_zs)
 all_HRs = np.array(all_HRs)
 
-binx, biny = dobin(all_zs, all_HRs)
 
 plt.figure(figsize = (8, 6))
-plt.plot(binx, biny, '.', color = 'b')
-plt.axhline(np.median(all_HRs))
+
+binx, biny = dobin(all_zs, all_HRs, meanbin = 1)
+plt.plot(binx, biny, '.', color = 'r', label = "Mean")
+
+binx, biny = dobin(all_zs, all_HRs, meanbin = 0)
+plt.plot(binx, biny, '.', color = 'b', label = "Median")
+
+plt.xscale('log')
+
+medval = np.median(all_HRs)
+plt.axhline(medval, label = "$\Omega_m = 0.3$")
+
+tmpcosmo30 = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
+tmpcosmo29 = FlatLambdaCDM(Om0 = 0.29, H0 = 70.)
+
+xlim = plt.xlim()
+
+pltz = np.linspace(xlim[0], xlim[1], 100)
+pltHR = tmpcosmo29.distmod(pltz).value - tmpcosmo30.distmod(pltz).value
+
+plt.plot(pltz, pltHR + medval, label = "$\Omega_m = 0.29$")
+
+plt.legend(loc = 'best')
+plt.xlim(xlim)
+
 plt.savefig("bin_HR_from_03.pdf", bbox_inches = 'tight')
 plt.close()
 
