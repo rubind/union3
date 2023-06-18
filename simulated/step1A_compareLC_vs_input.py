@@ -5,6 +5,26 @@ import numpy as np
 from subprocess import getoutput
 import tqdm
 import sys
+from scipy.stats import scoreatpercentile
+
+def do_med_bins(x, y, nbins, average_not_median = 0):
+    binedges = scoreatpercentile(x, np.linspace(0, 100, nbins+1))
+    binedges[0] -= (binedges[1] - binedges[0])*0.001
+    binedges[-1] += (binedges[-1] - binedges[-2])*0.001
+
+    binx = []
+    biny = []
+    
+    for i in range(nbins):
+        inds = np.where((x >= binedges[i])*(x < binedges[i+1]))
+
+        if average_not_median:
+            binx.append(np.mean(x[inds]))
+            biny.append(np.mean(y[inds]))
+        else:
+            binx.append(np.median(x[inds]))
+            biny.append(np.median(y[inds]))
+    return binx, biny
 
 def get_dmu(band, resfl):
     cmd = "grep Zeropoint " + resfl.replace("result_salt2.dat", "result_deriv.dat") + " | grep 'AB|SDSS|SDSS_" + band + "'"
@@ -84,30 +104,47 @@ all_dat["pulls_c"] = all_dat["delta_c"]/all_dat["obs_sig_c"]
 all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
 
 
-plt.figure(figsize = (24, 16))
-for i, keys in enumerate([("redshift", "delta_c"),
-                          ("redshift", "delta_x1"),
-                          ("redshift", "pulls_c"),
-                          ("redshift", "pulls_x1"),
-                          ("redshift", "delta_mu"),
-                          ("redshift", "delta_mag"),
-                          ("dmudg", "delta_mu"),
-                          ("dmudr", "delta_mu"),
-                          ("dmudi", "delta_mu"),
-                          ("dmudz", "delta_mu"),
-                          ("true_c", "delta_c"),
-                          ("true_x1", "delta_x1")]):
+plt.figure(figsize = (24, 24))
+for i, keys in enumerate([("redshift", "delta_mag", 0),
+                          ("redshift", "delta_c", 0),
+                          ("true_c", "delta_c", 0),
+                          ("redshift", "delta_x1", 0),
+                          ("redshift", "pulls_c", 0),
+                          ("redshift", "pulls_x1", 0),
+                          ("redshift", "delta_mu", 0),
+                          ("redshift", "delta_mag", 1),
+                          ("redshift", "delta_c", 1),
+                          ("true_c", "delta_c", 1),
+                          ("redshift", "delta_x1", 1),
+                          ("redshift", "delta_mu", 1),
+                          ("dmudg", "delta_mu", 0),
+                          ("dmudr", "delta_mu", 0),
+                          ("dmudi", "delta_mu", 0),
+                          ("dmudz", "delta_mu", 0),
+                          ("true_x1", "delta_x1", 0)]):
     
-    plt.subplot(4,3,i+1)
-    plt.scatter(all_dat[keys[0]], all_dat[keys[1]], label = "Mean %.3f +- %.3f Median %.3f RMS %.3f" % (np.mean(all_dat[keys[1]]), np.std(all_dat[keys[1]], ddof=1)/np.sqrt(float(len(all_dat[keys[1]]))),
-                                                                                                        np.median(all_dat[keys[1]]),
-                                                                                                        np.std(all_dat[keys[1]], ddof=1)))
+    plt.subplot(4,5,i+1)
+    if keys[2] == 0:
+        plt.scatter(all_dat[keys[0]], all_dat[keys[1]], label = "Mean %.3f +- %.3f Median %.3f RMS %.3f" % (np.mean(all_dat[keys[1]]), np.std(all_dat[keys[1]], ddof=1)/np.sqrt(float(len(all_dat[keys[1]]))),
+                                                                                                            np.median(all_dat[keys[1]]),
+                                                                                                            np.std(all_dat[keys[1]], ddof=1)))
+    else:
+        binx, biny = do_med_bins(all_dat[keys[0]], all_dat[keys[1]], 15)
+        plt.plot(binx, biny, '.', color = 'k')
+
+        binx, biny = do_med_bins(all_dat[keys[0]], all_dat[keys[1]], 15, average_not_median = 1)
+        plt.plot(binx, biny, '^', color = 'g')
+
     plt.axhline(0)
     plt.legend(loc = 'best')
     
     plt.xlabel(keys[0])
     plt.ylabel(keys[1])
 
-plt.savefig("compare_LC_vs_input.pdf")
+    if keys[0] == "redshift":
+        plt.xscale('log')
+
+plt.tight_layout()
+plt.savefig("compare_LC_vs_input.pdf", bbox_inches = 'tight')
 plt.close()
 

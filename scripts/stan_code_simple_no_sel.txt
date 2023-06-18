@@ -102,7 +102,7 @@ parameters {
 
     vector [n_sne] true_x1;
     vector [n_sne] true_cB;
-    vector [n_sne] true_cR;
+    vector <lower = -0.25> [n_sne] true_cR_unit;
 
 
     // Population parameters:
@@ -126,7 +126,7 @@ parameters {
 
     vector [n_photoz] dz;
 
-    real <lower = 0.2, upper = 5> outl_mBx1c_uncertainties [3];
+    real <lower = 0.2, upper = 10> outl_mBx1c_uncertainties [4];
 
 }
 
@@ -154,6 +154,8 @@ transformed parameters {
     vector [n_sne] R_c_by_SN;
     vector [n_sne] tau_c_by_SN;
 
+    vector [n_sne] true_cR;
+
 
     vector [n_sne] mobs_by_SN_except_c_R;
     vector [n_sne] mobs_var_by_SN_except_c_R;
@@ -177,7 +179,6 @@ transformed parameters {
 
 
     // -------------Begin numerical integration-----------------
-
 
 
     if ((cosmo_model == 1) || (cosmo_model == 3)) {
@@ -285,6 +286,9 @@ transformed parameters {
         R_c_by_SN[i] = dot_product(R_c, redshift_coeffs[i]);
         tau_c_by_SN[i] = dot_product(tau_c, redshift_coeffs[i]);
 
+        true_cR[i] = true_cR_unit[i]*tau_c_by_SN[i];
+
+
         if (MB_by_sample == 1) {
             this_MB <- MB[sample_list[i]];
         } else {
@@ -313,7 +317,7 @@ transformed parameters {
 
 
         for (g_ind in 1:n_gauss) { // gauss ind
-            tmploglike_c[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR[i], exp_approx_pos[g_ind]*tau_c_by_SN[i], abs(exp_approx_width[g_ind]*tau_c_by_SN[i]));
+            tmploglike_c[g_ind]   <- log(exp_approx_norm[g_ind]) + normal_log(true_cR_unit[i], exp_approx_pos[g_ind], exp_approx_width[g_ind]);
             tmploglike_x1[g_ind] <- log(exp_approx_norm[g_ind]) + normal_log(true_x1[i], exp_approx_pos[g_ind]*tau_x1_by_SN[i] + x1_star_by_SN[i], sqrt((exp_approx_width[g_ind]*tau_x1_by_SN[i])^2 + R_x1_by_SN[i]^2));
         }
 
@@ -322,7 +326,7 @@ transformed parameters {
                                           + multi_normal_log(obs_mBx1c[i] + d_mBx1c_d_calib[i] * calibs + dz_deriv_term, model_mBx1c[i], model_mBx1c_cov_outl[i])
 					  + normal_log(true_x1[i], 0, outl_mBx1c_uncertainties[2])
 					  + normal_log(true_cB[i], 0, outl_mBx1c_uncertainties[3])
-					  + normal_log(true_cR[i], 0, outl_mBx1c_uncertainties[3]);
+					  + normal_log(true_cR_unit[i], 0, outl_mBx1c_uncertainties[4]);
 
 
 	inl_loglike_by_SN[i] <- log(1 - outl_frac)
@@ -398,5 +402,6 @@ model {
     outl_mBx1c_uncertainties[1] ~ normal(0.5, 0.5);
     outl_mBx1c_uncertainties[2] ~ normal(3, 3);
     outl_mBx1c_uncertainties[3] ~ normal(0.5, 0.5);
+    outl_mBx1c_uncertainties[4] ~ normal(10, 3);
     outl_frac ~ lognormal(outl_frac_prior_lnmean, outl_frac_prior_lnwidth);
 }

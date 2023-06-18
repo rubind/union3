@@ -142,15 +142,17 @@ print("Values & " + " & ".join(to_print) + "\\\\")
 
 tmp_wmat = np.linalg.inv(c_mat[:3,:3])
 
+tmp_wmat = 0.5*(tmp_wmat + tmp_wmat.T) # Force symmetric
+
 to_print = ["$" + str(item) + "$" for item in tmp_wmat[0]]
 print("$R$ & " + " & ".join(to_print) + "\\\\")
 to_print = ["$" + str(item) + "$" for item in tmp_wmat[1]]
-print("$\\theta$ & " + " & ".join(to_print) + "\\\\")
+print("$l_A$ & " + " & ".join(to_print) + "\\\\")
 to_print = ["$" + str(item) + "$" for item in tmp_wmat[2]]
 print("$\omega_b$ & " + " & ".join(to_print) + "\\\\")
 
 
 if columns.count("omegak"):
-    kde_corner.kde_corner(R_theta_Obhh_smallk, labels = ["R", "theta", "Obh^2", "omegamh2", "r_star_mine", "O_k", "w"])
+    kde_corner.kde_corner(R_theta_Obhh_smallk, labels = ["R", "l_A", "Obh^2", "omegamh2", "r_star_mine", "O_k", "w"])
     plt.savefig("CMB_corner_smallk" + sys.argv[1].split(".")[0] + ".pdf", bbox_inches = 'tight')
     plt.close()
