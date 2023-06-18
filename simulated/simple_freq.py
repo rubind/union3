@@ -10,6 +10,21 @@ import tqdm
 from astropy.cosmology import FlatLambdaCDM
 import sys
 
+def dobin(xs, ys):
+    xbins = 10.**np.linspace(np.log10(min(xs)*0.999),
+                             np.log10(max(xs)*1.001), 51)
+
+    binx = []
+    biny = []
+    
+    for i in range(len(xbins) - 1):
+        inds = np.where((xs > xbins[i])*(xs <= xbins[i+1]))
+        binx.append(np.median(xs[inds]))
+        biny.append(np.median(ys[inds]))
+
+    return binx, biny
+                    
+    
 
 def pullfn(P, passdata):
     [redshifts, obs_mus] = passdata[0]
@@ -36,6 +51,9 @@ all_tau_c = []
 all_c_star = []
 all_mobs_cuts = []
 
+all_zs = []
+all_HRs = []
+
 for dr in tqdm.tqdm(drs):
     possible_inputs = glob.glob(dr + "/inputs*.pickle")
     assert len(possible_inputs) == 1
@@ -47,6 +65,12 @@ for dr in tqdm.tqdm(drs):
 
     obs_mus = the_data["mB_list"] + 0.15*the_data["x1_list"] - 3.1*the_data["c_list"]
 
+    tmpcosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
+    obs_HRs = obs_mus - cosmo.distmod(the_data["z_CMB_list"]).value
+
+    all_zs.extend(the_data["z_CMB_list"])
+    all_HRs.extend(obs_HRs)
+    
     P, NA, NA = miniLM_new(ministart = [0., 0.], miniscale = [1., 1.], residfn = pullfn, passdata = [the_data["z_CMB_list"], obs_mus])
 
     print(P)
@@ -103,6 +127,19 @@ plt.title("all_freq_Oms %.3f all_UNITY_Oms %.3f average %.3f\ndiff %.4f +- %.4f"
 plt.legend(loc = 'best')
 plt.savefig("Om_vs_Om_" + prefix + ".pdf")
 plt.close()
+
+
+all_zs = np.array(all_zs)
+all_HRs = np.array(all_HRs)
+
+binx, biny = dobin(all_zs, all_HRs)
+
+plt.figure(figsize = (8, 6))
+plt.plot(binx, biny, '.', color = 'b')
+plt.axhline(np.median(all_HRs))
+plt.savefig("bin_HR_from_03.pdf", bbox_inches = 'tight')
+plt.close()
+
 
 plt.hist(np.array(all_sig_int))
 plt.savefig("sig_int.pdf")
