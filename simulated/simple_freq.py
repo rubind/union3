@@ -22,7 +22,10 @@ def pullfn(P, passdata):
 prefix = sys.argv[1]
 
 drs = glob.glob(prefix + "_???/input*pickle")
+print("drs", drs)
 drs = [item.split("/")[0] for item in drs]
+print("drs", drs)
+
 
 all_freq_Oms = []
 all_UNITY_Oms = []
@@ -34,7 +37,10 @@ all_c_star = []
 all_mobs_cuts = []
 
 for dr in tqdm.tqdm(drs):
-    the_data, stan_data, params = pickle.load(gzip.open(dr + "/inputs__.pickle", "rb"))
+    possible_inputs = glob.glob(dr + "/inputs*.pickle")
+    assert len(possible_inputs) == 1
+    
+    the_data, stan_data, params = pickle.load(gzip.open(possible_inputs[0], "rb"))
 
     for key in the_data:
         print(key)
