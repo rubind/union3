@@ -10,11 +10,11 @@ import tqdm
 from astropy.cosmology import FlatLambdaCDM
 import sys
 
-def dobin(xs, ys, meanbin):
+def dobin(xs, ys, wys, meanbin):
     #xbins = 10.**np.linspace(np.log10(min(xs)*0.999),
     #                         np.log10(max(xs)*1.001), 21)
 
-    xbins = scoreatpercentile(xs, np.linspace(0, 100, 36))
+    xbins = scoreatpercentile(xs, np.linspace(0, 100, 21))
     xbins[0] *= 0.9999
     xbins[-1] *= 1.0001
     
@@ -25,8 +25,8 @@ def dobin(xs, ys, meanbin):
         inds = np.where((xs > xbins[i])*(xs <= xbins[i+1]))
 
         if meanbin:
-            binx.append(np.mean(xs[inds]))
-            biny.append(np.mean(ys[inds]))
+            binx.append(sum(xs[inds]*wys[inds])/ sum(wys[inds]))
+            biny.append(sum(ys[inds]*wys[inds])/ sum(wys[inds]))
         else:
             binx.append(np.median(xs[inds]))
             biny.append(np.median(ys[inds]))
@@ -36,12 +36,46 @@ def dobin(xs, ys, meanbin):
     
 
 def pullfn(P, passdata):
-    [redshifts, obs_mus] = passdata[0]
+    [redshifts, obs_mus, obs_dmus] = passdata[0]
     cosmo = FlatLambdaCDM(Om0 = P[1], H0 = 70.)
     mu = cosmo.distmod(redshifts).value
 
-    return obs_mus - (P[0] + mu)
-    
+    return (obs_mus - (P[0] + mu))/obs_dmus
+
+
+def make_bin_plot(xs, ys, sigys, binname):
+    plt.figure(figsize = (8, 6))
+
+    binx, biny = dobin(xs, ys, 1./sigys**2., meanbin = 1)
+    plt.plot(binx, biny, '.', color = 'r', label = "Weighted Mean")
+
+    binx, biny = dobin(xs, ys, np.ones(len(ys), dtype=np.float64), meanbin = 1)
+    plt.plot(binx, biny, '.', color = 'g', label = "Mean")
+
+    binx, biny = dobin(xs, ys, None, meanbin = 0)
+    plt.plot(binx, biny, '.', color = 'b', label = "Median")
+
+    plt.xscale('log')
+
+    medval = np.median(ys)
+    plt.axhline(medval, label = "$\Omega_m = 0.3$")
+
+    tmpcosmo30 = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
+    tmpcosmo29 = FlatLambdaCDM(Om0 = 0.29, H0 = 70.)
+
+    xlim = plt.xlim()
+
+    pltz = np.linspace(xlim[0], xlim[1], 100)
+    pltHR = tmpcosmo29.distmod(pltz).value - tmpcosmo30.distmod(pltz).value
+
+    plt.plot(pltz, pltHR + medval, label = "$\Omega_m = 0.29$")
+
+    plt.legend(loc = 'best')
+    plt.xlim(xlim)
+
+    plt.savefig("bin_" + binname + ".pdf", bbox_inches = 'tight')
+    plt.close()
+
 
 prefix = sys.argv[1]
 
@@ -49,6 +83,8 @@ drs = glob.glob(prefix + "_???/input*pickle")
 print("drs", drs)
 drs = [item.split("/")[0] for item in drs]
 print("drs", drs)
+
+onealphabeta = [1, 0.15, -3.1]
 
 
 all_freq_Oms = []
@@ -62,6 +98,9 @@ all_mobs_cuts = []
 
 all_zs = []
 all_HRs = []
+all_uncs = []
+all_ax1s = [] # alpha x1
+all_bcs = [] # beta c
 
 for dr in tqdm.tqdm(drs):
     possible_inputs = glob.glob(dr + "/inputs*.pickle")
@@ -72,15 +111,23 @@ for dr in tqdm.tqdm(drs):
     for key in the_data:
         print(key)
 
-    obs_mus = the_data["mB_list"] + 0.15*the_data["x1_list"] - 3.1*the_data["c_list"]
+    for key in stan_data:
+        print("stan_data", key)
+
+    obs_mus = the_data["mB_list"] + onealphabeta[1]*the_data["x1_list"] + onealphabeta[2]*the_data["c_list"]
 
     tmpcosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
     obs_HRs = obs_mus - tmpcosmo.distmod(the_data["z_CMB_list"]).value
-
+    obs_dHRs = np.array([np.sqrt(np.dot(onealphabeta, np.dot(item, onealphabeta))) for item in stan_data["obs_mBx1c_cov"]])
+    obs_dHRs = np.sqrt(   obs_dHRs**2. + 0.15**2. + (0.0022/the_data["z_CMB_list"])**2.   )
+    
     all_zs.extend(the_data["z_CMB_list"])
     all_HRs.extend(obs_HRs)
+    all_uncs.extend(obs_dHRs)
+    all_ax1s.extend(onealphabeta[1]*np.array(the_data["x1_list"]))
+    all_bcs.extend(onealphabeta[2]*np.array(the_data["c_list"]))
     
-    P, NA, NA = miniLM_new(ministart = [0., 0.], miniscale = [1., 1.], residfn = pullfn, passdata = [the_data["z_CMB_list"], obs_mus])
+    P, NA, NA = miniLM_new(ministart = [0., 0.], miniscale = [1., 1.], residfn = pullfn, passdata = [the_data["z_CMB_list"], obs_mus, obs_dHRs])
 
     print(P)
 
@@ -140,37 +187,15 @@ plt.close()
 
 all_zs = np.array(all_zs)
 all_HRs = np.array(all_HRs)
+all_uncs = np.array(all_uncs)
+all_ax1s = np.array(all_ax1s)
+all_bcs = np.array(all_bcs)
 
+print("all_uncs", np.median(all_uncs))
 
-plt.figure(figsize = (8, 6))
-
-binx, biny = dobin(all_zs, all_HRs, meanbin = 1)
-plt.plot(binx, biny, '.', color = 'r', label = "Mean")
-
-binx, biny = dobin(all_zs, all_HRs, meanbin = 0)
-plt.plot(binx, biny, '.', color = 'b', label = "Median")
-
-plt.xscale('log')
-
-medval = np.median(all_HRs)
-plt.axhline(medval, label = "$\Omega_m = 0.3$")
-
-tmpcosmo30 = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
-tmpcosmo29 = FlatLambdaCDM(Om0 = 0.29, H0 = 70.)
-
-xlim = plt.xlim()
-
-pltz = np.linspace(xlim[0], xlim[1], 100)
-pltHR = tmpcosmo29.distmod(pltz).value - tmpcosmo30.distmod(pltz).value
-
-plt.plot(pltz, pltHR + medval, label = "$\Omega_m = 0.29$")
-
-plt.legend(loc = 'best')
-plt.xlim(xlim)
-
-plt.savefig("bin_HR_from_03.pdf", bbox_inches = 'tight')
-plt.close()
-
+make_bin_plot(xs = all_zs, ys = all_HRs, sigys = all_uncs, binname = "HR_from_03")
+make_bin_plot(xs = all_zs, ys = all_ax1s, sigys = all_uncs, binname = "alpha_x1")
+make_bin_plot(xs = all_zs, ys = all_bcs, sigys = all_uncs, binname = "beta_c")
 
 plt.hist(np.array(all_sig_int))
 plt.savefig("sig_int.pdf")
