@@ -10,7 +10,10 @@ from astropy.cosmology import FlatLambdaCDM
 from DavidsNM import miniLM_new
 
 def do_med_bins(x, y, sigy, nbins, average_not_median = 0):
-    binedges = scoreatpercentile(x, np.linspace(0, 100, nbins+1))
+    bad_mask = np.isnan(x) + np.isnan(y) + np.isnan(sigy)
+    
+    inds = np.where(bad_mask == 0)
+    binedges = scoreatpercentile(x[inds], np.linspace(0, 100, nbins+1))
     binedges[0] -= (binedges[1] - binedges[0])*0.001
     binedges[-1] += (binedges[-1] - binedges[-2])*0.001
 
@@ -18,7 +21,7 @@ def do_med_bins(x, y, sigy, nbins, average_not_median = 0):
     biny = []
     
     for i in range(nbins):
-        inds = np.where((x >= binedges[i])*(x < binedges[i+1]))
+        inds = np.where((x >= binedges[i])*(x < binedges[i+1])*(bad_mask == 0))
 
         if average_not_median:
             binx.append(sum(x[inds]/sigy[inds]**2.)/sum(1./sigy[inds]**2.))
@@ -83,11 +86,14 @@ all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
 
 
 if len(sys.argv) > 1:
-    globstr = "dataset_*/*00*/res*salt2.dat"
+    globstr = "dataset_*/*00*/result_deriv.dat"
 else:
-    globstr = "dataset_*/*/res*salt2.dat"
+    globstr = "dataset_*/*/result_deriv.dat"
 
+    
 for resfl in tqdm.tqdm(glob.glob(globstr)):
+    resfl = resfl.replace("result_deriv.dat", "result_salt2.dat")
+    
     obs_c = read_param(resfl, "Color")
     if obs_c != None:
         obs_sig_c = read_param(resfl, "Color", ind = 2)
