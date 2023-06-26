@@ -248,7 +248,7 @@ def make_dataset(wd, cal_offsets):
                     
 
                     model_fluxes = fluxes + np.random.multivariate_normal(mean = fluxes*0.,
-                                                                                cov = fluxcov*(opts.addnoise*0.999 + 0.001))
+                                                                                cov = fluxcov*(opts.modeluncertainty*0.9999 + 0.0001))
                     obs_fluxes = model_fluxes + np.random.normal(size = len(model_fluxes))*obs_err*opts.addnoise
                     
                     f = open(this_wd + "/lc2fit_" + band + ".dat", 'w')
@@ -360,10 +360,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--ndataset', help='N datasets', type = int)
 parser.add_argument('--addnoise', help='Add Noise', type = int)
 parser.add_argument('--addcalibration', help='Add Calibration', type = int)
+parser.add_argument('--modeluncertainty', help='Add Model Uncertainty', type = int)
 parser.add_argument('--prefixname', help='Prefix Name for Directory', type = str)
 parser.add_argument('--skewdist', help='x1 and c distributions have skew', type = int)
 parser.add_argument('--volumelimited', help='volume-limited, not magnitude-limited datasets')
 parser.add_argument('--obsmagselection', help="If magnitude-limited, select based on observer-frame magntiudes, not rest-frame x0", type=int)
+
 
 opts = parser.parse_args()
 
@@ -378,7 +380,7 @@ for filt in "griz":
     SDSS_obs_frame[filt] = sncosmo.get_bandpass("sdss" + filt)
 
 params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4.,
-              obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited,
+              obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
               Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
               gray_sig_unexplained = 0.12, alpha = 0.15,

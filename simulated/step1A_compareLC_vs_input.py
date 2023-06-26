@@ -8,6 +8,7 @@ import sys
 from scipy.stats import scoreatpercentile
 from astropy.cosmology import FlatLambdaCDM
 from DavidsNM import miniLM_new
+import pickle
 
 def do_med_bins(x, y, sigy, nbins, average_not_median = 0):
     bad_mask = np.isnan(x) + np.isnan(y) + np.isnan(sigy)
@@ -24,8 +25,12 @@ def do_med_bins(x, y, sigy, nbins, average_not_median = 0):
         inds = np.where((x >= binedges[i])*(x < binedges[i+1])*(bad_mask == 0))
 
         if average_not_median:
-            binx.append(sum(x[inds]/sigy[inds]**2.)/sum(1./sigy[inds]**2.))
-            biny.append(sum(y[inds]/sigy[inds]**2.)/sum(1./sigy[inds]**2.))
+            if sum(1./sigy[inds]**2.) > 0:
+                binx.append(sum(x[inds]/sigy[inds]**2.)/sum(1./sigy[inds]**2.))
+                biny.append(sum(y[inds]/sigy[inds]**2.)/sum(1./sigy[inds]**2.))
+            else:
+                binx.append(np.sqrt(-1.))
+                biny.append(np.sqrt(-1.))
         else:
             binx.append(np.median(x[inds]))
             biny.append(np.median(y[inds]))
@@ -82,6 +87,7 @@ all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                dmudr = [],
                dmudi = [],
                dmudz = [],
+               LH = [],
                redshift = [])
 
 
@@ -120,7 +126,15 @@ for resfl in tqdm.tqdm(glob.glob(globstr)):
         all_dat["true_c"].append(true_c)
         all_dat["delta_c"].append(obs_c - true_c)
         all_dat["obs_sig_c"].append(obs_sig_c)
+
+        if resfl.count("_L_"):
+            LH = "L"
+        elif resfl.count("_H_"):
+            LH = "H"
+        else:
+            assert 0, resfl
         
+        all_dat["LH"].append(LH)
 
         all_dat["delta_mag"].append(obs_mag - true_mag)
 
@@ -146,7 +160,9 @@ all_dat["pulls_c"] = all_dat["delta_c"]/all_dat["obs_sig_c"]
 all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
 
 
-plt.figure(figsize = (32, 24))
+pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
+
+plt.figure(figsize = (36, 24))
 for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("redshift", "delta_c", 0),
                           ("true_c", "delta_c", 0),
@@ -159,6 +175,11 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("true_c", "delta_c", 35),
                           ("redshift", "delta_x1", 35),
                           ("redshift", "delta_mu", 35),
+                          ("redshift", "dmudg", 0),
+                          ("redshift", "dmudg", 35),
+                          ("dmudg", "delta_mag", 35),
+                          ("dmudg", "delta_x1", 35),
+                          ("dmudg", "delta_c", 35),
                           ("dmudg", "delta_mu", 35),
                           ("dmudr", "delta_mu", 35),
                           ("dmudi", "delta_mu", 35),
@@ -168,48 +189,60 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("obs_sig_c", "delta_c", 35),
                           ("true_x1", "delta_x1", 35)]):
     
-    plt.subplot(4,5,i+1)
+    plt.subplot(5,5,i+1)
     if keys[2] == 0:
-        plt.scatter(all_dat[keys[0]], all_dat[keys[1]], label = "Mean %.3f +- %.3f Median %.3f RMS %.3f" % (np.mean(all_dat[keys[1]]), np.std(all_dat[keys[1]], ddof=1)/np.sqrt(float(len(all_dat[keys[1]]))),
-                                                                                                            np.median(all_dat[keys[1]]),
-                                                                                                            np.std(all_dat[keys[1]], ddof=1)))
-    else:
-        nsne = len(all_dat[keys[0]])
-        binx, biny = do_med_bins(all_dat[keys[0]], all_dat[keys[1]], np.ones(nsne, dtype=np.float64), keys[2])
-        plt.plot(binx, biny, '.', color = 'k', label = "Median")
-
-        binx, biny = do_med_bins(all_dat[keys[0]], all_dat[keys[1]], np.ones(nsne, dtype=np.float64), keys[2], average_not_median = 1)
-        plt.plot(binx, biny, '^', color = 'g', label = "Average")
-
-        try:
-            all_dat["obs_sig_" + keys[1].split("_")[-1]]
-            has_uncs = 1
-        except:
-            has_uncs = 0
-
-        if has_uncs:
-            binx, biny = do_med_bins(all_dat[keys[0]], all_dat[keys[1]], all_dat["obs_sig_" + keys[1].split("_")[-1]], keys[2], average_not_median = 1)
-            plt.plot(binx, biny, '*', color = 'b', label = "Weighted")
-
-            xlim = plt.xlim()
-            pltx = np.linspace(0.01, xlim[1], 200)
-            
-            if keys[0] == "redshift" and keys[1] == "delta_mu":
-                plty, label = fit_delta_cosmo(binx, biny, pltx)
-                plt.plot(pltx, plty, label = label)
-                
+        plt.plot(all_dat[keys[0]], all_dat[keys[1]], '.', label = "Mean %.3f +- %.3f Median %.3f RMS %.3f" % (np.mean(all_dat[keys[1]]), np.std(all_dat[keys[1]], ddof=1)/np.sqrt(float(len(all_dat[keys[1]]))),
+                                                                                                              np.median(all_dat[keys[1]]),
+                                                                                                              np.std(all_dat[keys[1]], ddof=1)), color = 'b', alpha = 0.05)#, gridsize=100)
         
+    else:
+
+        for LH in "LH":
+            pltcolor = dict(L = 'b', H = 'r')[LH]
+
+            if keys[0] != "redshift":
+                inds = np.where(all_dat["LH"] == LH)
+            else:
+                inds = np.where(all_dat["redshift"] > -1)
+                
+            nsne = len(all_dat[keys[0]][inds])
+            binx, biny = do_med_bins(all_dat[keys[0]][inds], all_dat[keys[1]][inds], np.ones(nsne, dtype=np.float64), keys[2])
+            plt.plot(binx, biny, '.', color = pltcolor, label = "Median")
+           
+            binx, biny = do_med_bins(all_dat[keys[0]][inds], all_dat[keys[1]][inds], np.ones(nsne, dtype=np.float64), keys[2], average_not_median = 1)
+            plt.plot(binx, biny, '^', color = pltcolor, label = "Average")
+            
+            try:
+                all_dat["obs_sig_" + keys[1].split("_")[-1]]
+                has_uncs = 1
+            except:
+                has_uncs = 0
+                
+            if has_uncs:
+                binx, biny = do_med_bins(all_dat[keys[0]][inds], all_dat[keys[1]][inds], all_dat["obs_sig_" + keys[1].split("_")[-1]][inds], keys[2], average_not_median = 1)
+                plt.plot(binx, biny, '*', color = pltcolor, label = "Weighted")
+                
+                xlim = plt.xlim()
+                pltx = np.linspace(0.01, xlim[1], 200)
+                
+                if keys[0] == "redshift" and keys[1] == "delta_mu":
+                    plty, label = fit_delta_cosmo(binx, biny, pltx)
+                    plt.plot(pltx, plty, label = label)
+                
+
+        plt.legend(loc = 'best')
+
+        
+    if keys[0] == "redshift":
+        plt.xscale('log')
+        plt.xlim(0.01, 1)
+
     plt.axhline(0)
-    plt.legend(loc = 'best')
     
     plt.xlabel(keys[0])
     plt.ylabel(keys[1])
 
-    if keys[0] == "redshift":
-        plt.xscale('log')
-
-
-        
+            
 plt.tight_layout()
 plt.savefig("compare_LC_vs_input.pdf", bbox_inches = 'tight')
 plt.close()
