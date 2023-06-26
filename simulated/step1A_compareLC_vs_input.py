@@ -91,7 +91,7 @@ all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                redshift = [],
                resfl = [])
 
-"""
+
 if len(sys.argv) > 1:
     globstr = "dataset_*/*00*/result_deriv.dat"
 else:
@@ -164,7 +164,6 @@ all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
 
 
 pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
-"""
 
 all_dat = pickle.load(open("all_dat.pickle", 'rb'))
 
