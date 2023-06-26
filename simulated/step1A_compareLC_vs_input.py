@@ -88,9 +88,10 @@ all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                dmudi = [],
                dmudz = [],
                LH = [],
-               redshift = [])
+               redshift = [],
+               resfl = [])
 
-
+"""
 if len(sys.argv) > 1:
     globstr = "dataset_*/*00*/result_deriv.dat"
 else:
@@ -99,7 +100,7 @@ else:
     
 for resfl in tqdm.tqdm(glob.glob(globstr)):
     resfl = resfl.replace("result_deriv.dat", "result_salt2.dat")
-    
+
     obs_c = read_param(resfl, "Color")
     if obs_c != None:
         obs_sig_c = read_param(resfl, "Color", ind = 2)
@@ -122,7 +123,9 @@ for resfl in tqdm.tqdm(glob.glob(globstr)):
         true_x1 = read_param(paramsfl, "x1")
         true_c = read_param(paramsfl, "c")
 
-        
+
+        all_dat["resfl"].append(resfl)
+
         all_dat["true_c"].append(true_c)
         all_dat["delta_c"].append(obs_c - true_c)
         all_dat["obs_sig_c"].append(obs_sig_c)
@@ -161,8 +164,11 @@ all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
 
 
 pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
+"""
 
-plt.figure(figsize = (36, 24))
+all_dat = pickle.load(open("all_dat.pickle", 'rb'))
+
+plt.figure(figsize = (36, 32))
 for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("redshift", "delta_c", 0),
                           ("true_c", "delta_c", 0),
@@ -172,6 +178,8 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("redshift", "delta_mu", 0),
                           ("redshift", "delta_mag", 35),
                           ("redshift", "delta_c", 35),
+                          ("true_c", "delta_mu", 35),
+                          ("true_x1", "delta_mu", 35),
                           ("true_c", "delta_c", 35),
                           ("redshift", "delta_x1", 35),
                           ("redshift", "delta_mu", 35),
@@ -189,7 +197,7 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("obs_sig_c", "delta_c", 35),
                           ("true_x1", "delta_x1", 35)]):
     
-    plt.subplot(5,5,i+1)
+    plt.subplot(6,5,i+1)
     if keys[2] == 0:
         plt.plot(all_dat[keys[0]], all_dat[keys[1]], '.', label = "Mean %.3f +- %.3f Median %.3f RMS %.3f" % (np.mean(all_dat[keys[1]]), np.std(all_dat[keys[1]], ddof=1)/np.sqrt(float(len(all_dat[keys[1]]))),
                                                                                                               np.median(all_dat[keys[1]]),
