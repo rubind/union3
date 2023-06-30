@@ -76,6 +76,7 @@ def fit_delta_cosmo(zs, delta_mus, pltzs):
     return modelfn(P, [[pltzs, None]]), "%.4f" % P[1]
 
 
+"""
 
     
 all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
@@ -90,7 +91,6 @@ all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                LH = [],
                redshift = [],
                resfl = [])
-
 
 if len(sys.argv) > 1:
     globstr = "dataset_*/*00*/result_deriv.dat"
@@ -164,8 +164,10 @@ all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
 
 
 pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
-
+"""
 all_dat = pickle.load(open("all_dat.pickle", 'rb'))
+
+print(len(all_dat["redshift"]))
 
 plt.figure(figsize = (36, 32))
 for i, keys in enumerate([("redshift", "delta_mag", 0),
@@ -177,6 +179,7 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("redshift", "delta_mu", 0),
                           ("redshift", "delta_mag", 35),
                           ("redshift", "delta_c", 35),
+                          ("redshift", "true_c", 35),
                           ("true_c", "delta_mu", 35),
                           ("true_x1", "delta_mu", 35),
                           ("true_c", "delta_c", 35),
@@ -208,9 +211,9 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
             pltcolor = dict(L = 'b', H = 'r')[LH]
 
             if keys[0] != "redshift":
-                inds = np.where(all_dat["LH"] == LH)
+                inds = np.where((all_dat["LH"] == LH))#*(all_dat["redshift"] < 0.055))
             else:
-                inds = np.where(all_dat["redshift"] > -1)
+                inds = np.where((all_dat["redshift"] > -1))#*(all_dat["redshift"] < 0.055))
                 
             nsne = len(all_dat[keys[0]][inds])
             binx, biny = do_med_bins(all_dat[keys[0]][inds], all_dat[keys[1]][inds], np.ones(nsne, dtype=np.float64), keys[2])
@@ -254,3 +257,43 @@ plt.tight_layout()
 plt.savefig("compare_LC_vs_input.pdf", bbox_inches = 'tight')
 plt.close()
 
+
+
+plt.figure(figsize = (36, 32))
+
+plt_ind = 1
+
+for key in all_dat:
+    if all_dat[key].dtype == np.float64:
+        plt.subplot(5,5,plt_ind)
+        inds = np.where(all_dat["LH"] == "L")
+        counts, bins, NA = plt.hist(all_dat[key][inds], bins = 80, color = 'b')
+
+        inds = np.where((all_dat["dmudg"] > -0.9)*(all_dat["LH"] == "L"))
+        the_med = np.median(all_dat[key][inds])
+        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
+        
+        plt.hist(all_dat[key][inds], bins = bins, color = 'g', label = "Median %.2g +- %.2g" % (the_med, the_unc))
+
+        inds = np.where((all_dat["dmudg"] > -0.85)*(all_dat["LH"] == "L"))
+        the_med = np.median(all_dat[key][inds])
+        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
+
+        plt.hist(all_dat[key][inds], bins = bins, color = 'orange', label = "Median %.2g +- %.2g" % (the_med, the_unc))
+
+        inds = np.where((all_dat["dmudg"] > -0.8)*(all_dat["LH"] == "L"))
+
+        the_med = np.median(all_dat[key][inds])
+        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
+        plt.hist(all_dat[key][inds], bins = bins, color = 'r', label = "Median %.2g +- %.2g" % (the_med, the_unc))
+
+        plt.legend(loc = 'best')
+
+        plt.title(key)
+        plt_ind += 1
+        plt.yscale('log')
+        
+        
+plt.tight_layout()
+plt.savefig("high_dmudg.pdf", bbox_inches = 'tight')
+plt.close()

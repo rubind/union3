@@ -217,9 +217,9 @@ def read_data(params):
                     the_data["n_photoz"] += 1
                     
                     the_data["photoz_inds"].append(the_data["n_photoz"]) # That's right, after incrementing the counter
-                    the_data["d_mBx1c_dz_list"].append([helper_functions.read_param(snpath + "/result_deriv.dat", "Redshift", ind = 5),
-                                                        helper_functions.read_param(snpath + "/result_deriv.dat", "Redshift", ind = 6),
-                                                        helper_functions.read_param(snpath + "/result_deriv.dat", "Redshift", ind = 7)])
+                    the_data["d_mBx1c_dz_list"].append([helper_functions.read_param(snpath + "/model_deriv.dat", "Redshift", ind = 5),
+                                                        helper_functions.read_param(snpath + "/model_deriv.dat", "Redshift", ind = 6),
+                                                        helper_functions.read_param(snpath + "/model_deriv.dat", "Redshift", ind = 7)])
 
                     the_data["photo_z0"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz", ind = 1))
                     the_data["photo_dz"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz", ind = 2))
@@ -279,10 +279,10 @@ def read_data(params):
                 if abs(h_resid) > 2 or (the_data["c_list"][-1] > 1) or (the_data["c_list"][-1] < -0.3):
                     print("Weird supernova!", snpath)
 
-                dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", res_der_fl = snpath + "/result_deriv.dat", params = params)
+                dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", res_der_fl = snpath + "/model_deriv.dat", params = params)
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
 
-                dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = snpath + "/result_deriv.dat", params = params)
+                dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = snpath + "/model_deriv.dat", params = params)
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
 
                 
@@ -351,7 +351,7 @@ def read_data(params):
                                                                                               [mBx1, x1x1, x1c],
                                                                                               [mBc, x1c, cc]]], dtype=float64) + extra_cmat   ), axis = 0)
 
-                dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/result_deriv.dat", this_redshift_helio, calibration_paths = calibration_paths)
+                dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/model_deriv.dat", this_redshift_helio, calibration_paths = calibration_paths)
                 
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind,
                                                         uncertainties = calibration_uncertainties)
@@ -375,6 +375,7 @@ def read_data(params):
     print('the_data["d_mBx1c_dcalib_list"].shape ', the_data["d_mBx1c_dcalib_list"].shape)
     print('the_data["calib_names"] ', the_data["calib_names"])
     
+    save_img([the_data["d_mBx1c_dcalib_list"][:,0,:], the_data["d_mBx1c_dcalib_list"][:,1,:], the_data["d_mBx1c_dcalib_list"][:,2,:]], "d_mBx1c_dcalib_list.fits")
 
     print("read cov shape ", the_data["mBx1c_cov_list"].shape)
 
@@ -392,6 +393,7 @@ def read_data(params):
     if the_data["d_mBx1c_dz_list"] == []:
         the_data["d_mBx1c_dz_list"] = zeros([0,3], dtype=float64)
 
+        
     return the_data
 
 
@@ -667,7 +669,7 @@ def init_fn():
             "blind_values": [0.]*n_samples,
             
             "true_cB": random.random(size = n_sne)*0.02 - 0.01 + clip(the_data["c_list"]/2., -0.2, 1.0),
-            "true_cR": random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0), #"true_cR_unit": random.random(size = nsne)*0.5 + 0.5, #random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0),
+            "true_cR_unit": random.random(size = n_sne)*0.5 + 0.5, #random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0),
             "true_x1": random.random(size = n_sne)*0.2 - 0.1 + the_data["x1_list"],
 
             "x1_star": random.random(size = stan_data["n_x1c_star"])*0.5,

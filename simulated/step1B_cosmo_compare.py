@@ -48,7 +48,7 @@ def chifn(P, passdata): # Not chi2
     delta_mu_model = modelfn(P, passdata)
     
     resid = delta_mus - delta_mu_model
-    return np.sum(np.abs(resid)) + np.sum((P[2:]/0.1)**2.)
+    return np.sum(np.abs(resid)) + np.sum((P[2:]/1)**2.)
 
 
 def fit_delta_cosmo(zs, delta_mus, pltzs, dmudg, dmudr, dmudi, dmudz):
@@ -60,6 +60,21 @@ def fit_delta_cosmo(zs, delta_mus, pltzs, dmudg, dmudr, dmudi, dmudz):
 
 
     print("P", P)
+    delta_mu_model = modelfn(P, [passdata_orig])
+
+    plt.figure(figsize = (18, 18))
+    
+    plt.subplot(3,3,1)
+    plt.hexbin(np.log10(zs), delta_mus)
+
+
+    plt.subplot(3,3,4)
+    plt.hexbin(np.log10(zs), delta_mu_model)
+    plt.title(str(P))
+
+
+    plt.subplot(3,3,7)
+    plt.hexbin(np.log10(zs), delta_mus - delta_mu_model)
 
     
     P, NA, NA = miniNM_new(ministart = [0.35, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -67,6 +82,21 @@ def fit_delta_cosmo(zs, delta_mus, pltzs, dmudg, dmudr, dmudi, dmudz):
                            chi2fn = chifn, passdata = passdata_orig, verbose = True, compute_Cmat = False)
 
     print("P", P)
+    delta_mu_model = modelfn(P, [passdata_orig])
+
+
+    plt.subplot(3,3,2)
+    plt.hexbin(np.log10(zs), delta_mus)
+
+
+    plt.subplot(3,3,5)
+    plt.hexbin(np.log10(zs), delta_mu_model)
+    plt.title(str(P))
+
+    plt.subplot(3,3,8)
+    plt.hexbin(np.log10(zs), delta_mus - delta_mu_model)
+
+    
     
     med_bins, NA = do_med_bins(zs, delta_mus, np.ones(len(zs), dtype=np.float64), nbins = 200)
     
@@ -83,6 +113,9 @@ def fit_delta_cosmo(zs, delta_mus, pltzs, dmudg, dmudr, dmudi, dmudz):
                            chi2fn = chifn, passdata = passdata_binned, verbose = True, compute_Cmat = False)
 
     print("P", P)
+
+    plt.savefig("cosmo_compare.pdf", bbox_inches = 'tight')
+    plt.close()
     
 
 all_dat = pickle.load(open("all_dat.pickle", 'rb'))
