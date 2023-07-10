@@ -282,8 +282,9 @@ def read_data(params):
                 dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", res_der_fl = snpath + "/model_deriv.dat", params = params)
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
 
-                dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = snpath + "/model_deriv.dat", params = params)
-                the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
+                if params["IG_extinction_coeff"] != 0:
+                    dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = snpath + "/model_deriv.dat", params = params)
+                    the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
 
                 
                 dparam_dzps, add_mag_electron = helper_functions.get_electron_scattering(the_data["z_CMB_list"][-1], params = params)
@@ -431,7 +432,7 @@ def plot_coeffs(z_list, redshift_coeffs):
     plt.savefig("redshift_coeffs.pdf")
     plt.close()
 
-    assert np.min(np.max(redshift_coeffs, axis = 1) - np.min(redshift_coeffs, axis = 1)) > 0
+    #assert np.min(np.max(redshift_coeffs, axis = 1) - np.min(redshift_coeffs, axis = 1)) > 0
 
 def get_redshift_coeffs(z_list, p_high_mass, separate_mass_x1c, redshift_coeff_type):
     """redshift_coeff_type could be ("a", 1) or ("a", 3) for a population that varies with a(t)

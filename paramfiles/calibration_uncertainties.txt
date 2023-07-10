@@ -45,6 +45,18 @@
 ('Lambda', 'CNIa02|SDSS_r'):										20
 ('Lambda', 'CNIa02|SDSS_i'):										20
 
+('Zeropoint', 'ZTF|ztfg'):										0.02
+('Zeropoint', 'ZTF|ztfr'):										0.02
+('Zeropoint', 'ATLAS|c'):										0.02
+('Zeropoint', 'ATLAS|o'):										0.02
+('Zeropoint', 'UKIRT|J'):										0.02
+
+('Lambda', 'ZTF|ztfg'):											20
+('Lambda', 'ZTF|ztfr'):											20
+('Lambda', 'ATLAS|c'):											20
+('Lambda', 'ATLAS|o'):											20
+('Lambda', 'UKIRT|J'):											20
+
 
 
 ('Zeropoint', 'NB99|NB99_b4'):										0.01L
