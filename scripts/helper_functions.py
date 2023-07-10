@@ -1,9 +1,10 @@
 from numpy import *
 import numpy as np
 from scipy.stats import scoreatpercentile
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, RectBivariateSpline
 import os
 import subprocess
+from astropy.io import fits
 
 ################################################# File-Reading Functions ###################################################
 def clean_lines(lines, stringlist = [""]):
@@ -110,6 +111,15 @@ def get_params(paramfl):
 
     print("Read params ", params)
     assert isinstance(params["filenamelist"], list), "filenamelist should be a list!"
+
+    f = fits.open(os.environ["UNITY"] + "/paramfiles/Azwave_grid.fits")
+    IG_dat = f[0].data
+    f.close()
+
+    params["IG_fn"] = RectBivariateSpline(IG_dat[1:, 0],
+                                          IG_dat[0, 1:],
+                                          IG_dat[1:, 1:], kx = 1, ky = 1)
+    
     return params
 
 
@@ -242,20 +252,19 @@ def get_electron_scattering(redshift, params):
 
     return dparam_dzps, add_mag_electron
 
-def eval_IG_extinction(z, efflambrest_A):
+def eval_IG_extinction(z, efflambrest_A, params):    
     """Menard model
-test: eval_IG_extinction(1.0, 4400.) 0.0199155
-"""
-    assert efflambrest_A > 2000. and efflambrest_A < 12000.
-    assert z < 3.
-    
+test: eval_IG_extinction(1.0, 4400.) 0.020019767101606717
+"""    
     efflamb = efflambrest_A/10000.
-
-    IGextinct = z*(0.14266413515924342 - 0.711892836963675*efflamb + 1.7510415311715886*efflamb**2 - 2.2923914751125025*efflamb**3 + 1.504991618219626*efflamb**4 - 0.38778718783447*efflamb**5 + z*(-0.017363494533132157 + 0.0884331439174376*efflamb - 0.23324737421981015*efflamb**2 + 0.3266246131010411*efflamb**3 - 0.22587470118421055*efflamb**4 + 0.06043849091784413*efflamb**5))
-    return IGextinct
+    return params["IG_fn"](z, efflamb)[0,0]
+    
 
 
 def get_IG_extinction_sys(redshift, res_der_fl, params):
+    assert eval_IG_extinction(1.0, 4400, params) > eval_IG_extinction(0.5, 4400, params)
+    assert eval_IG_extinction(1.0, 4400, params) > eval_IG_extinction(1.0, 5500, params)
+
     
     f = open(res_der_fl)
     lines = f.read().split('\n')
@@ -266,7 +275,7 @@ def get_IG_extinction_sys(redshift, res_der_fl, params):
     for line in lines:
         parsed = line.split(None)
         if parsed.count("Zeropoint"):
-            IGextinct = eval_IG_extinction(redshift, float(parsed[2]))*params["IG_extinction_coeff"]
+            IGextinct = eval_IG_extinction(redshift, float(parsed[2]), params)*params["IG_extinction_coeff"]
 
             this_dmu_zp = np.array([float(parsed[5]), float(parsed[6]), float(parsed[7])])*IGextinct
             dparam_dzps["IG_extinction"] += this_dmu_zp
