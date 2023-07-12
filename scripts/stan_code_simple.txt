@@ -107,13 +107,13 @@ parameters {
 
     // Population parameters:
   
-    vector [n_x1c_star] x1_star;
+    vector <lower = -5, upper = 5> [n_x1c_star] x1_star;
     vector <lower= 0.1, upper = 2> [n_x1c_star] R_x1;
-    vector [n_x1c_star] tau_x1;
+    vector <lower =-5, upper = 5> [n_x1c_star] tau_x1;
 
-    vector [n_x1c_star] c_star;
+    vector <lower = -0.5, upper = 0.5> [n_x1c_star] c_star;
     vector <lower= 0.01, upper = 0.2> [n_x1c_star] R_c;
-    vector [n_x1c_star] tau_c; // This doesn't actually have to be positive. If it's negative, the color distribution will have negative skew.
+    vector <lower = -0.5, upper = 0.5> [n_x1c_star] tau_c; // This doesn't actually have to be positive. If it's negative, the color distribution will have negative skew.
 
     //
 
@@ -121,8 +121,8 @@ parameters {
 
     real <lower = 0.001, upper = 0.1> outl_frac;
 
-    real <lower = 14> mobs_cuts[n_samples];
-    real <lower = 0.1> mobs_cut_sigmas[n_samples];
+    real <lower = 14, upper = 30> mobs_cuts[n_samples];
+    real <lower = 0.1, upper = 3> mobs_cut_sigmas[n_samples];
 
     vector [n_photoz] dz;
 
@@ -181,6 +181,10 @@ transformed parameters {
 
     // -------------Begin numerical integration-----------------
 
+
+    print("MB ", MB);
+    print("delta_0 ", delta_0);
+    print("calibs ", calibs);
 
 
     if ((cosmo_model == 1) || (cosmo_model == 3)) {
@@ -297,6 +301,7 @@ transformed parameters {
             this_MB <- MB[1];
         }
 
+
 	mobs_by_SN_except_c_R[i] <- this_MB + model_mu[i] + mobs_cut0[i] - alpha*x1_star_by_SN[i] + (beta_B + mobs_cut1[i])*c_star_by_SN[i] - delta_0*p_high_mass_eff;
 	mobs_var_by_SN_except_c_R[i] <- mobs_cut_sigmas[sample_list[i]]^2
                                       + model_mBx1c_cov[i][1,1] + (mobs_cut1[i]*model_mBx1c_cov[i][3,3])^2 + 2.*mobs_cut1[i]*model_mBx1c_cov[i][1,3]
@@ -334,7 +339,6 @@ transformed parameters {
 	for (g_indx in 1:n_gauss) {
 	    for (g_indc in 1:n_gauss) {
 	        this_norm_LL += exp_approx_norm[g_indx]*exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]], //  + d_mBx1c_d_calib[i][1] * calibs
-		
 											      mobs_by_SN_except_c_R[i] + ((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i] - alpha*exp_approx_pos[g_indx]*tau_x1_by_SN[i],
 											   
                                                       	                                      sqrt(mobs_var_by_SN_except_c_R[i]
@@ -342,6 +346,7 @@ transformed parameters {
 											      + (alpha*exp_approx_width[g_indx]*tau_x1_by_SN[i])^2)   );
 	    }
 	}
+
 
 	inl_loglike_by_SN[i] <- log(1 - outl_frac)
                                           + multi_normal_log(obs_mBx1c[i] + d_mBx1c_d_calib[i] * calibs + dz_deriv_term, model_mBx1c[i], model_mBx1c_cov[i])

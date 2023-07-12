@@ -39,7 +39,7 @@ threeD_unexplained	1
 
 
 
-iter			1500
+iter			2500
 n_jobs			4
 chains			4
 
