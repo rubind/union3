@@ -182,10 +182,7 @@ transformed parameters {
     // -------------Begin numerical integration-----------------
 
 
-    print("MB ", MB);
-    print("delta_0 ", delta_0);
-    print("calibs ", calibs);
-
+    
 
     if ((cosmo_model == 1) || (cosmo_model == 3)) {
         for (i in 1: 2*(n_sne + nzadd) - 1) {    // Inverse Hubble parameter
