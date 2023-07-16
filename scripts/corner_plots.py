@@ -51,7 +51,7 @@ def make_plot(keys, pltname):
         labels.append(get_label(key))
 
 
-    kde_corner(samples, labels, bw_method = 0.2, colors = [[(104/255., 140/255., 184/255.), (37/255., 85/255., 145/255.)]])
+    kde_corner(samples, labels, bw_method = 0.2, colors = [(104/255., 140/255., 184/255.), (37/255., 85/255., 145/255.)], ax_limits = [(item.min(), item.max()) for item in samples], labelfontsize = 14)
     plt.savefig(pltname, bbox_inches = 'tight')
     plt.close()
 
