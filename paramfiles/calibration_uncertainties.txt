@@ -5,6 +5,7 @@
 ('Fundamental', (10000.0, 100000.0)):									0.005
 
 
+"SALT_UV_CAL":												0.03
 "SALT_U_CAL":												0.01
 "SALT_I_CAL":												0.01
 

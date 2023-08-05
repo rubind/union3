@@ -317,7 +317,7 @@ def unc_labeling(labels_indiv):
 
     for label_indiv in labels_indiv:
         if label_indiv.startswith("calibs_('Fundamental"):
-            new_labels.append("Fundamental Calibration")
+            new_labels.append("Calibration of White-Dwarf-SED Model")
             
         elif label_indiv.startswith("calibs_MWEBV_"):
             new_labels.append("Milky Way Extinction")
@@ -347,7 +347,7 @@ def unc_labeling(labels_indiv):
             new_labels.append("Instrument Zeropoints")
 
         elif label_indiv.startswith("calibs_('Lambda'"):
-            new_labels.append("Instrument Bandpasses")
+            new_labels.append("Instrument Passbands")
             
         elif label_indiv.startswith("tau_c_") or label_indiv.startswith("R_c_") or label_indiv.startswith("c_star_"):
             new_labels.append("Color Population")

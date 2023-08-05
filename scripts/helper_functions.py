@@ -62,7 +62,7 @@ def get_params(paramfl):
             "min_redshift", "max_redshift", "redshift_coeff_type",
             "do_blind", "do_twoalphabeta", "separate_mass_x1c", "outl_frac", "remap_x1",
             "stan_code", "pec_vel_disp", "lensing_disp", "MWEBV_zeropoint_EBV", "electron_coeff", "IG_extinction_coeff",
-            "sample_file",
+            "sample_file", "max_params_to_save",
             "do_host_mass", "fix_Om", "MB_by_sample", "include_pec_cov", "threeD_unexplained"
             ]
     
@@ -190,7 +190,15 @@ def get_dparam_dzps(res_der_fl, redshift, calibration_paths):
                         dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
                     else:
                         dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
-                        
+
+            if restlamb < 3400:
+                thekey = "SALT_UV_CAL"
+                
+                if thekey in dparam_dzps:
+                    dparam_dzps[thekey] += array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+                else:
+                    dparam_dzps[thekey] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
+
             if restlamb < 4000:
                 thekey = "SALT_U_CAL"
                 

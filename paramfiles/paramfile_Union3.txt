@@ -9,6 +9,7 @@ stan_code		"$UNITY/scripts/stan_code_simple.txt"
 sample_file		"None"
 calibration_uncertainties    "$UNITY/paramfiles/calibration_uncertainties.txt"
 
+max_params_to_save	     10000
 
 min_redshift		0.01
 max_redshift		3.

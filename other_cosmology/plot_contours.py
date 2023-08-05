@@ -5,37 +5,10 @@ import matplotlib.pyplot as plt
 import sys
 import pickle
 from matplotlib import rcParams
-from cosmo_functions import no_big_bang
+from cosmo_functions import no_big_bang, get_colors
 rcParams['font.family'] = 'serif'
 rcParams['text.usetex'] = True
 
-
-def get_colors(key):
-    if key == "blue":
-        return ((0., 83/255., 152/255.),
-                (30/255., 104/255., 168/255.),
-                (92/255., 140/255., 190/255.))
-
-    if key == "orange":
-        return ((243/255., 116/255., 17/255.),
-                (248/255., 144/255., 62/255.),
-                (250/255., 180/255., 110/255.))
-
-    if key == "green":
-        return ((0., 160/255., 52/255.),
-                (50/255., 176/255., 86/255.),
-                (117/255., 198/255., 126/255.))
-              
-    if key == "gray":
-        return ((71/255., 71/255., 71/255.),
-                (119/255., 119/255., 119/255.),
-                (178/255., 178/255., 178/255.))
-
-    if key == "teal":
-        return ((0/255., 168/255., 168/255.),
-                (127/255., 204/255., 189/255.),
-                (190/255., 226/255., 210/255.))
-    assert 0, key
 
 
 def get_DETF(the_grid):
@@ -46,6 +19,17 @@ def get_DETF(the_grid):
 
 
     plt.figure(2)
+
+    if np.any(the_grid[2][0, :] < 7):
+        return 0
+    if np.any(the_grid[2][-1, :] < 7):
+        return 0
+    if np.any(the_grid[2][:, 0] < 7):
+        return 0
+    if np.any(the_grid[2][:, -1] < 7):
+        return 0
+
+    
     
     for cut_val in np.linspace(6.15, 6.21, 100):
         included_points = float((the_grid[2] <= cut_val).sum())
@@ -79,12 +63,12 @@ def find_three_sigma(all_grids, key, top_not_bottom):
 def make_contours(all_grids, BAO_Omh2):
     DETF_FoM_txt = ""
     
-    if all_grids["model"] == "flatwCDM":
+    if all_grids["model"] == "flatwCDM" or (all_grids["model"] == "flatLCDM"):
         plt.figure(figsize = (5,5))
-    elif (all_grids["model"] == "flatw0wa") or (all_grids["model"] == "w0wa") or (all_grids["model"] == "flatLCDM"):
+    elif (all_grids["model"] == "flatw0wa") or (all_grids["model"] == "w0wa"):
         plt.figure(figsize = (5,5))
-        DETF_FoM = get_DETF(all_grids)
-        DETF_FoM_txt = "\nDETF FoM: %.2f" % DETF_FoM
+        DETF_FoM = get_DETF(all_grids["SNeBAOCMB"])
+        DETF_FoM_txt = "\nDETF FoM SNe BAO CMB: %.2f" % DETF_FoM
 
         
     elif all_grids["model"] == "LCDM":
@@ -125,34 +109,28 @@ def make_contours(all_grids, BAO_Omh2):
         plt.ylabel("$h$")
         plt_name = "Om-h%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
         
-    elif all_grids["model"] == "flatw0wa":
+    elif all_grids["model"] == "flatw0wa" or all_grids["model"] == "w0wa":
         plt.xlabel("$w_0$")
         plt.ylabel("$w_a$")
-        plt_name = "w0-wa%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
 
+        if all_grids["model"] == "flatw0wa":
+            plt_name = "w0-wa%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
+        else:
+            plt_name = "w0-wa_open%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
+                    
         xlim = plt.xlim()
         ylim = plt.ylim()
         early_x = np.linspace(xlim[0], xlim[-1], 20)
-        plt.fill_between(early_x, -early_x, [3]*len(early_x), color = (0.7, 0.7, 0.7))
-        plt.xlim(xlim)
-        plt.ylim(ylim)
-        plt.text(-0.75, 1.5, "Early Matter Domination Violated", color = 'k', ha = 'center', va = 'center')#, bbox=dict(facecolor='w', edgecolor = 'w'))
 
-        plt.plot(-1, 0., '.', color = 'k')
-        plt.text(-0.95, 0.2, "$\Lambda$CDM", color = 'k', ha = 'left', va = 'center')#, bbox=dict(facecolor='w', edgecolor = 'w'))
+        # wa -> -0.302669 - 1.16638 w0 % DE is 1% of matter density at z=1100
+        # -0.174851 - 1.16638 w0 % DE is 10% of matter density at z=1100
 
+        # -0.0470338 - 0.127817 n - 1.16638 w0 for 10^(-n)
         
-    elif all_grids["model"] == "w0wa":
-        plt.xlabel("$w_0$")
-        plt.ylabel("$w_a$")
-        plt_name = "w0-wa_open%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
-
-        xlim = plt.xlim()
-        ylim = plt.ylim()
-        early_x = np.linspace(xlim[0], xlim[-1], 20)
-        plt.fill_between(early_x, -early_x, [3]*len(early_x), color = (0.7, 0.7, 0.7))
-        plt.xlim(xlim)
-        plt.ylim(ylim)
+        plt.fill_between(early_x, -0.302669 - 1.16638*early_x, [3]*len(early_x), color = (0.8, 0.8, 0.8))
+        plt.fill_between(early_x, -0.174851 - 1.16638*early_x, [3]*len(early_x), color = (0.7, 0.7, 0.7))
+        plt.xlim([-2, 0])
+        plt.ylim([-3, 2])
         plt.text(-0.75, 1.5, "Early Matter Domination Violated", color = 'k', ha = 'center', va = 'center')#, bbox=dict(facecolor='w', edgecolor = 'w'))
 
         plt.plot(-1, 0., '.', color = 'k')
@@ -193,12 +171,13 @@ def make_contours(all_grids, BAO_Omh2):
     all_txt += DETF_FoM_txt
     
     plt.savefig(plt_name, bbox_inches = 'tight', metadata=dict(Keywords = all_txt))
-
+    plt.close()
     
     
 def make_latex_table(all_grids):
-    keys_to_look_for = ["SNe_minos", "SNeCMB_minos", "BAOCMB_minos", "SNeBAO_minos", "SNeBAOCMB_minos", "SNeBAOCMBH0_minos"]
-    labels = dict(SNe_minos = "SNe", SNeBAO_minos = "SNe+BAO+$\omega_b$", SNeCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", SNeBAOCMB_minos = "SNe+BAO+CMB", SNeBAOCMBH0_minos = "SNe+BAO+CMB+$H_0$")
+    keys_to_look_for = ["SNe_minos", "SNeCMB_minos", "BAOCMB_minos", "SNeBAO_minos", "SNeBAOCMB_minos", "SNeBAOCMBH0T_minos", "SNeBAOCMBH0C_minos"]
+    labels = dict(SNe_minos = "SNe", SNeBAO_minos = "SNe+BAO+$\omega_b$", SNeCMB_minos = "SNe+CMB", BAOCMB_minos = "BAO+CMB", SNeBAOCMB_minos = "SNe+BAO+CMB", SNeBAOCMBH0T_minos = "SNe+BAO+CMB+$H_0^{\mathrm{TRGB}}$",
+                  SNeBAOCMBH0C_minos = "SNe+BAO+CMB+$H_0^{\mathrm{Ceph.}}$")
     param_order = [["h"], ["Om"], ["Ok"], ["w", "w0"], ["wa"]]
     fmt_strs = ["%.3f", "%.3f", "%.3f", "%.3f", "%.2f"]
 
@@ -222,10 +201,24 @@ def make_latex_table(all_grids):
                     assert 0, "Conflicting params found!"
 
 
-            print(all_grids.keys())
-            if key:
-                DETF_FoM = get_DETF(all_grids[key.replace("_minos", "_chi2")])
-                these_latex_lines += " & %.2f " % DETF_FoM
+            
+            if all_grids["model"].count("w0wa"):
+                gridkey = key.replace("_minos", "")
+                try:
+                    all_grids[gridkey][2][0,0]
+                    do_DETF = 1
+                except:
+                    do_DETF = 0
+
+                if do_DETF:
+                    print("DETF", gridkey, key)
+                    DETF_FoM = get_DETF(all_grids[gridkey])
+                    if DETF_FoM > 0:
+                        these_latex_lines += " & %.2f " % DETF_FoM
+                    else:
+                        these_latex_lines += " & \\nodata "                    
+                else:
+                    these_latex_lines += " & \\nodata "
             else:
                 these_latex_lines += " & \\nodata "
             these_latex_lines += ' \\\\ \n'
@@ -244,7 +237,9 @@ all_latex_lines = ""
 for fl in sys.argv[1:]:
     all_grids = pickle.load(open(fl, 'rb'))
 
-    all_latex_lines += "\hline\n \multicolumn{7}{c}{" + model_labels[all_grids["model"]] + "}\\\\ \n \hline\n"
+    print(fl, all_grids.keys())
+    
+    all_latex_lines += "\hline\n \multicolumn{8}{c}{" + model_labels[all_grids["model"]] + "}\\\\ \n \hline\n"
     all_latex_lines += make_latex_table(all_grids)
     
     make_contours(all_grids, BAO_Omh2 = 0)

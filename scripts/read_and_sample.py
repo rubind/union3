@@ -696,6 +696,7 @@ print("cosmo_model: 1 for Om, 2 for binned mu, 3 for each sample diagnostics")
 cosmo_model = int(sys.argv[2])
 
 
+
 if inputfl.count("pickle"):
     (the_data, stan_data, params) = pickle.load(gzip.open(inputfl, "rb"))
 else:
@@ -880,12 +881,15 @@ fit = sm.sampling(data=stan_data,
 
 fit_params = fit.extract(permuted = True)
 
+
 try:
     fit_params = filter_fit_params(fit_params, "MB", params["chains"], params["iter"]/2) # burns the first half of the chain, so iter/2
 except:
     print("Couldn't filter bad chains! One or more chains may be bad!")
 
 #summarize_parameters(fit_params)
+
+
 
 try:
     mu_cov = np.cov(fit_params["mu_zbins"].T)
@@ -899,6 +903,19 @@ except:
     print("Couldn't save whole_mat")
 
 
+del_keys = []
+for key in fit_params:
+    sh = np.array(fit_params[key].shape)
+
+    if np.any(sh[1:] > params["max_params_to_save"]):
+        print(key, " is too big to save!", sh)
+        del_keys.append(key)
+
+print("del_keys", del_keys)
+for key in del_keys:
+    del fit_params[key]
+
+    
 try:
     samples_txt
     pickle.dump(fit_params, gzip.open("samples_" + samples_txt + ".pickle", "wb"))
