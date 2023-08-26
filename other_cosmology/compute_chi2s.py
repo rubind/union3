@@ -41,8 +41,12 @@ def chi2fn(P, passdata, get_n_data_instead = False):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4])
     elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa"):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
-    elif (run_settings["model"] == "flatw0waOmh"):
+    elif (run_settings["model"] == "flatw0waOmh") or (run_settings["model"] == "flatw0waOmhEDE"):
         cosmo = dict(model = "flatw0wa", O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
+        if run_settings["model"] == "flatw0waOmh":
+            # wa -> -0.302669 - 1.16638 w0 % DE is 1% of matter density at z=1100
+            if cosmo["w_a"] > -0.302669 - 1.16638*cosmo["w_0"]:
+                return 1e10
     elif (run_settings["model"] == "binnedrho"):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], zbins = run_settings["zbins"], rhobins = P[5:])
     else:
@@ -199,7 +203,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         run_separate_contours = 1
         run_inverse_ladder = 0
         run_SNeCMB_and_BAOCMB = 0
-    elif model == "flatw0waOmh":
+    elif (model == "flatw0waOmh") or (model == "flatw0waOmhEDE"):
         run_settings = dict(contour_xs = np.linspace(0., 0.5, 30),
                             contour_ys = np.linspace(0.5, 1.0, 31),
                             ministart_fn = lambda x, y : [0, 0.022, y, x, 0.0, -1., 0.],
@@ -464,12 +468,13 @@ mu_list = dat[1:, 0]
 z_list = dat[0, 1:]
 mu_invcov = dat[1:, 1:]
 
+"""
 if SN_matrix.count("P+"):
     pass
 else:
     print("BLINDED!!!!!"*100)
     mu_list = get_mu(z_list, cosmo = dict(model = "flatLCDM", O_bhh = 0.022, h = 0.67, O_m = 0.31, O_k = 0.))
-
+"""
 
 
 print("use_parallel", use_parallel)

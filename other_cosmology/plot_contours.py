@@ -185,7 +185,8 @@ def make_latex_table(all_grids):
     
     for key in keys_to_look_for:
         if key in all_grids:
-            these_latex_lines += labels[key] + " & %.1f " % all_grids[key.replace("_minos", "_chi2")]
+            these_latex_lines += labels[key] + " & %.1f (%i) " % (all_grids[key.replace("_minos", "_chi2")],
+                                                                  all_grids[key.replace("_minos", "_n_data")] - all_grids[key.replace("_minos", "_n_par")])
 
             for possible_params, fmt_str in zip(param_order, fmt_strs):
                 found_one = 0

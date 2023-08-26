@@ -16,7 +16,7 @@ data {
     matrix [n_sne, n_x1c_star] redshift_coeffs;
 
 
-    int cosmo_model; // 1 => Om, 2, 3 => Om-w => Binned mu
+    int cosmo_model; // 1 => Om, 2 => Binned mu, 3 => Om-w, 4 => q0-j0, 5 => Om-w0-wa
     int fix_Om;
     int MB_by_sample;
     int <lower = 0, upper = 1> threeD_unexplained;
@@ -55,7 +55,8 @@ data {
     vector [n_photoz] spike_redshift_prob; // E.g., 0.8
     vector [n_photoz] photo_spikez;
     int <lower = 0, upper = n_sne> photoz_inds [n_sne]; // index of photo-z parameter (indexed from one) if photo-z, else 0
-
+    matrix [3,3] BAOCMB_Om_w0_wa_covmatrix;
+    vector [3] BAOCMB_Om_w0_wa_mean;
 }
 
 transformed data {
@@ -92,6 +93,7 @@ parameters {
 
     real <lower = 0, upper = 1> Om;
     real <lower = -2, upper = 0> wDE;
+    real <lower = -4, upper = 2> waDE;
     real <lower = -2, upper = 2> q0;
     real <lower = -5, upper = 5> j0;
     
@@ -184,13 +186,17 @@ transformed parameters {
 
     
 
-    if ((cosmo_model == 1) || (cosmo_model == 3)) {
+    if ((cosmo_model == 1) || (cosmo_model == 3) || (cosmo_model == 5)) {
         for (i in 1: 2*(n_sne + nzadd) - 1) {    // Inverse Hubble parameter
             if (cosmo_model == 1) {
                 Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om) );
             }
             if (cosmo_model == 3) {
                 Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3) + (1. - Om)*pow(1. + redshifts_sort_fill[i], 3.*(1 + wDE)) );
+            }
+            if (cosmo_model == 5) {
+                Hinv_sort_fill[i] <- 1./sqrt( Om*pow(1. + redshifts_sort_fill[i], 3)
+		                            + (1. - Om)*pow(1. + redshifts_sort_fill[i], 3.*(1 + wDE + waDE))*exp(-3.*waDE*redshifts_sort_fill[i]/(1. + redshifts_sort_fill[i])) );
             }
         }
 
@@ -213,6 +219,10 @@ transformed parameters {
                 }
                 if (cosmo_model == 3) {
                     dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3) + (1. - Om)*pow(1. + redshifts[i], 3.*(1 + wDE)) );
+                }
+                if (cosmo_model == 5) {
+                    dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts_sort_fill[i], 3)
+		                                           + (1. - Om)*pow(1. + redshifts_sort_fill[i], 3.*(1 + wDE + waDE))*exp(-3.*waDE*redshifts_sort_fill[i]/(1. + redshifts_sort_fill[i])) );
                 }
             }
             model_mu[i] <- 5.*log10((1. + zhelio[i] + dz_term)*(r_com_sort[unsort_inds[i] + 1] + dz_Hinv_term)) + 43.1586133146;
@@ -378,6 +388,7 @@ transformed parameters {
 }
 
 model {
+    vector [3] Omw0wa_vect;
 
     for (i in 1:n_sne) {
         target += log_sum_exp(outl_loglike_by_SN[i], inl_loglike_by_SN[i]);
@@ -396,6 +407,13 @@ model {
         mu_zbins ~ normal(0, 1);
     }
 
+    if (cosmo_model == 5) {
+         Omw0wa_vect[1] = Om;
+	 Omw0wa_vect[2] = w0DE;
+	 Omw0wa_vect[3] = waDE;
+	 
+	 Omw0wa_vect ~ multi_normal(BAOCMB_Om_w0_wa_mean, BAOCMB_Om_w0_wa_covmatrix);
+    }
 
     MB ~ normal(-19, 0.3);
     delta_0 ~ normal(0.0, 0.2);

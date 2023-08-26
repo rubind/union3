@@ -531,6 +531,7 @@ def zbins_chi2fn(P, alldata):
     return chi2
 """
 
+"""
 def get_equal_a_bins(z, n_to_add):
     if z.max()/z.min() < 20:
         ministart = np.linspace(0, 1, 4)
@@ -551,7 +552,7 @@ def get_equal_a_bins(z, n_to_add):
         zbins[-1] += 0.001
         
         return zbins
-        
+"""
 
 def add_zbins(stan_data, cosmo_model):
     # For binned mu
@@ -567,25 +568,10 @@ def add_zbins(stan_data, cosmo_model):
         
         return stan_data
 
-    n_to_add = 0
-    good_bins = 0
 
-    while good_bins == 0:
-        zbins = get_equal_a_bins(stan_data["redshifts"], n_to_add)
-        n_to_add += 1
-
-        good_bins = 1
-        for i in range(len(zbins) - 1):
-            if zcount(stan_data["redshifts"], zbins[i], zbins[i+1]) < 10:
-                good_bins = 0
-                print("bad_bins!", zbins)
-                
-                print("n_to_add for zbins", n_to_add)
-                
-    #zbins, NA, NA = miniNM_new(ministart = ministart,
-    #                           miniscale = np.array([0.] + [0.1]*28 + [0.]),
-    #                           chi2fn = zbins_chi2fn, passdata = stan_data["redshifts"], maxiter = 5000, maxruncount = 100, compute_Cmat = False)
-
+    zbins = np.exp(np.linspace(np.log(stan_data["redshifts"].min()*0.999),
+                                np.log(stan_data["redshifts"].max()*1.001), 30))
+    
     stan_data["zbins"] = zbins
     
     """
@@ -692,7 +678,7 @@ def init_fn():
 ################################################# Main Program ###################################################
 
 inputfl = sys.argv[1]
-print("cosmo_model: 1 for Om, 2 for binned mu, 3 for each sample diagnostics")
+print("cosmo_model: 1 for Om, 2 for binned mu, 3 for Omega_m-w, 4 for q0-j0, 5 for Omega_m-w0-wa")
 cosmo_model = int(sys.argv[2])
 
 
