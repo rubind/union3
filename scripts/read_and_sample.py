@@ -722,6 +722,8 @@ else:
                                           separate_mass_x1c = params["separate_mass_x1c"],
                                           redshift_coeff_type = params["redshift_coeff_type"])
     
+
+    BAOCMB_Om_w0_wa_mean, BAOCMB_Om_w0_wa_covmatrix = pickle.load(open(os.environ["UNITY"] + "/other_cosmology/BAOCMB_Omw0wa.pickle", 'rb'))
     
     stan_data = {"n_sne": n_sne, "nzadd": nzadd,
                  "n_samples": len(the_data["sample_names"]),
@@ -758,7 +760,8 @@ else:
 
                  "est_mobs_cuts": the_data["est_mobs_cuts"],
                  "est_mobs_sigmas": the_data["est_mobs_sigmas"],
-                 "mobs_cut0": the_data["mobs_cut0"], "mobs_cut1": the_data["mobs_cut1"]
+                 "mobs_cut0": the_data["mobs_cut0"], "mobs_cut1": the_data["mobs_cut1"],
+                 "BAOCMB_Om_w0_wa_mean": BAOCMB_Om_w0_wa_mean, "BAOCMB_Om_w0_wa_covmatrix": BAOCMB_Om_w0_wa_covmatrix
              }
 
     plt.figure()
