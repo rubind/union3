@@ -39,11 +39,18 @@ def chi2fn(P, passdata, get_n_data_instead = False):
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w = P[5])
     elif run_settings["model"] == "LCDM" or run_settings["model"] == "flatLCDM":
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4])
-    elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa"):
-        cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
+    elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa") or (run_settings["model"] == "flatw0waEDE") or (run_settings["model"] == "w0waEDE"):
+        cosmo = dict(model = run_settings["model"].replace("EDE", ""), O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
+
+        if run_settings["model"].count("EDE") == 0:
+            # wa -> -0.302669 - 1.16638 w0 % DE is 1% of matter density at z=1100
+
+            if cosmo["w_a"] > -0.302669 - 1.16638*cosmo["w_0"]:
+                return 1e10
+
     elif (run_settings["model"] == "flatw0waOmh") or (run_settings["model"] == "flatw0waOmhEDE"):
         cosmo = dict(model = "flatw0wa", O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
-        if run_settings["model"] == "flatw0waOmh":
+        if run_settings["model"].count("EDE") == 0:
             # wa -> -0.302669 - 1.16638 w0 % DE is 1% of matter density at z=1100
             if cosmo["w_a"] > -0.302669 - 1.16638*cosmo["w_0"]:
                 return 1e10
@@ -215,7 +222,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         run_separate_contours = 0
         run_inverse_ladder = 1
         run_SNeCMB_and_BAOCMB = 1
-    elif model == "flatw0wa":
+    elif (model == "flatw0wa") or (model == "flatw0waEDE"):
         run_settings = dict(contour_xs = np.linspace(-2., 0.5, 26),
                             contour_ys = np.linspace(-4., 2., 30),
                             ministart_fn = lambda x, y : [0, 0.022, 0.7, 0.3, 0.0, x, y],
@@ -227,7 +234,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         run_separate_contours = 0
         run_inverse_ladder = 1
         run_SNeCMB_and_BAOCMB = 1
-    elif model == "w0wa":
+    elif (model == "w0wa") or (model == "w0waEDE"):
         run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
                             contour_ys = np.linspace(-3., 2., 25),
                             ministart_fn = lambda x, y : [0, 0.022, 0.7, 0.3, 0.0, x, y],

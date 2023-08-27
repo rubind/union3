@@ -694,13 +694,17 @@ else:
         
 
 
-has_q0 = int("q0" in fit_params)
-for cosmo_key in ["Om"] + ["j0", "q0"]*has_q0:
+has_wa = int("waDE" in fit_params)
+
+if has_wa:
+    fit_params["DETF"] = fit_params["waDE"]*fit_params["wDE"]
+
+for cosmo_key in ["Om"] + ["wDE", "waDE", "DETF"]*has_wa:
     print("Running ", cosmo_key)
     unc_analysis(cosmo_key, ["MB", "alpha", "beta_B", "beta_R", "delta_beta_R", "delta_0", "delta_h",
                              "mobs_cuts", "mobs_cut_sigmas", "sigma_int",
                              "c_star", "R_c", "tau_c", "x1_star", "R_x1", "tau_x1",
-                             "calibs",  "mBx1c_int_variance", "outl_frac", "outl_mBx1c_uncertainties"] + ["j0"]*has_q0*(cosmo_key == "q0")
+                             "calibs",  "mBx1c_int_variance", "outl_frac", "outl_mBx1c_uncertainties"]
                  )
 
 
