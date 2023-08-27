@@ -409,7 +409,7 @@ model {
 
     if (cosmo_model == 5) {
          Omw0wa_vect[1] = Om;
-	 Omw0wa_vect[2] = w0DE;
+	 Omw0wa_vect[2] = wDE;
 	 Omw0wa_vect[3] = waDE;
 	 
 	 Omw0wa_vect ~ multi_normal(BAOCMB_Om_w0_wa_mean, BAOCMB_Om_w0_wa_covmatrix);
