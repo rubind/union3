@@ -52,7 +52,9 @@ SN2006eb  Not Ia
 SN2007qd  Not Ia
 SN2006pt  No SN?
 TPS10byn  One phase?
-	
+ASASSN-15hf   Not a SN Ia?
+
+
 SN1999gh	1991bg
 SN1998de	1991bg
 SN1998bp	1991bg

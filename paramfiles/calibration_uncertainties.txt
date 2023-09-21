@@ -34,6 +34,17 @@
 "SMITH_z_LAM":												15
 
 
+"PS1_g_CAL":												0.005
+"PS1_r_CAL":												0.005
+"PS1_i_CAL":												0.005
+"PS1_z_CAL":												0.005
+
+"PS1_g_LAM":												6.
+"PS1_r_LAM":												6.
+"PS1_i_LAM":												6.
+"PS1_z_LAM":												6.
+
+
 ('Zeropoint', 'CNIa02|Bessell12_B'):									0.01
 ('Zeropoint', 'CNIa02|Bessell12_V'):									0.01
 ('Zeropoint', 'CNIa02|SDSS_g'):										0.01
@@ -164,15 +175,15 @@
 ('Lambda', 'LCOGT|LCOGT_i'):										20.S
 
 
-('Zeropoint', 'PS|PS_g'):										0.01
-('Zeropoint', 'PS|PS_r'):										0.01
-('Zeropoint', 'PS|PS_i'):										0.01
-('Zeropoint', 'PS|PS_z'):										0.01
+('Zeropoint', 'PS|PS_g'):										0.001P
+('Zeropoint', 'PS|PS_r'):										0.001P
+('Zeropoint', 'PS|PS_i'):										0.001P
+('Zeropoint', 'PS|PS_z'):										0.001P
 
-('Lambda', 'PS|PS_g'):											10.0
-('Lambda', 'PS|PS_r'):											10.0
-('Lambda', 'PS|PS_i'):											10.0
-('Lambda', 'PS|PS_z'):											10.0
+('Lambda', 'PS|PS_g'):											10.0P
+('Lambda', 'PS|PS_r'):											0.0P
+('Lambda', 'PS|PS_i'):											0.0P
+('Lambda', 'PS|PS_z'):											0.0P
 
 ('Zeropoint', 'SWOPE|SWOPE_B'):										0.01L
 ('Zeropoint', 'SWOPE|SWOPE_V-LC-3014'):									0.01L
@@ -483,14 +494,14 @@
 ('Zeropoint', 'KeckAO|Keck_H'):										0.01
 ('Lambda', 'KeckAO|Keck_H'):										10
 
-('Zeropoint', 'MEGACAMPSF|g'):										0.01
-('Zeropoint', 'MEGACAMPSF|r'):										0.01
-('Zeropoint', 'MEGACAMPSF|i'):										0.01
-('Zeropoint', 'MEGACAMPSF|z'):										0.01
-('Lambda', 'MEGACAMPSF|g'):										10
-('Lambda', 'MEGACAMPSF|r'):										10
-('Lambda', 'MEGACAMPSF|i'):										10
-('Lambda', 'MEGACAMPSF|z'):										10
+('Zeropoint', 'MEGACAMPSF|g'):										0.01P
+('Zeropoint', 'MEGACAMPSF|r'):										0.01P
+('Zeropoint', 'MEGACAMPSF|i'):										0.01P
+('Zeropoint', 'MEGACAMPSF|z'):										0.01P
+('Lambda', 'MEGACAMPSF|g'):										10P
+('Lambda', 'MEGACAMPSF|r'):										10P
+('Lambda', 'MEGACAMPSF|i'):										10P
+('Lambda', 'MEGACAMPSF|z'):										10P
 
 
 ('Zeropoint', 'TONRY|TONRY_Z'):										0.01

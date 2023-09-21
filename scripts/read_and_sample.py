@@ -211,15 +211,22 @@ def read_data(params):
             if all(okay_to_add):
 
                 the_data["snpaths"].append(snpath)
+                if Spectra.check_derivs(snpath, flname = "model_deriv.dat") == 0:
+                    assert Spectra.check_derivs(snpath, flname = "result_deriv.dat") == 1
+                    deriv_file_to_use = snpath + "/result_deriv.dat"
+                    print("Using observed derivatives instead!", snpath)
+                else:
+                    deriv_file_to_use = snpath + "/model_deriv.dat"
+
 
                 if helper_functions.read_param(snpath + "/lightfile", "Photoz") != None:
                     print("Photoz found!", snpath)
                     the_data["n_photoz"] += 1
                     
                     the_data["photoz_inds"].append(the_data["n_photoz"]) # That's right, after incrementing the counter
-                    the_data["d_mBx1c_dz_list"].append([helper_functions.read_param(snpath + "/model_deriv.dat", "Redshift", ind = 5),
-                                                        helper_functions.read_param(snpath + "/model_deriv.dat", "Redshift", ind = 6),
-                                                        helper_functions.read_param(snpath + "/model_deriv.dat", "Redshift", ind = 7)])
+                    the_data["d_mBx1c_dz_list"].append([helper_functions.read_param(deriv_file_to_use, "Redshift", ind = 5),
+                                                        helper_functions.read_param(deriv_file_to_use, "Redshift", ind = 6),
+                                                        helper_functions.read_param(deriv_file_to_use, "Redshift", ind = 7)])
 
                     the_data["photo_z0"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz", ind = 1))
                     the_data["photo_dz"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz", ind = 2))
@@ -279,11 +286,11 @@ def read_data(params):
                 if abs(h_resid) > 2 or (the_data["c_list"][-1] > 1) or (the_data["c_list"][-1] < -0.3):
                     print("Weird supernova!", snpath)
 
-                dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", res_der_fl = snpath + "/model_deriv.dat", params = params)
+                dparam_dzps, extra_cmat = helper_functions.get_MWEBV_uncs(snpath + "/lightfile", res_der_fl = deriv_file_to_use, params = params)
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
 
                 if params["IG_extinction_coeff"] != 0:
-                    dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = snpath + "/model_deriv.dat", params = params)
+                    dparam_dzps = helper_functions.get_IG_extinction_sys(redshift = the_data["z_CMB_list"][-1], res_der_fl = deriv_file_to_use, params = params)
                     the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind, uncertainties = calibration_uncertainties, check_1 = True)
 
                 
@@ -352,7 +359,7 @@ def read_data(params):
                                                                                               [mBx1, x1x1, x1c],
                                                                                               [mBc, x1c, cc]]], dtype=float64) + extra_cmat   ), axis = 0)
 
-                dparam_dzps = helper_functions.get_dparam_dzps(snpath + "/model_deriv.dat", this_redshift_helio, calibration_paths = calibration_paths)
+                dparam_dzps = helper_functions.get_dparam_dzps(deriv_file_to_use, this_redshift_helio, calibration_paths = calibration_paths)
                 
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind,
                                                         uncertainties = calibration_uncertainties)

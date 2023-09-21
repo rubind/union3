@@ -65,7 +65,7 @@ def make_contours(all_grids, BAO_Omh2):
     
     if all_grids["model"] == "flatwCDM" or (all_grids["model"] == "flatLCDM"):
         plt.figure(figsize = (5,5))
-    elif (all_grids["model"] == "flatw0wa") or (all_grids["model"] == "w0wa"):
+    elif (all_grids["model"].replace("EDE", "") == "flatw0wa") or (all_grids["model"].replace("EDE", "") == "w0wa"):
         plt.figure(figsize = (5,5))
         DETF_FoM = get_DETF(all_grids["SNeBAOCMB"])
         DETF_FoM_txt = "\nDETF FoM SNe BAO CMB: %.2f" % DETF_FoM
@@ -109,7 +109,7 @@ def make_contours(all_grids, BAO_Omh2):
         plt.ylabel("$h$")
         plt_name = "Om-h%s.pdf" % ("_BAO_Omh2"*BAO_Omh2)
         
-    elif all_grids["model"] == "flatw0wa" or all_grids["model"] == "w0wa":
+    elif all_grids["model"].replace("EDE", "") == "flatw0wa" or all_grids["model"].replace("EDE", "") == "w0wa":
         plt.xlabel("$w_0$")
         plt.ylabel("$w_a$")
 
@@ -228,8 +228,10 @@ def make_latex_table(all_grids):
 
 
 model_labels = dict(flatLCDM = "Flat $\Lambda$CDM",
-                    w0wa = "Open $w_0$-$w_a$",
-                    flatw0wa = "Flat $w_0$-$w_a$",
+                    w0wa = "Open $w_0$-$w_a$, No EDE",
+                    flatw0wa = "Flat $w_0$-$w_a$, No EDE",
+                    w0waEDE = "Open $w_0$-$w_a$",
+                    flatw0waEDE = "Flat $w_0$-$w_a$",
                     LCDM = "Open $\Lambda$CDM",
                     flatwCDM = "Flat $w$CDM")
 

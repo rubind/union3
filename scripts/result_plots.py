@@ -697,7 +697,7 @@ else:
 has_wa = int("waDE" in fit_params)
 
 if has_wa:
-    fit_params["DETF"] = fit_params["waDE"]*fit_params["wDE"]
+    fit_params["DETF"] = (fit_params["waDE"] - np.mean(fit_params["waDE"]))*(fit_params["wDE"] - np.mean(fit_params["wDE"]))
 
 for cosmo_key in ["Om"] + ["wDE", "waDE", "DETF"]*has_wa:
     print("Running ", cosmo_key)
