@@ -140,7 +140,11 @@ def get_dparam_dzps(res_der_fl, redshift, calibration_paths):
                                    "SMITH_g": (4000, 5500),
                                    "SMITH_r": (5500, 7000),
                                    "SMITH_i": (7000, 8000),
-                                   "SMITH_z": (8000, 10000)}
+                                   "SMITH_z": (8000, 10000)},
+                              P = {"PS1_g": (4000, 5500),
+                                   "PS1_r": (5500, 7000),
+                                   "PS1_i": (7000, 8000),
+                                   "PS1_z": (8000, 10000)}
                               )
     
     
@@ -162,7 +166,7 @@ def get_dparam_dzps(res_der_fl, redshift, calibration_paths):
             dparam_dzps[the_key] = array([float(parsed[5]), float(parsed[6]), float(parsed[7])])
 
 
-            for Landolt_or_Smith in "LS":
+            for Landolt_or_Smith in "LSP":
                 if calibration_paths[the_key] == Landolt_or_Smith:
                     for LSkey in Landolt_Smith_bins[Landolt_or_Smith]:
                         if (Landolt_Smith_bins[Landolt_or_Smith][LSkey][0] < obslamb) and (Landolt_Smith_bins[Landolt_or_Smith][LSkey][1] > obslamb):

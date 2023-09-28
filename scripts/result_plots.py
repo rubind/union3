@@ -322,8 +322,8 @@ def unc_labeling(labels_indiv):
         elif label_indiv.startswith("calibs_MWEBV_"):
             new_labels.append("Milky Way Extinction")
 
-        elif label_indiv.startswith("calibs_LANDOLT_") or label_indiv.startswith("calibs_SMITH_"):
-            new_labels.append("Landolt/Smith Calibration")
+        elif label_indiv.startswith("calibs_LANDOLT_") or label_indiv.startswith("calibs_SMITH_") or label_indiv.startswith("calibs_PS1_"):
+            new_labels.append("Landolt/Smith/PS1 Calibration")
             
         elif label_indiv.startswith("MB"):
             new_labels.append("Absolute Magnitude (for $h = 0.7$) $\scriptM$")
@@ -342,7 +342,7 @@ def unc_labeling(labels_indiv):
 
         elif label_indiv.startswith("calibs_SALT"):
             new_labels.append("SALT Calibration")
-
+            
         elif label_indiv.startswith("calibs_('Zeropoint'"):
             new_labels.append("Instrument Zeropoints")
 

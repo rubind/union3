@@ -96,7 +96,7 @@ def read_data(params):
 
             calibration_paths[eval(parsed[0])] = "None"
 
-            for possible_path in "LS":
+            for possible_path in "LSP":
                 if parsed[1].count(possible_path):
                     calibration_paths[eval(parsed[0])] = possible_path
                     parsed[1] = parsed[1].replace(possible_path, "")
