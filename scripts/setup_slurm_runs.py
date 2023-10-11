@@ -50,7 +50,7 @@ for i in range(n_copy):
     suffix = orig_dir.split("/")[-1]
     assert len(suffix) > 3
 
-    for cosmomodel in [1,2,3,5]:
+    for cosmomodel in [1,6,3,5]:
         wd = new_dir_loc + "/" + suffix + "_cosmo=%i_%03i" % (cosmomodel, i)
 
         good_run = 1
