@@ -17,7 +17,7 @@ def check_if_good(wd, par_name):
     
     grepout = getoutput("grep %s %s/log.txt" % (par_name, wd)).split('\n')
 
-    did_check = 0
+    did_check = leave_running_jobs_alone
     
     for line in grepout:
         parsed = line.split(None)
@@ -42,7 +42,7 @@ orig_dir = sys.argv[1]
 new_dir_loc = sys.argv[2]
 n_copy = int(sys.argv[3])
 redo_runs = int(sys.argv[4])
-
+leave_running_jobs_alone = int(sys.argv[5])
 
 
 
@@ -70,10 +70,10 @@ for i in range(n_copy):
             assert len(pfl) == 1
             pfl = pfl[0]
 
-            (the_data, stan_data, params) = pickle.load(gzip.open(pfl), 'rb')
+            (the_data, stan_data, params) = pickle.load(gzip.open(pfl, 'rb'))
 
-            if stan_data["cosmo_model"] != 1:
-                print("cosmo_model", stan_data["cosmo_model"], " so restricting saved parameters!")
+            if cosmomodel != 1:
+                print("cosmomodel", cosmomodel, " so restricting saved parameters!")
                 params["max_params_to_save"] = min(params["max_params_to_save"], 1000)
 
                 pickle.dump((the_data, stan_data, params), gzip.open(pfl, "wb"))
