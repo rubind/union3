@@ -37,8 +37,10 @@ def chi2fn(P, passdata, get_n_data_instead = False):
             return 1e10
 
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w = P[5])
+        
     elif run_settings["model"] == "LCDM" or run_settings["model"] == "flatLCDM":
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4])
+
     elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa") or (run_settings["model"] == "flatw0waEDE") or (run_settings["model"] == "w0waEDE"):
         cosmo = dict(model = run_settings["model"].replace("EDE", ""), O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
 

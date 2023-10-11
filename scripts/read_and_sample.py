@@ -567,7 +567,7 @@ def add_zbins(stan_data, cosmo_model):
     stan_data["cosmo_model"] = cosmo_model
 
     print("min, max", stan_data["redshifts"].min(), stan_data["redshifts"].max())
-    if stan_data["redshifts"].min() == stan_data["redshifts"].max() or (cosmo_model != 2):
+    if stan_data["redshifts"].min() == stan_data["redshifts"].max() or ([2, 6].count(cosmo_model) == 0):
         stan_data["zbins"] = [stan_data["redshifts"][0]]
         stan_data["n_zbins"] = 1
         stan_data["dmu_dbin"] = ones([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
@@ -576,8 +576,22 @@ def add_zbins(stan_data, cosmo_model):
         return stan_data
 
 
-    zbins = np.exp(np.linspace(np.log(stan_data["redshifts"].min()*0.999),
-                                np.log(stan_data["redshifts"].max()*1.001), 30))
+    if cosmo_model == 2:
+        zbins = np.exp(np.linspace(np.log(stan_data["redshifts"].min()*0.999),
+                                   np.log(stan_data["redshifts"].max()*1.001), 30))
+    else:
+        assert cosmo_model == 6
+        zbins = np.linspace(stan_data["redshifts"].min()*0.999,
+                            min(stan_data["redshifts"].max() + 0.001, 1.),
+                            20)
+        range_high = stan_data["redshifts"].max() + 0.001 - 1.
+
+        if range_high > 0.0:
+            zbins_high = np.linspace(1.1, stan_data["redshifts"].max() + 0.001, int(np.around(range_high/0.1)))
+            zbins = np.concatenate((zbins, zbins_high))
+
+        print("zbins", zbins)
+        
     
     stan_data["zbins"] = zbins
     
@@ -626,7 +640,9 @@ def add_zbins(stan_data, cosmo_model):
     plt.imshow(stan_data["dmu_dbin"])
     plt.savefig("dmu_dbin.pdf")
     plt.close()
-        
+
+    save_img(stan_data["dmu_dbin"], "dmu_dbin.fits")
+    save_img(stan_data["dmudz_dbin"], "dmudz_dbin.fits")
 
     return stan_data
 
@@ -640,8 +656,11 @@ def init_fn():
     print("n_samples ", n_samples)
 
     if stan_data["cosmo_model"] == 2:
-        mu_init = 43.2 + 5*np.log10(np.array(stan_data["zbins"])*(1. + np.array(stan_data["zbins"])))
-        
+        zbins_tmp = np.array(stan_data["zbins"])
+        mu_init = 43.2 + 5*np.log10((zbins_tmp - 0.225*zbins_tmp**2.)*(1. + zbins_tmp))
+    elif stan_data["cosmo_model"] == 6:
+        zbins_tmp = np.array(stan_data["zbins"])
+        mu_init = zbins_tmp - 0.225*zbins_tmp**2.
     else:
         mu_init = np.zeros(stan_data["n_zbins"], dtype=np.float64)
         
@@ -685,7 +704,7 @@ def init_fn():
 ################################################# Main Program ###################################################
 
 inputfl = sys.argv[1]
-print("cosmo_model: 1 for Om, 2 for binned mu, 3 for Omega_m-w, 4 for q0-j0, 5 for Omega_m-w0-wa")
+print("cosmo_model: 1 for Om, 2 for binned mu, 3 for Omega_m-w, 4 for q0-j0, 5 for Omega_m-w0-wa, 6 for binned dL")
 cosmo_model = int(sys.argv[2])
 
 

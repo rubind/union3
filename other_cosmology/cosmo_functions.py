@@ -189,8 +189,8 @@ def get_BAO_chi2(BAO_data, cosmo, verbose = False):
     resid = np.array(resid)
     chi2 = np.dot(resid, np.dot(BAO_data["w_mat"], resid))
 
-    c_mat = np.linalg.inv(BAO_data["w_mat"])
-    uncs = np.sqrt(np.diag(c_mat))
+    #c_mat = np.linalg.inv(BAO_data["w_mat"])
+    #uncs = np.sqrt(np.diag(c_mat))
     #print(resid/uncs)
 
         

@@ -16,7 +16,7 @@ data {
     matrix [n_sne, n_x1c_star] redshift_coeffs;
 
 
-    int cosmo_model; // 1 => Om, 2 => Binned mu, 3 => Om-w, 4 => q0-j0, 5 => Om-w0-wa
+    int cosmo_model; // 1 => Om, 2 => Binned mu, 3 => Om-w, 4 => q0-j0, 5 => Om-w0-wa, 6 => comoving distance
     int fix_Om;
     int MB_by_sample;
     int <lower = 0, upper = 1> threeD_unexplained;
@@ -236,6 +236,17 @@ transformed parameters {
             }
         }
     }
+
+    if (cosmo_model == 6) { // binned comoving distance
+        model_mu <- dmu_dbin * mu_zbins;
+        for (i in 1:n_sne) {
+            if (photoz_inds[i] > 0) {
+                model_mu[i] <- model_mu[i] + dz[photoz_inds[i]] * dmudz_dbin[i] * mu_zbins;
+            }
+	    model_mu[i] = 5.*log10((1. + zhelio[i])*model_mu[i]) + 43.1586133146;
+        }
+    }
+
     if (cosmo_model == 4) {
         for (i in 1:n_sne) {
             model_mu[i] <- 5.*log10((1. + zhelio[i])*redshifts[i]/(1. + redshifts[i]) * (1. + (1./2.)*(1 - q0)*redshifts[i] - (1./6.)*(1. - q0 - 3.*q0*q0 + j0) * redshifts[i]*redshifts[i])
@@ -401,7 +412,7 @@ model {
 
     calibs ~ normal(0, 1.);
     
-    if (cosmo_model == 2) {
+    if ((cosmo_model == 2) || (cosmo_model == 6)) {
         MB ~ normal(-19, 0.01);
     } else {
         mu_zbins ~ normal(0, 1);
