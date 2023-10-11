@@ -57,7 +57,16 @@ for i in range(n_copy):
 
         good_run *= check_if_good(wd, "Om")
         good_run *= check_if_good(wd, "mu_zbins")
-        
+
+        errglob = glob.glob(wd + "/*.err")
+        if len(errglob) > 0:
+            f = open(errglob[0], 'r')
+            lines = f.read()
+            f.close()
+
+            if lines.count("DUE TO TIME LIMIT"):
+                good_run = 0
+                print("TIME LIMIT")
 
         
         if redo_runs or (good_run == 0):
