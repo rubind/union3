@@ -16,7 +16,7 @@ data {
     matrix [n_sne, n_x1c_star] redshift_coeffs;
 
 
-    int cosmo_model; // 1 => Om, 2 => Binned mu, 3 => Om-w, 4 => q0-j0, 5 => Om-w0-wa, 6 => comoving distance
+    int cosmo_model; // 1 => Om, 2 => Binned mu, 3 => Om-w, 4 => q0-j0, 5 => Om-w0-wa, 6 => comoving distance interpolation
     int fix_Om;
     int MB_by_sample;
     int <lower = 0, upper = 1> threeD_unexplained;
@@ -180,6 +180,7 @@ transformed parameters {
     vector [n_gauss] tmploglike_x1;
     vector [n_gauss] tmploglike_c;
 
+    vector [n_zbins] r_comove_bins;
 
     // -------------Begin numerical integration-----------------
 
@@ -238,11 +239,10 @@ transformed parameters {
     }
 
     if (cosmo_model == 6) { // binned comoving distance
-        model_mu <- dmu_dbin * mu_zbins;
-        for (i in 1:n_sne) {
-            if (photoz_inds[i] > 0) {
-                model_mu[i] <- model_mu[i] + dz[photoz_inds[i]] * dmudz_dbin[i] * mu_zbins;
-            }
+        r_comove_bins = exp(0.2*log(10.)*(mu_zbins - 43.1586133146))  /  (1. + zbins);
+	
+        model_mu <- dmu_dbin * r_comove_bins;
+	for (i in 1:n_sne) {
 	    model_mu[i] = 5.*log10((1. + zhelio[i])*model_mu[i]) + 43.1586133146;
         }
     }

@@ -655,12 +655,12 @@ def init_fn():
     print("n_sne ", n_sne)
     print("n_samples ", n_samples)
 
-    if stan_data["cosmo_model"] == 2:
+    if stan_data["cosmo_model"] == 2 or stan_data["cosmo_model"] == 6:
         zbins_tmp = np.array(stan_data["zbins"])
         mu_init = 43.2 + 5*np.log10((zbins_tmp - 0.225*zbins_tmp**2.)*(1. + zbins_tmp))
-    elif stan_data["cosmo_model"] == 6:
-        zbins_tmp = np.array(stan_data["zbins"])
-        mu_init = zbins_tmp - 0.225*zbins_tmp**2.
+    #elif stan_data["cosmo_model"] == 6:
+    #    zbins_tmp = np.array(stan_data["zbins"])
+    #    mu_init = zbins_tmp - 0.225*zbins_tmp**2.
     else:
         mu_init = np.zeros(stan_data["n_zbins"], dtype=np.float64)
         
@@ -704,7 +704,7 @@ def init_fn():
 ################################################# Main Program ###################################################
 
 inputfl = sys.argv[1]
-print("cosmo_model: 1 for Om, 2 for binned mu, 3 for Omega_m-w, 4 for q0-j0, 5 for Omega_m-w0-wa, 6 for binned dL")
+print("cosmo_model: 1 for Om, 2 for binned mu, 3 for Omega_m-w, 4 for q0-j0, 5 for Omega_m-w0-wa, 6 for binned mu with comoving interpolation")
 cosmo_model = int(sys.argv[2])
 
 
