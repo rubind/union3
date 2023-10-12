@@ -239,7 +239,9 @@ transformed parameters {
     }
 
     if (cosmo_model == 6) { // binned comoving distance
-        r_comove_bins = exp(0.2*log(10.)*(mu_zbins - 43.1586133146))  /  (1. + zbins);
+        for (i in 1:n_zbins) {
+            r_comove_bins[i] = 10^(0.2*(mu_zbins[i] - 43.1586133146))  /  (1. + zbins[i]);
+        }
 	
         model_mu <- dmu_dbin * r_comove_bins;
 	for (i in 1:n_sne) {
