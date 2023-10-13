@@ -35,6 +35,9 @@ def check_if_good(wd, par_name):
     return did_check
     
 pwd = getoutput("pwd")
+whoami = getoutput("whoami")
+
+assert getoutput('squeue | grep drubin | grep -v " R "').strip() == ""
 
 print("python union3/scripts/setup_slurm_runs.py union3/scripts/union3 koa_scratch/Union3 110 0")
 
@@ -50,7 +53,7 @@ for i in range(n_copy):
     suffix = orig_dir.split("/")[-1]
     assert len(suffix) > 3
 
-    for cosmomodel in [1,6,3,5]:
+    for cosmomodel in [1,3,5,6]:#[6]:#[1,6,3,5]:
         wd = new_dir_loc + "/" + suffix + "_cosmo=%i_%03i" % (cosmomodel, i)
 
         good_run = 1
