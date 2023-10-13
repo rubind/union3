@@ -415,7 +415,7 @@ model {
     calibs ~ normal(0, 1.);
     
     if ((cosmo_model == 2) || (cosmo_model == 6)) {
-        MB ~ normal(-19, 0.01);
+        MB ~ normal(-19, 0.001);
     } else {
         mu_zbins ~ normal(0, 1);
     }
