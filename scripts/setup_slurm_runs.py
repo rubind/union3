@@ -39,13 +39,14 @@ whoami = getoutput("whoami")
 
 assert getoutput('squeue | grep drubin | grep -v " R "').strip() == ""
 
-print("python union3/scripts/setup_slurm_runs.py union3/scripts/union3 koa_scratch/Union3 110 0")
+print("python union3/scripts/setup_slurm_runs.py union3/scripts/union3 koa_scratch/Union3 100 1356 0 1")
 
 orig_dir = sys.argv[1]
 new_dir_loc = sys.argv[2]
 n_copy = int(sys.argv[3])
-redo_runs = int(sys.argv[4])
-leave_running_jobs_alone = int(sys.argv[5])
+cosmomodels = [int(item) for item in sys.argv[4]]
+redo_runs = int(sys.argv[5])
+leave_running_jobs_alone = int(sys.argv[6])
 
 
 
@@ -53,7 +54,7 @@ for i in range(n_copy):
     suffix = orig_dir.split("/")[-1]
     assert len(suffix) > 3
 
-    for cosmomodel in [1,3,5,6]:#[6]:#[1,6,3,5]:
+    for cosmomodel in cosmomodels:#[6]:#[1,6,3,5]:
         wd = new_dir_loc + "/" + suffix + "_cosmo=%i_%03i" % (cosmomodel, i)
 
         good_run = 1
