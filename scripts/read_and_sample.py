@@ -707,7 +707,7 @@ def init_fn():
             "delta_0": random.random()*0.05,
             "delta_h": 0.5,
             "calibs": random.normal(size = len(the_data["calib_names"]))*0.01,
-            "blind_values": [0.]*n_samples,
+            #"blind_values": [0.]*n_samples,
             
             "true_cB": random.random(size = n_sne)*0.02 - 0.01 + clip(the_data["c_list"]/2., -0.2, 1.0),
             "true_cR_unit": random.random(size = n_sne)*0.5 + 0.5, #random.random(size = n_sne)*0.01 + clip(the_data["c_list"]/2., 0, 1.0),
