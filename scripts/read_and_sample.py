@@ -584,18 +584,33 @@ def add_zbins(stan_data, cosmo_model):
         zsort = np.sort(stan_data["redshifts"])
 
         print("zsort", zsort[-10:])
+
+        zbins = [zsort[-1]*1.001]
+        step = 10
+        minstepsize = 0.1
+        ind = -4
+        while step > minstepsize:
+            step = zbins[0] - zsort[ind]
+            minstepsize = ((zbins[0] + zsort[ind])*0.5 > 1.)*0.05 + 0.05
+            
+            if step > minstepsize:
+                zbins = [zsort[ind]] + zbins
+                ind -= 3
         
+        print("zbins high z", zbins)
+        
+            
         zbins = np.concatenate((
-            np.linspace(zsort[0]*0.999, 1.0, 21),
-            np.linspace(1.1, zsort[-3], int(np.around((zsort[-3] - 1.1)/0.1)) + 1),
-            [zsort[-1]*1.001]))
+            np.linspace(0.05, 1.0, 21),
+            np.linspace(1.0, zbins[0], int(np.around((zbins[0] - 1.0)/0.1)) + 1)[1:-1],
+            zbins))
 
         
             
         zbins = np.array(zbins)
         
         
-        print("zbins", zbins)
+        print("zbins", zbins, list(zbins))
         
     
     stan_data["zbins"] = zbins
@@ -636,9 +651,10 @@ def add_zbins(stan_data, cosmo_model):
         nodes[j] = 1.
 
         if cosmo_model == 6:
+            minz = min(stan_data["redshifts"])*0.999
             ifn = interp1d(
-                np.concatenate(([0], stan_data["zbins"])),
-                np.concatenate(([0], nodes)), kind = 'cubic')
+                np.concatenate(([0, minz], stan_data["zbins"])),
+                np.concatenate(([0, minz], nodes)), kind = 'cubic')
         else:
             assert cosmo_model == 2
             ifn = interp1d(stan_data["zbins"], nodes, kind = 'quadratic')
