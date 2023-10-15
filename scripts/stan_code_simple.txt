@@ -414,7 +414,7 @@ model {
 
     calibs ~ normal(0, 1.);
     
-    if ((cosmo_model == 2) {
+    if (cosmo_model == 2) {
         MB ~ normal(-19, 0.001);
     } else {
         if (cosmo_model != 6) {
