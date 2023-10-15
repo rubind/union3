@@ -15,6 +15,6 @@ conda activate py39
 
 for i in {1..12}
 do
-    ~/.conda/envs/py39/bin/python3.9 union3/scripts/setup_slurm_runs.py union3/scripts/union3 koa_scratch/Union3 100 0 1
+    ~/.conda/envs/py39/bin/python3.9 union3/scripts/setup_slurm_runs.py union3/scripts/union3 koa_scratch/Union3 100 1356 0 1
     sleep 3600
 done
