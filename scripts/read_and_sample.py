@@ -701,7 +701,7 @@ def init_fn():
             "beta_angle_blue": arctan(random.random()*0.5 + 2.5),
             "beta_angle_red_low": arctan(random.random()*0.5 + 2.5),
             "beta_angle_red_high": arctan(random.random()*0.5 + 2.5),
-            "log10_sigma_int": log10(random.random(size = n_samples)*0.1 + 0.1),
+            #"log10_sigma_int": log10(random.random(size = n_samples)*0.1 + 0.1),
             "mBx1c_int_variance": [0.9, 0.05, 0.05],
             #"mass_0": 10,
             "delta_0": random.random()*0.05,
