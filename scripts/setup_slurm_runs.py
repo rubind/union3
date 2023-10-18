@@ -68,6 +68,8 @@ for i in range(n_copy):
             lines = f.read()
             f.close()
 
+            print(lines)
+            
             if lines.count("DUE TO TIME LIMIT"):
                 good_run = 0
                 print("TIME LIMIT")
@@ -91,12 +93,18 @@ for i in range(n_copy):
 
                 pickle.dump((the_data, stan_data, params), gzip.open(pfl, "wb"))
 
+
+            if cosmomodel != 6:
+                time_limit = "01-12:00:00"
+            else:
+                time_limit = "03-00:00:00"
+
                         
             f = open(wd + "/run.sh", 'w')
             f.write("""#!/bin/bash
 #SBATCH --job-name=example
 #SBATCH --partition=shared
-#SBATCH --time=01-12:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=""" + time_limit + """ ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G # Memory per node my job requires
