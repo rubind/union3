@@ -306,10 +306,14 @@ def sinn_r(r_list, O_k):
     else:
         return np.sin(np.sqrt(np.abs(O_k))  *  r_list)  /  np.sqrt(np.abs(O_k))
 
-def get_mu(z_list, cosmo):
+def get_mu(z_list, cosmo, z_helio_list = [-2]):
     r_list = n_integrate(z_list, get_Hinv, cosmo)
+
+    if z_helio_list[0] < -1:
+        z_helio_list = z_list
     
-    return 5.*np.log10(  (1. + z_list)*sinn_r(r_list, cosmo["O_k"])  ) + CosConst.cH100 - 5*np.log10(cosmo["h"])
+    return 5.*np.log10(  (1. + z_helio_list)*sinn_r(r_list, cosmo["O_k"])  ) + CosConst.cH100 - 5*np.log10(cosmo["h"])
+
 
 """
 def mu_to_z(mu_list, cosmo): # I'll have to generalize this later

@@ -9,6 +9,9 @@ multiprocessing.set_start_method("fork")
 import pystan
 import sys
 import os
+sys.path.append(os.environ["UNITY"] + "/other_cosmology/")
+
+from cosmo_functions import get_mu
 
 import matplotlib.pyplot as plt
 from scipy.stats import scoreatpercentile
@@ -572,47 +575,50 @@ def add_zbins(stan_data, cosmo_model):
         stan_data["n_zbins"] = 1
         stan_data["dmu_dbin"] = ones([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
         stan_data["dmudz_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
+        stan_data["mu_const"] = np.zeros(stan_data["n_sne"], dtype=np.float64)
         
         return stan_data
 
 
-    if cosmo_model == 2:
-        zbins = np.exp(np.linspace(np.log(stan_data["redshifts"].min()*0.999),
-                                   np.log(stan_data["redshifts"].max()*1.001), 30))
-    else:
-        assert cosmo_model == 6
-        zsort = np.sort(stan_data["redshifts"])
+    #if cosmo_model == 2:
+    #    zbins = np.exp(np.linspace(np.log(stan_data["redshifts"].min()*0.999),
+    #                               np.log(stan_data["redshifts"].max()*1.001), 30))
+    #else:
+    assert cosmo_model == 6 or cosmo_model == 2
+    zsort = np.sort(stan_data["redshifts"])
 
-        print("zsort", zsort[-10:])
+    print("zsort", zsort[-10:])
 
-        zbins = [zsort[-1]*1.001]
-        step = 10
-        minstepsize = 0.1
-        ind = -4
-        while step > minstepsize:
-            step = zbins[0] - zsort[ind]
-            minstepsize = ((zbins[0] + zsort[ind])*0.5 > 1.)*0.05 + 0.05
-            
-            if step > minstepsize:
-                zbins = [zsort[ind]] + zbins
-                ind -= 3
-        
-        print("zbins high z", zbins)
-        
-            
-        zbins = np.concatenate((
-            np.linspace(0.05, 1.0, 21),
-            np.linspace(1.0, zbins[0], int(np.around((zbins[0] - 1.0)/0.1)) + 1)[1:-1],
-            zbins))
+    zbins = [zsort[-1]*1.001]
+    step = 10
+    minstepsize = 0.1
+    ind = -5
+    z_cutoff_for_05 = 0.8
 
-        
-            
-        zbins = np.array(zbins)
-        
-        
-        print("zbins", zbins, list(zbins))
-        
-    
+    while step > minstepsize:
+        step = zbins[0] - zsort[ind]
+        minstepsize = ((zbins[0] + zsort[ind])*0.5 > z_cutoff_for_05)*0.05 + 0.05
+
+        if step > minstepsize:
+            zbins = [zsort[ind]] + zbins
+            ind -= 4
+
+    print("zbins high z", zbins)
+
+
+    zbins = np.concatenate((
+        np.linspace(0.05, z_cutoff_for_05, int(np.around(z_cutoff_for_05/0.05))),
+        np.linspace(z_cutoff_for_05, zbins[0], int(np.around((zbins[0] - z_cutoff_for_05)/0.1)) + 1)[1:-1],
+        zbins))
+
+
+
+    zbins = np.array(zbins)
+
+
+    print("zbins", zbins, list(zbins))
+
+
     stan_data["zbins"] = zbins
     
     """
@@ -651,17 +657,27 @@ def add_zbins(stan_data, cosmo_model):
         nodes[j] = 1.
 
         if cosmo_model == 6:
+
             minz = min(stan_data["redshifts"])*0.999
             ifn = interp1d(
                 np.concatenate(([0, minz], stan_data["zbins"])),
                 np.concatenate(([0, minz], nodes)), kind = 'cubic')
         else:
             assert cosmo_model == 2
-            ifn = interp1d(stan_data["zbins"], nodes, kind = 'quadratic')
+            ifn = interp1d(np.concatenate(([0], stan_data["zbins"])),
+                           np.concatenate(([0], nodes)), kind = 'cubic')
 
+            
         for i in range(stan_data["n_sne"]):
             stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i])
             stan_data["dmudz_dbin"][i, j] = (ifn(stan_data["redshifts"][i] + 0.001) - ifn(stan_data["redshifts"][i]))/0.001
+
+    if cosmo_model == 6:
+        stan_data["mu_const"] = np.zeros(stan_data["n_sne"], dtype=np.float64)
+    else:
+        stan_data["mu_const"] = get_mu(z_list = stan_data["redshifts"],
+                                       cosmo = dict(model = "flatLCDM", O_m = 0.3, O_k = 0.0, h = 0.7),
+                                       z_helio_list = stan_data["zhelio"])
 
 
     plt.figure()

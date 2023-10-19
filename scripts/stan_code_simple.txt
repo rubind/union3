@@ -23,6 +23,7 @@ data {
 
     int n_zbins;
     vector [n_zbins] zbins;
+    vector [n_sne] mu_const;
     matrix [n_sne, n_zbins] dmu_dbin;
     matrix [n_sne, n_zbins] dmudz_dbin;
 
@@ -230,10 +231,10 @@ transformed parameters {
         }
     }
     if (cosmo_model == 2) { // binned mu
-        model_mu <- dmu_dbin * mu_zbins;
+        model_mu <- dmu_dbin * mu_zbins + mu_const;
         for (i in 1:n_sne) {
             if (photoz_inds[i] > 0) {
-                model_mu[i] <- model_mu[i] + dz[photoz_inds[i]] * dmudz_dbin[i] * mu_zbins;
+                // model_mu[i] <- model_mu[i] + dz[photoz_inds[i]] * dmudz_dbin[i] * mu_zbins + mu_const;
             }
         }
     }
@@ -414,13 +415,16 @@ model {
 
     calibs ~ normal(0, 1.);
     
-    if (cosmo_model == 2) {
-        MB ~ normal(-19, 0.001);
+    // if (cosmo_model == 2) {
+    //    MB ~ normal(-19, 0.001);
+    // } else {
+    
+    if ((cosmo_model == 6) || (cosmo_model == 2)) {
     } else {
-        if (cosmo_model != 6) {
-            mu_zbins ~ normal(0, 1);
-	}
+        mu_zbins ~ normal(0, 1);
     }
+
+    // }
 
     if (cosmo_model == 5) {
          Omw0wa_vect[1] = Om;
