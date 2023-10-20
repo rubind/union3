@@ -592,7 +592,8 @@ def add_zbins(stan_data, cosmo_model):
     zbins = [zsort[-1]*1.001]
     step = 10
     minstepsize = 0.1
-    ind = -5
+    min_sn_bin = 10
+    ind = -1 - min_sn_bin
     z_cutoff_for_05 = 0.8
 
     while step > minstepsize:
@@ -601,7 +602,7 @@ def add_zbins(stan_data, cosmo_model):
 
         if step > minstepsize:
             zbins = [zsort[ind]] + zbins
-            ind -= 4
+            ind -= min_sn_bin
 
     print("zbins high z", zbins)
 
@@ -665,7 +666,7 @@ def add_zbins(stan_data, cosmo_model):
         else:
             assert cosmo_model == 2
             ifn = interp1d(np.concatenate(([0], stan_data["zbins"])),
-                           np.concatenate(([0], nodes)), kind = 'cubic')
+                           np.concatenate(([0], nodes)), kind = 'quadratic')
 
             
         for i in range(stan_data["n_sne"]):
