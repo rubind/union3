@@ -95,7 +95,7 @@ for i in range(n_copy):
 
 
             if cosmomodel != 6:
-                time_limit = "01-12:00:00"
+                time_limit = "02-12:00:00"
             else:
                 time_limit = "03-00:00:00"
 
