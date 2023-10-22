@@ -8,8 +8,8 @@ use("PDF")
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from matplotlib import rcParams
-rcParams['font.family'] = 'serif'
-rcParams['text.usetex'] = True
+#rcParams['font.family'] = 'serif'
+#rcParams['text.usetex'] = True
 from astropy.io import ascii
 
 from adaptive_contour import adaptive_contour
