@@ -29,7 +29,7 @@ conda info --envs
 conda activate py39
 
 cd /home/drubin/union3/other_cosmology
-~/.conda/envs/py39/bin/python3.9 compute_chi2s.py """ + cosmo)
+~/.conda/envs/py39/bin/python3.9 compute_chi2s.py mu_mat_union3_cosmo=2.fits """ + cosmo)
     f.close()
 
     print(subprocess.getoutput("sbatch tmp.sh"))
