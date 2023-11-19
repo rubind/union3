@@ -7,27 +7,34 @@ import os
 # Ports/copies of code written for minimarginalize.py for Union compilations
 
 def get_colors(key):
-    if key == "blue":
+    if key == "blue": # SNe
         return ((0., 83/255., 152/255.),
                 (30/255., 104/255., 168/255.),
                 (92/255., 140/255., 190/255.))
 
-    if key == "orange":
+    if key == "orange": # CMB
         return ((243/255., 116/255., 17/255.),
                 (248/255., 144/255., 62/255.),
                 (250/255., 180/255., 110/255.))
 
-    if key == "green":
+    if key == "blueorange":
+        return [(111/255., 0., 255./255.)]*3
+    if key == "bluegreen":
+        return [(0., 201/255., 165./255.)]*3
+    if key == "greenorange":
+        return [(255/255., 177/255., 0.)]*3
+
+    if key == "green": # BAO
         return ((0., 160/255., 52/255.),
                 (50/255., 176/255., 86/255.),
                 (117/255., 198/255., 126/255.))
               
-    if key == "gray":
+    if key == "gray": # Combined
         return ((71/255., 71/255., 71/255.),
                 (119/255., 119/255., 119/255.),
                 (178/255., 178/255., 178/255.))
 
-    if key == "teal":
+    if key == "teal": # Combined, w0-wa
         return ((0/255., 168/255., 168/255.),
                 (127/255., 204/255., 189/255.),
                 (190/255., 226/255., 210/255.))
