@@ -317,7 +317,7 @@ def unc_labeling(labels_indiv):
 
     for label_indiv in labels_indiv:
         if label_indiv.startswith("calibs_('Fundamental"):
-            new_labels.append("Calibration of White-Dwarf-SED Model")
+            new_labels.append("White-Dwarf-SED Model")
             
         elif label_indiv.startswith("calibs_MWEBV_"):
             new_labels.append("Milky Way Extinction")
@@ -368,6 +368,8 @@ def unc_labeling(labels_indiv):
             new_labels.append("$\\beta_B$")
         elif label_indiv == "beta_R":
             new_labels.append("$\\beta_R \equiv 0.5(\\betaRH + \\betaRL)$")
+        elif label_indiv == "delta_beta":
+            new_labels.append("$\delta \\beta \equiv \\beta_R - \\beta_B$")
         elif label_indiv == "alpha":
             new_labels.append("$\\alpha$")
         elif label_indiv == "calibs_lensing_bias":
@@ -443,6 +445,8 @@ def unc_analysis(explain, keys):
         ind = unique_new.index(new_labels[i])
         explained_new[ind] += (explained_indiv[i])**2.
     explained_new = np.sqrt(explained_new)
+
+    print("explain:", explain)
             
     for expl, lbls in [(explained_indiv, labels_indiv), (explained, labels), (explained_new, unique_new)]:
         expl = abs(array(expl))
@@ -494,6 +498,8 @@ def plot_sample_mag_limits(the_data, stan_data):
     samp_bins = bin_samples_in_redshift(stan_data = stan_data, the_data = the_data)
 
     offset = 0.2
+
+    credible_posterior = []
     
     for i in range(stan_data["n_samples"]):
         params_ind = samp_bins["inds"][i]
@@ -502,7 +508,9 @@ def plot_sample_mag_limits(the_data, stan_data):
             mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"][:,params_ind], [15.8655, 50, 84.1345])
         else:
             mobs_165084 = scoreatpercentile(fit_params["mobs_cuts"], [15.8655, 50., 84.1345])
-            
+
+
+        credible_posterior.append("$%.2f^{+%.2f}_{-%.2f}$" % (mobs_165084[1], mobs_165084[2] - mobs_165084[1], mobs_165084[1] - mobs_165084[0]))
         plt.plot(mobs_165084, [i - offset]*3, color = samp_bins["colors"][i])
         plt.plot(mobs_165084[1], i - offset, 'o', color = samp_bins["colors"][i])
             
@@ -518,7 +526,11 @@ def plot_sample_mag_limits(the_data, stan_data):
 
     for i in range(stan_data["n_samples"]):
         params_ind = samp_bins["inds"][i]
+
         plt.text(xlim[1] + 0.02*(xlim[1] - xlim[0]),
+                 i, credible_posterior[i], ha = 'left', va = 'center', color = samp_bins["colors"][i])
+        
+        plt.text(xlim[1] + 0.22*(xlim[1] - xlim[0]),
                  i, samp_bins["short_labels"][i], ha = 'left', va = 'center', color = samp_bins["colors"][i])
 
     
@@ -537,6 +549,8 @@ def plot_sample_mag_limits(the_data, stan_data):
     plt.xlabel("Limiting Mag (Observer-Frame)")
     plt.savefig(resdir + "Mag_limits.pdf", bbox_inches = 'tight')
     plt.close()
+    print("resdir", resdir)
+
 
 
 def plot_sample_pop_params(the_data, stan_data):
@@ -662,7 +676,7 @@ print("Done!", time.asctime())
 
 fit_params["beta_R"] = 0.5*(fit_params["beta_R_low"] + fit_params["beta_R_high"])
 fit_params["delta_beta_R"] = fit_params["beta_R_high"] - fit_params["beta_R_low"]
-
+fit_params["delta_beta"] = fit_params["beta_R"] - fit_params["beta_B"]
 
 for key in ["obs_mBx1c"]:
     stan_data[key] = array(stan_data[key])
@@ -671,16 +685,8 @@ label_dict = get_label_dict()
 for key in label_dict:
     print("label_dict ", key, "->", label_dict[key])
 
-isoutl = count_outliers()
-
-make_mB_vs_z()
-show_x1color_pop(log_scale = 0)
-show_x1color_pop(log_scale = 1)
 
 plot_sample_mag_limits(the_data, stan_data)
-
-make_Hubble_diagram(0)
-make_Hubble_diagram(1)
 
 
 
@@ -707,8 +713,21 @@ for cosmo_key in ["Om"] + ["wDE", "waDE", "DETF"]*has_wa:
                              "calibs",  "mBx1c_int_variance", "outl_frac", "outl_mBx1c_uncertainties"]
                  )
 
+isoutl = count_outliers()
 
-make_calib_corner(["MWEBV_multnorm", "MWEBV_addnorm"], "MWEBV_corner.pdf")
+make_mB_vs_z()
+
+make_Hubble_diagram(1)
+make_Hubble_diagram(0)
+
+show_x1color_pop(log_scale = 0)
+show_x1color_pop(log_scale = 1)
+
+
+
+
+    
+make_calib_corner(["Om", "MWEBV_multnorm", "MWEBV_addnorm"], "MWEBV_corner.pdf")
 
 
 make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
