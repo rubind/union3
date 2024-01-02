@@ -44,11 +44,13 @@ for pfl in tqdm.tqdm(sys.argv[3:]):
     for key in del_keys:
         del fit_params[key]
 
-    if thin_by > 1:
-        print("thinning...")
-        fit_params[key] = fit_params[key][::thin_by]
         
     for key in fit_params:
+        if thin_by > 1:
+            print("thinning...")
+            fit_params[key] = fit_params[key][::thin_by]
+
+        
         if key in all_samples:
             all_samples[key] = np.concatenate((all_samples[key], fit_params[key]))
         else:
