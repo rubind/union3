@@ -20,7 +20,7 @@ def get_colors(key):
     if key == "blueorange":
         return [(111/255., 0., 255./255.)]*3
     if key == "bluegreen":
-        return [(0., 201/255., 165./255.)]*3
+        return [(0., 65/255., 201/255.)]*3
     if key == "greenorange":
         return [(255/255., 177/255., 0.)]*3
 

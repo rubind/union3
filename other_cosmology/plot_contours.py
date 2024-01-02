@@ -122,13 +122,13 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0):
         if show_all_four == 0 and show_H0s == 0:
             plt.contourf(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("teal"))
             plt.contour(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25)
-            label_dict = dict(xs = [-1.2], ys = [-0.25], labels = ["$\Lambda$CDM"], colors = ["k"], sizes = [12]*10, has = ["center"]*10, vas = ["center"]*10, minys = 0.135)
+            label_dict = dict(xs = [-1.2], ys = [-0.25], labels = ["$\Lambda$CDM"], colors = ["k"], sizes = [12]*10, has = ["center"]*10, vas = ["center"]*10, minys = 0.14)
             optimize_label_positions(label_dict)
         elif show_all_four > 0:
             level_for_four = [None, 2.29575, 6.18007][show_all_four]
             #plt.contour(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, level_for_four], colors = 'k', linewidths = 0.25)
 
-            label_dict = dict(xs = [-1.2], ys = [-0.25], labels = ["$\Lambda$CDM"], colors = ["k"], sizes = [12]*10, has = ["center"]*10, vas = ["center"]*10, minys = 0.135)
+            label_dict = dict(xs = [-1.2], ys = [-0.25], labels = ["$\Lambda$CDM"], colors = ["k"], sizes = [12]*10, has = ["center"]*10, vas = ["center"]*10, minys = 0.14)
 
 
             for gridkey in ["SNeBAO", "SNeCMB", "BAOCMB", "SNeBAOCMB"]:
@@ -150,7 +150,7 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0):
                     if gridkeylabel == "SNe+BAO":
                         gridkeylabel = "SNe+BAO+$\omega_b$"
                     
-                    label_dict["xs"].append(three_x - 0.1)
+                    label_dict["xs"].append(three_x - 0.2)
                     label_dict["ys"].append(three_y + 0.25)
                     label_dict["labels"].append(gridkeylabel)
                     label_dict["colors"].append(these_colors)
@@ -167,7 +167,7 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0):
             level_for_four = [None, 2.29575, 6.18007][show_H0s]
             #plt.contour(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, level_for_four], colors = 'k', linewidths = 0.25)
 
-            label_dict = dict(xs = [-1.2], ys = [-0.25], labels = ["$\Lambda$CDM"], colors = ["k"], sizes = [12]*10, has = ["center"]*10, vas = ["center"]*10, minys = 0.135)
+            label_dict = dict(xs = [-1.2], ys = [-0.25], labels = ["$\Lambda$CDM"], colors = ["k"], sizes = [12]*10, has = ["center"]*10, vas = ["center"]*10, minys = 0.14)
 
             
             for gridkey in ["SNeBAOCMB", "SNeBAOCMBH0T", "SNeBAOCMBH0C"]:
@@ -241,7 +241,7 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0):
         plt.fill_between(early_x, -0.174851 - 1.16638*early_x, [3]*len(early_x), color = (0.7, 0.7, 0.7), zorder = 0.1)
         plt.xlim([-2, 0])
         plt.ylim([-3, 2])
-        plt.text(-0.75, 1.5, "Early Matter Domination Violated", color = 'k', ha = 'center', va = 'center')#, bbox=dict(facecolor='w', edgecolor = 'w'))
+        plt.text(-0.75, 1.7, "Early Matter Domination Violated", color = 'k', ha = 'center', va = 'center')#, bbox=dict(facecolor='w', edgecolor = 'w'))
 
         plt.plot(-1, 0., '.', color = 'k')
 
