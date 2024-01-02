@@ -1,4 +1,4 @@
-from DavidsNM import miniNM_new, minos
+from DavidsNM import miniNM_new, minos, save_img
 import pickle
 import numpy as np
 import tqdm
@@ -482,6 +482,9 @@ if np.max(np.abs(mu_list)) < 10:
     mu_list += get_mu(z_list = dat[0, 1:],
                       cosmo = dict(model = "flatLCDM", O_m = 0.3, O_k = 0.0, h = 0.7))
 
+    dat[1:, 0] = mu_list
+    save_img(dat, SN_matrix.replace(".fits", "_mu.fits"))
+    
 z_list = dat[0, 1:]
 mu_invcov = dat[1:, 1:]
 
