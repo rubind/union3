@@ -2,7 +2,7 @@ from matplotlib import use
 use("PDF")
 import matplotlib.pyplot as plt
 import numpy as np
-from FileRead import readcol
+from FileRead import readcol, file_to_fn
 from scipy.interpolate import interp1d
 import sncosmo
 from astropy.table import Table
@@ -184,18 +184,18 @@ def make_dataset(wd, cal_offsets):
     model = sncosmo.Model(source=source)
 
     if z_range_key == "L":
-        zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=2000.))
+        zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=8000., ratefunc = SN_rate_function))
         min_date = dates[0] + params["cadence"]*2
         max_date = dates[-1] - params["cadence"]*2
     elif z_range_key == "H":
-        zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"]))
+        zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"], ratefunc = SN_rate_function))
         min_date = dates[0] + params["cadence"]*2
         max_date = dates[-1] - params["cadence"]*2
     elif z_range_key == "V":
         dates = np.arange(params["HST_visit"], dtype=np.float64)*params["HST_cadence"]
         min_date = dates[0] + params["HST_cadence"]
         max_date = dates[-1] - params["HST_cadence"]*3
-        zlist = list(sncosmo.zdist(0., zmax = 3.0, time=dates[-1] - dates[0] - 4*params["HST_cadence"], area=2.0))
+        zlist = list(sncosmo.zdist(0., zmax = 3.0, time=dates[-1] - dates[0] - 4*params["HST_cadence"], area=5.0, ratefunc = SN_rate_function))
     else:
         raise Exception("Unknown z_range_key " + z_range_key)
 
@@ -472,8 +472,12 @@ for filt in "griz":
     dict_of_obsframe_filt["sdss" + filt] = sncosmo.get_bandpass("sdss" + filt)
 for filt in ["f775w", "f850lp", "f105w", "f125w", "f160w"]:
     dict_of_obsframe_filt[filt] = sncosmo.get_bandpass(filt)
-    
-params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
+
+
+SN_rate_function = file_to_fn(os.environ["UNITY"] + "/simulated/SN_rates.txt", kind = 'linear')
+
+
+params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
               obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
               Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
