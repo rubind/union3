@@ -188,7 +188,6 @@ def make_dataset(wd, cal_offsets):
         mabs = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
         p["latentMB"] = mabs
 
-
         delta_mBx1c = np.random.normal(size = 3)*np.array([np.sqrt(params["sig_unexplained_3d"][0]**2. + (0.055*z)**2. + (0.00217/z)**2.),
 
         
