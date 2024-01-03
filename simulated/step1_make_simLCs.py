@@ -15,6 +15,22 @@ from astropy.cosmology import FlatLambdaCDM
 import argparse
 from scipy.special import erf
 
+def band_to_instr(band):
+    if band[:4] == "sdss":
+        return "SDSS"
+    elif band[:2] == "f1":
+        return "WFC3"
+    else:
+        return "ACSWF"
+
+def band_to_name(band):
+    if band[:4] == "sdss":
+        return "SDSS_" + band[-1]
+    elif band[:2] == "f1":
+        return "WFC3_" + band.lower()
+    else:
+        return band.upper()
+    
 
 def get_SNCosmo_model(these_params, source):
     #sncosmo_model = sncosmo.Model(source="salt2-extended")
@@ -95,7 +111,10 @@ def get_observed_SNe_mag_limited(nsne, dates, all_SNe, model, z_range_key, mag_l
                 model = get_SNCosmo_model(all_SNe[i], source)
                 if params["obs_mag_selection"]:
                     if z_range_key == "V":
-                        all_mags.append(model.bandmag("f125w", "ab", night))
+                        try:
+                            all_mags.append(model.bandmag("f125w", "ab", night))
+                        except:
+                            all_mags.append(10.)
                     else:
                         raise Exception("Unknown z_range_key " + z_range_key)
                 else:
@@ -147,11 +166,16 @@ def make_dataset(wd, cal_offsets):
             
     if z_range_key == "L":
         obs_err = 200. # ZP = 27.5, so depth of 20.0 at 5 sigma
+        bands_to_use = ['sdssg', 'sdssr', 'sdssi', 'sdssz']
     elif z_range_key == "H":
         obs_err = 5. # Depth of 24.0 at 5 sigma
+        bands_to_use = ['sdssg', 'sdssr', 'sdssi', 'sdssz']
     elif z_range_key == "V":
         # For MCT, median F160W depth is 26.146, F125W is 26.442, F850LP is 26.164, F775W is 25.718
+        # For MCT, median F160W visits are 6.5, F125W are 6, F850LP 1, and F775W 3.5
+        # For MCT, median F160W cadences are 18.2, F125W are 18.7, F850LP 16.3, and F775W is 17.15
         obs_err = 0.7 # Depth of 26.14 at 5 sigma
+        bands_to_use = ['f775w', 'f850lp', 'f105w', 'f125w', 'f160w']
     else:
         raise Exception("Unknown z_range_key " + z_range_key)
 
@@ -161,10 +185,17 @@ def make_dataset(wd, cal_offsets):
 
     if z_range_key == "L":
         zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=2000.))
+        min_date = dates[0] + params["cadence"]*2
+        max_date = dates[-1] - params["cadence"]*2
     elif z_range_key == "H":
         zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"]))
+        min_date = dates[0] + params["cadence"]*2
+        max_date = dates[-1] - params["cadence"]*2
     elif z_range_key == "V":
-        zlist = list(sncosmo.zdist(0., zmax = 2.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"]))
+        dates = np.arange(params["HST_visit"], dtype=np.float64)*params["HST_cadence"]
+        min_date = dates[0] + params["HST_cadence"]
+        max_date = dates[-1] - params["HST_cadence"]*3
+        zlist = list(sncosmo.zdist(0., zmax = 3.0, time=dates[-1] - dates[0] - 4*params["HST_cadence"], area=2.0))
     else:
         raise Exception("Unknown z_range_key " + z_range_key)
 
@@ -175,7 +206,7 @@ def make_dataset(wd, cal_offsets):
     all_SNe = []
     for z in zlist:
         p = dict(z = z,
-                 t0 = np.random.uniform(dates[0] + params["cadence"]*2, dates[-1] - params["cadence"]*2),
+                 t0 = np.random.uniform(min_date, max_date),
                  latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
                  latentc = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"],
                  mass = 10. + np.random.normal())
@@ -187,12 +218,12 @@ def make_dataset(wd, cal_offsets):
 
         p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
 
-        delta_mBx1c = np.random.normal(size = 3)*np.array([np.sqrt(params["sig_unexplained_3d"][0]**2. + (0.055*z)**2. + (0.00217/z)**2.),
-                                                           params["sig_unexplained_3d"][1],
-                                                           params["sig_unexplained_3d"][2]])
-        p["MB"] = p["latentMB"] + delta_mBx1c[0]
-        p["x1"] = p["latentx1"] + delta_mBx1c[1]
-        p["c"] = p["latentc"] + delta_mBx1c[2]
+        p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + (0.00217/z)**2.),
+                                                           params["sigma_unexplained_3d"][1],
+                                                           params["sigma_unexplained_3d"][2]])
+        p["MB"] = p["latentMB"] + p["delta_mBx1c"][0]
+        p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
+        p["c"] = p["latentc"] + p["delta_mBx1c"][2]
 
         all_SNe.append(p)
 
@@ -200,7 +231,7 @@ def make_dataset(wd, cal_offsets):
 
     if params["volume_limited"] == 0:
         if z_range_key == "V":
-            observed_SNe = get_observed_SNe_mag_limited(dates = dates, all_SNe = all_SNe, model = model, mag_limit = 26.6, sigma_mag_limit = 0.25)
+            observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, mag_limit = 26.6, sigma_mag_limit = 0.25, z_range_key = z_range_key)
         else:
             observed_SNe = get_observed_SNe_followup_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model)
     else:
@@ -224,7 +255,11 @@ def make_dataset(wd, cal_offsets):
             elif z_range_key == "H":
                 peak_mags.append(model.bandmag("sdssi", "ab", all_SNe[i]["t0"]))
             elif z_range_key == "V":
-                peak_mags.append(model.bandmag("f125w", "ab", all_SNe[i]["t0"]))
+                try:
+                    peak_mags.append(model.bandmag("f125w", "ab", all_SNe[i]["t0"]))
+                except:
+                    peak_mags.append(model.bandmag("f850lp", "ab", all_SNe[i]["t0"]))
+
         else:
             peak_mags.append(approxmB(model, all_SNe[i]["t0"]))
         SNe_x0s.append(model.get("x0"))
@@ -277,8 +312,8 @@ def make_dataset(wd, cal_offsets):
 
             these_dates = dates[np.where(np.abs(dates - all_SNe[i]["t0"]) < 50*(1 + all_SNe[i]["z"]))]
             
-            for band in ['sdssg', 'sdssr', 'sdssi', 'sdssz']:
-                rest_frame_band = sncosmo.Bandpass(SDSS_obs_frame[band[-1]].wave/(1 + all_SNe[i]["z"]), SDSS_obs_frame[band[-1]].trans)
+            for band in bands_to_use:
+                rest_frame_band = sncosmo.Bandpass(dict_of_obsframe_filt[band].wave/(1 + all_SNe[i]["z"]), dict_of_obsframe_filt[band].trans)
 
                   
                 try:
@@ -314,12 +349,12 @@ def make_dataset(wd, cal_offsets):
 #Fluxerr :
 #ZP :
 #end :
-@INSTRUMENT SDSS
-@BAND SDSS_""" + band[-1]  + """
+@INSTRUMENT """ + band_to_instr(band) + """
+@BAND """ + band_to_name(band) + """
 @MAGSYS AB
 """)
                     for j in range(len(obs_fluxes)):
-                        towrite = [dates[j], obs_fluxes[j], obs_err*(opts.addnoise*0.99 + 0.01), 27.5 + cal_offsets[band[-1]]]
+                        towrite = [dates[j], obs_fluxes[j], obs_err*(opts.addnoise*0.99 + 0.01), 27.5 + cal_offsets[band]]
                         towrite = [str(item) for item in towrite]
                         f.write("  ".join(towrite) + '\n')
                     f.close()
@@ -420,7 +455,7 @@ parser.add_argument('--addcalibration', help='Add Calibration', type = int)
 parser.add_argument('--modeluncertainty', help='Add Model Uncertainty', type = int)
 parser.add_argument('--prefixname', help='Prefix Name for Directory', type = str)
 parser.add_argument('--skewdist', help='x1 and c distributions have skew', type = int)
-parser.add_argument('--volumelimited', help='volume-limited, not magnitude-limited datasets')
+parser.add_argument('--volumelimited', help='volume-limited, not magnitude-limited datasets', type=int)
 parser.add_argument('--obsmagselection', help="If magnitude-limited, select based on observer-frame magntiudes, not rest-frame x0", type=int)
 
 
@@ -430,13 +465,15 @@ opts = parser.parse_args()
 salt2_version = "salt3-22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
 
-nonSALTkeys = ["MB", "mass", "delta_m"]
+nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc"]
 
-SDSS_obs_frame = {}
+dict_of_obsframe_filt = {}
 for filt in "griz":
-    SDSS_obs_frame[filt] = sncosmo.get_bandpass("sdss" + filt)
-
-params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4.,
+    dict_of_obsframe_filt["sdss" + filt] = sncosmo.get_bandpass("sdss" + filt)
+for filt in ["f775w", "f850lp", "f105w", "f125w", "f160w"]:
+    dict_of_obsframe_filt[filt] = sncosmo.get_bandpass(filt)
+    
+params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 5., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
               obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
               Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
@@ -540,7 +577,7 @@ source ~/.bash_profile
 
 for dataset_ind in tqdm.trange(opts.ndataset):
     cal_offsets = {}
-    for band in "griz":
+    for band in dict_of_obsframe_filt:
         cal_offsets[band] = np.random.normal()*0.005*opts.addcalibration
 
     frac_var_mBx1c = np.random.exponential(scale=1.0, size=3)
