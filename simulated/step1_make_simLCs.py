@@ -185,12 +185,15 @@ def make_dataset(wd, cal_offsets):
         relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
         mass_term = -params["delta"]*relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*0.05)   ))
 
-        mabs = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
-        p["latentMB"] = mabs
+        p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
 
         delta_mBx1c = np.random.normal(size = 3)*np.array([np.sqrt(params["sig_unexplained_3d"][0]**2. + (0.055*z)**2. + (0.00217/z)**2.),
+                                                           params["sig_unexplained_3d"][1],
+                                                           params["sig_unexplained_3d"][2]])
+        p["MB"] = p["latentMB"] + delta_mBx1c[0]
+        p["x1"] = p["latentx1"] + delta_mBx1c[1]
+        p["c"] = p["latentc"] + delta_mBx1c[2]
 
-        
         all_SNe.append(p)
 
 
