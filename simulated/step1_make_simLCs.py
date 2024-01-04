@@ -369,14 +369,14 @@ def make_dataset(wd, cal_offsets):
             
 
 def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low):
-    dataset_list = ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind]
+    dataset_list = ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
     dataset_list = str(dataset_list).replace(" ", "")
 
     if twopop:
         population_model = "a 2"
     else:
         if include_low:
-            population_model = "sample 0.5 0.0"
+            population_model = "sample 0.5 0.0 1.0"
         else:
             population_model = "sample 0.5"
 
@@ -501,12 +501,14 @@ f = open(opts.prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(opts.ndataset):
     f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/SDSS_r_selection.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/SDSS_i_selection.txt    23.0            0.5\n" % dataset_ind)
+    f.write("dataset_V_%03i_v1.txt  $UNITY/paramfiles/WFC3_f125w_selection.txt	26.6		0.25\n" % dataset_ind)
 f.close()
 
 f = open(opts.prefixname + "/mag_cuts_x0.txt", 'w')
 for dataset_ind in range(opts.ndataset):
-    f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    18.0            0.5\n" % dataset_ind)
-    f.write("dataset_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    23.0            0.5\n" % dataset_ind)
+    f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    18.0            0.5\n" % dataset_ind)
+    f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    23.0            0.5\n" % dataset_ind)
+    f.write("dataset_V_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    26.0            0.5\n" % dataset_ind)
 f.close()
 
 

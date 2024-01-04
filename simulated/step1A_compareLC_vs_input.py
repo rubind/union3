@@ -134,6 +134,8 @@ for resfl in tqdm.tqdm(glob.glob(globstr)):
             LH = "L"
         elif resfl.count("_H_"):
             LH = "H"
+        elif resfl.count("_V_"):
+            LH = "V"
         else:
             assert 0, resfl
         
@@ -207,8 +209,8 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
         
     else:
 
-        for LH in "LH":
-            pltcolor = dict(L = 'b', H = 'r')[LH]
+        for LH in "LHV":
+            pltcolor = dict(L = 'b', H = 'g', V = 'r')[LH]
 
             if keys[0] != "redshift":
                 inds = np.where((all_dat["LH"] == LH))#*(all_dat["redshift"] < 0.055))
