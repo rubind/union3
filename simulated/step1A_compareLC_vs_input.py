@@ -76,7 +76,7 @@ def fit_delta_cosmo(zs, delta_mus, pltzs):
     return modelfn(P, [[pltzs, None]]), "%.4f" % P[1]
 
 
-"""
+
 
     
 all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
@@ -164,7 +164,7 @@ all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
 
 
 pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
-"""
+
 all_dat = pickle.load(open("all_dat.pickle", 'rb'))
 
 print(len(all_dat["redshift"]))

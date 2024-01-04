@@ -8,13 +8,7 @@
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
-cd /home/drubin/nfs_fs02/simulated_data_runs_no_twobeta/
-python $UNITY/simulated/make_sim_multidataset.py 1 1 1 0 0 1 > log_sim.txt
-
-
-sim_sel_effects = int(sys.argv[1])
-fit_sel_effects = int(sys.argv[2])
-sim_sig_int = int(sys.argv[3])
-sim_two_beta = int(sys.argv[4])
-fit_two_beta = int(sys.argv[5])
-k_correct = int(sys.argv[6])
+cd /home/drubin/union3/simulated
+python step1_make_simLCs.py --ndataset 10 --addnoise 1 --addcalibration 1 --modeluncertainty 1 --prefixname /home/drubin/koa_scratch/sim_data_simplex --skewdist 1 --volumelimited 0 --obsmagselection 1 > log.txt
+cd /home/drubin/koa_scratch/sim_data_simplex
+python /home/drubin/salt2_union//python_code/slurmfit.py 10 dontsort
