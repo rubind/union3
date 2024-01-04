@@ -470,7 +470,7 @@ parser.add_argument('--obsmagselection', help="If magnitude-limited, select base
 opts = parser.parse_args()
 
 
-salt2_version = "salt3-22"
+salt2_version = "salt3-f22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
 
 nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc"]
