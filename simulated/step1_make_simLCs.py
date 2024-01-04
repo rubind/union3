@@ -195,7 +195,7 @@ def make_dataset(wd, cal_offsets):
         dates = np.arange(params["HST_visit"], dtype=np.float64)*params["HST_cadence"]
         min_date = dates[0] + params["HST_cadence"]
         max_date = dates[-1] - params["HST_cadence"]*3
-        zlist = list(sncosmo.zdist(0., zmax = 3.0, time=dates[-1] - dates[0] - 4*params["HST_cadence"], area=5.0, ratefunc = SN_rate_function))
+        zlist = list(sncosmo.zdist(0., zmax = 3.2, time=dates[-1] - dates[0] - 4*params["HST_cadence"], area=4.0, ratefunc = SN_rate_function))
     else:
         raise Exception("Unknown z_range_key " + z_range_key)
 
@@ -233,15 +233,18 @@ def make_dataset(wd, cal_offsets):
         if z_range_key == "V":
             observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, mag_limit = 26.6, sigma_mag_limit = 0.25, z_range_key = z_range_key)
         else:
-            observed_SNe = get_observed_SNe_followup_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model)
+            observed_SNe = get_observed_SNe_followup_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, z_range_key = z_range_key)
     else:
-        observed_SNe = get_observed_SNe_volume_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model)
+        observed_SNe = get_observed_SNe_volume_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, z_range_key = z_range_key)
 
+
+    NA, bins, NA = plt.hist([all_SNe[i]["z"] for i in range(nsne)], bins = 30)
+    plt.close()
     
-    plt.hist([all_SNe[i]["z"] for i in range(nsne) if observed_SNe[i] == 1], alpha = 0.5, label = str(sum(observed_SNe)))
-    plt.hist([all_SNe[i]["z"] for i in range(nsne) if observed_SNe[i] == 0], alpha = 0.5, label = str(nsne - sum(observed_SNe)))
+    plt.hist([all_SNe[i]["z"] for i in range(nsne) if observed_SNe[i] == 1], alpha = 0.5, label = str(sum(observed_SNe)), bins = bins)
+    plt.hist([all_SNe[i]["z"] for i in range(nsne) if observed_SNe[i] == 0], alpha = 0.5, label = str(nsne - sum(observed_SNe)), bins = bins)
     plt.legend(loc = 'best')
-    plt.savefig("selected.pdf")
+    plt.savefig("selected_%s.pdf" % z_range_key)
     plt.close()
 
     peak_mags = []
@@ -265,9 +268,14 @@ def make_dataset(wd, cal_offsets):
         SNe_x0s.append(model.get("x0"))
         
     peak_mags = np.array(peak_mags)
-    plt.hist(peak_mags[np.where(observed_SNe)], alpha = 0.5)
-    plt.hist(peak_mags[np.where(1 - observed_SNe)], alpha = 0.5)
-    plt.savefig("selected_mags.pdf")
+
+    NA, bins, NA = plt.hist(peak_mags, bins = 30)
+    plt.close()
+    
+    plt.hist(peak_mags[np.where(observed_SNe)], alpha = 0.5, label = str(sum(observed_SNe)), bins = bins)
+    plt.hist(peak_mags[np.where(1 - observed_SNe)], alpha = 0.5, label = str(nsne - sum(observed_SNe)), bins = bins)
+    plt.legend(loc = 'best')
+    plt.savefig("selected_mags_%s.pdf" % z_range_key)
     plt.close()
     
 
@@ -474,7 +482,8 @@ for filt in ["f775w", "f850lp", "f105w", "f125w", "f160w"]:
     dict_of_obsframe_filt[filt] = sncosmo.get_bandpass(filt)
 
 
-SN_rate_function = file_to_fn(os.environ["UNITY"] + "/simulated/SN_rates.txt", kind = 'linear')
+[tmpx, tmpy] = readcol(os.environ["UNITY"] + "/simulated/SN_rates.txt", 'ff')
+SN_rate_function = interp1d(tmpx, tmpy*1e-4, kind = 'linear')
 
 
 params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
