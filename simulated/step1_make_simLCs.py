@@ -368,7 +368,7 @@ def make_dataset(wd, cal_offsets):
                     f.close()
             
 
-def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low):
+def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low, cosmomodel):
     dataset_list = ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
     dataset_list = str(dataset_list).replace(" ", "")
 
@@ -452,7 +452,7 @@ source ~/.bash_profile
 export UNION=../
 """)
     f.write("cd " + pwd + "/" + wd + '\n')
-    f.write("python $UNITY/scripts/read_and_sample.py paramfile.txt 1 > log.txt\n")
+    f.write("~/.conda/envs/py39/bin/python $UNITY/scripts/read_and_sample.py paramfile.txt %i > log.txt\n" % cosmomodel)
 
     f.close()
 
@@ -618,7 +618,7 @@ source ~/.bash_profile
 """)
 
     f_UNITY[include_low].write("cd " + pwd + "/" + opts.prefixname + "\n")
-    f_UNITY[include_low].write("python $PATHMODEL/python_code/cut_fits.py dataset*\n")
+    f_UNITY[include_low].write("~/.conda/envs/py39/bin/python $PATHMODEL/python_code/cut_fits.py dataset*\n")
 
 for dataset_ind in tqdm.trange(opts.ndataset):
     cal_offsets = {}
@@ -660,14 +660,15 @@ for dataset_ind in tqdm.trange(opts.ndataset):
 
     for include_low in [0, 1]:
         for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]):
-            wd = opts.prefixname + "/UNITY%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
-                                                          "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, dataset_ind)
-            subprocess.getoutput("mkdir " + wd)
-            
-            set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low)
-            
-            f_UNITY[include_low].write("cd " + pwd + "/" + wd + '\n')
-            f_UNITY[include_low].write("sbatch run.sh\n")
+            for cosmomodel in [1] + [3]*include_low:
+                wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
+                                                                     "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
+                subprocess.getoutput("mkdir " + wd)
+
+                set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel)
+
+                f_UNITY[include_low].write("cd " + pwd + "/" + wd + '\n')
+                f_UNITY[include_low].write("sbatch run.sh\n")
 
 f_UNITY[0].close()
 f_UNITY[1].close()
