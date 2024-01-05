@@ -42,7 +42,7 @@ for lowhigh in "LH":
     for fl in tqdm.tqdm(glob.glob(globstr + "/SN_params/*")):
         all_mags.append(read_param(fl, "peak_mag"))
         all_obs.append(read_param(fl, "observed"))
-        all_dm.append(read_param(fl, "delta_m"))
+        all_dm.append(read_param(fl, "delta_mu"))
         all_z.append(read_param(fl, "z"))
 
     all_mags = np.array(all_mags)

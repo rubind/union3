@@ -225,6 +225,12 @@ def make_dataset(wd, cal_offsets):
         p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
         p["c"] = p["latentc"] + p["delta_mBx1c"][2]
 
+        p["delta_mB"] = p["delta_mBx1c"][0]
+        p["delta_x1"] = p["delta_mBx1c"][1]
+        p["delta_c"] = p["delta_mBx1c"][2]
+
+        p["delta_mu"] = p["delta_mB"] + 0.14*p["delta_x1"] - 3.*p["delta_c"]
+        
         all_SNe.append(p)
 
 
@@ -261,6 +267,7 @@ def make_dataset(wd, cal_offsets):
                 try:
                     peak_mags.append(model.bandmag("f125w", "ab", all_SNe[i]["t0"]))
                 except:
+                    assert all_SNe[i]["z"] < 0.5
                     peak_mags.append(model.bandmag("f850lp", "ab", all_SNe[i]["t0"]))
 
         else:
@@ -476,7 +483,7 @@ opts = parser.parse_args()
 salt2_version = "salt3-f22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
 
-nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc"]
+nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "delta_mB", "delta_x1", "delta_c", "delta_mu"]
 
 dict_of_obsframe_filt = {}
 for filt in "griz":
