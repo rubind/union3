@@ -458,7 +458,9 @@ separate_mass_x1c	1
 source ~/.bash_profile
 export UNION=../
 """)
-    f.write("cd " + pwd + "/" + wd + '\n')
+    f.write("cd " + pwd + '\n')
+    f.write("cd " + wd + '\n')
+
     f.write("~/.conda/envs/py39/bin/python $UNITY/scripts/read_and_sample.py paramfile.txt %i > log.txt\n" % cosmomodel)
 
     f.close()
@@ -623,8 +625,8 @@ for include_low in [0, 1]:
 #SBATCH --output=runU-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 """)
-
-    f_UNITY[include_low].write("cd " + pwd + "/" + opts.prefixname + "\n")
+    f_UNITY[include_low].write("cd " + pwd + '\n')
+    f_UNITY[include_low].write("cd " + opts.prefixname + '\n')
     f_UNITY[include_low].write("~/.conda/envs/py39/bin/python $PATHMODEL/python_code/cut_fits.py dataset*\n")
 
 for dataset_ind in tqdm.trange(opts.ndataset):
@@ -674,7 +676,8 @@ for dataset_ind in tqdm.trange(opts.ndataset):
 
                 set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel)
 
-                f_UNITY[include_low].write("cd " + pwd + "/" + wd + '\n')
+                f_UNITY[include_low].write("cd " + pwd + '\n')
+                f_UNITY[include_low].write("cd " + wd + '\n')
                 f_UNITY[include_low].write("sbatch run.sh\n")
 
 f_UNITY[0].close()
