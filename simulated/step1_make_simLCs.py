@@ -659,8 +659,8 @@ for dataset_ind in tqdm.trange(opts.ndataset):
 
 
     for include_low in [0, 1]:
-        for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]):
-            for cosmomodel in [1] + [3]*include_low:
+        for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
+            for cosmomodel in [1]*(1 - include_low) + [3]*include_low:
                 wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
                                                                      "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
                 subprocess.getoutput("mkdir " + wd)
