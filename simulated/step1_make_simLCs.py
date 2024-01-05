@@ -414,7 +414,10 @@ redshift_coeff_type     %s
 electron_coeff		[0.0042,0.00042]
 IG_extinction_coeff	0.0001
 
-    
+
+max_params_to_save	50
+
+
 do_twoalphabeta		1
 threeD_unexplained	%i
 
@@ -521,6 +524,7 @@ f.write("""
 ('Fundamental', (10000.0, 100000.0)):                                                                   0.0001
 
 
+"SALT_UV_CAL":                                                                                          0.0001
 "SALT_U_CAL":                                                                                           0.0001
 "SALT_I_CAL":                                                                                           0.0001
 
@@ -534,6 +538,18 @@ f.write("""
 ('Lambda', 'SDSS|SDSS_r'):    0.01
 ('Lambda', 'SDSS|SDSS_i'):    0.01
 ('Lambda', 'SDSS|SDSS_z'):    0.01
+
+('Zeropoint', 'ACSWF|F775W'): 0.005
+('Zeropoint', 'ACSWF|F850LP'): 0.005
+('Zeropoint', 'WFC3|WFC3_f105w'): 0.005
+('Zeropoint', 'WFC3|WFC3_f125w'): 0.005
+('Zeropoint', 'WFC3|WFC3_f160w'): 0.005
+('Lambda', 'ACSWF|F775W'): 0.01
+('Lambda', 'ACSWF|F850LP'): 0.01
+('Lambda', 'WFC3|WFC3_f105w'): 0.01
+('Lambda', 'WFC3|WFC3_f125w'): 0.01
+('Lambda', 'WFC3|WFC3_f160w'): 0.01
+
 """)
 f.close()
 
@@ -547,6 +563,7 @@ f.write("""
 ('Fundamental', (10000.0, 100000.0)):                                                                   0.0001
 
 
+"SALT_UV_CAL":                                                                                          0.0001
 "SALT_U_CAL":                                                                                           0.0001
 "SALT_I_CAL":                                                                                           0.0001
 
@@ -560,6 +577,19 @@ f.write("""
 ('Lambda', 'SDSS|SDSS_r'):    0.01
 ('Lambda', 'SDSS|SDSS_i'):    0.01
 ('Lambda', 'SDSS|SDSS_z'):    0.01
+
+('Zeropoint', 'ACSWF|F775W'): 0.0001
+('Zeropoint', 'ACSWF|F850LP'): 0.0001
+('Zeropoint', 'WFC3|WFC3_f105w'): 0.0001
+('Zeropoint', 'WFC3|WFC3_f125w'): 0.0001
+('Zeropoint', 'WFC3|WFC3_f160w'): 0.0001
+('Lambda', 'ACSWF|F775W'): 0.01
+('Lambda', 'ACSWF|F850LP'): 0.01
+('Lambda', 'WFC3|WFC3_f105w'): 0.01
+('Lambda', 'WFC3|WFC3_f125w'): 0.01
+('Lambda', 'WFC3|WFC3_f160w'): 0.01
+
+
 """)
 f.close()
 
