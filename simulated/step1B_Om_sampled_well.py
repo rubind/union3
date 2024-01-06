@@ -5,7 +5,7 @@ except:
 import sys
 import glob
 
-def check_param(logfl, param):
+def check_param(logfl, param, leave_running_jobs_alone):
     grepout = getoutput("grep '" + param + " ' " + logfl).split(None)
     print(grepout)
     
@@ -20,8 +20,8 @@ def check_param(logfl, param):
 leave_running_jobs_alone = int(sys.argv[1])
 
 for logfl in glob.glob("UNITY*/log.txt"):
-    check_Om = check_param(logfl, "Om", leave_running_jobs_alone)
-    check_wDE = check_param(logfl, "wDE", leave_running_jobs_alone)
+    check_Om = check_param(logfl, param = "Om", leave_running_jobs_alone = leave_running_jobs_alone)
+    check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone)
 
     if check_Om and check_wDE:
         print("Good!")
