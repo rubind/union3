@@ -19,6 +19,11 @@ def check_param(logfl, param, leave_running_jobs_alone):
 
 leave_running_jobs_alone = int(sys.argv[1])
 
+whoami = getoutput("whoami")
+grepout = getoutput("squeue | grep " + whoami + " | grep -v ' R '")
+
+assert grepout.strip() == ""
+
 for logfl in glob.glob("UNITY*/log.txt"):
     check_Om = check_param(logfl, param = "Om", leave_running_jobs_alone = leave_running_jobs_alone)
     check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone)
