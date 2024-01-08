@@ -22,7 +22,7 @@ leave_running_jobs_alone = int(sys.argv[1])
 whoami = getoutput("whoami")
 grepout = getoutput("squeue | grep " + whoami + " | grep -v ' R '")
 
-assert grepout.strip() == ""
+assert grepout.strip() == "", "Some jobs are still queued"
 
 for logfl in glob.glob("UNITY*/log.txt"):
     check_Om = check_param(logfl, param = "Om", leave_running_jobs_alone = leave_running_jobs_alone)
