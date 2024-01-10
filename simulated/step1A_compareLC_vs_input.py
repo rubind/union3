@@ -6,9 +6,10 @@ from subprocess import getoutput
 import tqdm
 import sys
 from scipy.stats import scoreatpercentile
-from astropy.cosmology import FlatLambdaCDM
+from astropy.cosmology import FlatLambdaCDM, FlatwCDM
 from DavidsNM import miniLM_new
 import pickle
+
 
 def do_med_bins(x, y, sigy, nbins, average_not_median = 0):
     bad_mask = np.isnan(x) + np.isnan(y) + np.isnan(sigy)
@@ -56,8 +57,8 @@ def get_dmu(bands, resfl):
 def modelfn(P, passdata):
     [zs, delta_mus] = passdata[0]
 
-    cosmo = FlatLambdaCDM(Om0 = P[1], H0 = 70.)
-    cosmo3 = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
+    cosmo = FlatwCDM(Om0 = P[1], H0 = 70., w0 = P[2])
+    cosmo3 = FlatwCDM(Om0 = 0.3, H0 = 70., w0 = -1)
     mu = cosmo.distmod(zs).value
     mu3 = cosmo3.distmod(zs).value
     return mu - mu3 + P[0]
@@ -70,15 +71,15 @@ def pullfn(P, passdata):
     return delta_mus - delta_mu_model
 
 
-def fit_delta_cosmo(zs, delta_mus, pltzs):
-    P, NA, NA = miniLM_new(ministart = [0.3, 0.0], miniscale = [1., 1.], residfn = pullfn, passdata = [zs, delta_mus])
+def fit_delta_cosmo(zs, delta_mus, pltzs, fit_w):
+    P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1], miniscale = [1., 1., fit_w], residfn = pullfn, passdata = [zs, delta_mus])
 
-    return modelfn(P, [[pltzs, None]]), "%.4f" % P[1]
-
-
+    return modelfn(P, [[pltzs, None]]), "%.4f %.4f" % (P[1], P[2])
 
 
-    
+
+
+"""    
 all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                true_x1 = [], delta_x1 = [], obs_sig_x1 = [],
                delta_mag = [],
@@ -166,12 +167,16 @@ all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
 
 
 pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
+"""
 
 all_dat = pickle.load(open("all_dat.pickle", 'rb'))
 
 print(len(all_dat["redshift"]))
 
 plt.figure(figsize = (36, 32))
+
+zbins = 200
+
 for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("redshift", "delta_c", 0),
                           ("true_c", "delta_c", 0),
@@ -179,16 +184,16 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("redshift", "pulls_c", 0),
                           ("redshift", "pulls_x1", 0),
                           ("redshift", "delta_mu", 0),
-                          ("redshift", "delta_mag", 35),
-                          ("redshift", "delta_c", 35),
-                          ("redshift", "true_c", 35),
+                          ("redshift", "delta_mag", zbins),
+                          ("redshift", "delta_c", zbins),
+                          ("redshift", "true_c", zbins),
                           ("true_c", "delta_mu", 35),
                           ("true_x1", "delta_mu", 35),
                           ("true_c", "delta_c", 35),
-                          ("redshift", "delta_x1", 35),
-                          ("redshift", "delta_mu", 35),
-                          ("redshift", "dmudg", 0),
-                          ("redshift", "dmudg", 35),
+                          ("redshift", "delta_x1", zbins),
+                          ("redshift", "delta_mu", zbins),
+                          ("redshift", "dmudg", zbins),
+                          ("redshift", "dmudg", zbins),
                           ("dmudg", "delta_mag", 35),
                           ("dmudg", "delta_x1", 35),
                           ("dmudg", "delta_c", 35),
@@ -238,7 +243,9 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                 pltx = np.linspace(0.01, xlim[1], 200)
                 
                 if keys[0] == "redshift" and keys[1] == "delta_mu":
-                    plty, label = fit_delta_cosmo(binx, biny, pltx)
+                    plty, label = fit_delta_cosmo(binx, biny, pltx, fit_w = 0)
+                    plt.plot(pltx, plty, label = label)
+                    plty, label = fit_delta_cosmo(binx, biny, pltx, fit_w = 1)
                     plt.plot(pltx, plty, label = label)
                 
 
@@ -247,7 +254,7 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
         
     if keys[0] == "redshift":
         plt.xscale('log')
-        plt.xlim(0.01, 1)
+        plt.xlim(0.01, 3)
 
     plt.axhline(0)
     

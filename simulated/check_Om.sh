@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=example
+#SBATCH --job-name=checkruns
 #SBATCH --partition=shared
-#SBATCH --time=0-12:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=0-18:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=6G # Memory per node my job requires
@@ -9,7 +9,7 @@
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
-for i in {1..24}
+for i in {1..36}
 do
     cd /home/drubin/koa_scratch/sim_data_simplex/
     python /home/drubin/union3//simulated/step1B_Om_sampled_well.py 1
