@@ -175,7 +175,7 @@ def make_dataset(wd, cal_offsets):
         # For MCT, median F160W visits are 6.5, F125W are 6, F850LP 1, and F775W 3.5
         # For MCT, median F160W cadences are 18.2, F125W are 18.7, F850LP 16.3, and F775W is 17.15
         obs_err = 0.7 # Depth of 26.14 at 5 sigma
-        bands_to_use = ['f775w', 'f850lp', 'f105w', 'f125w', 'f160w']
+        bands_to_use = ['f775w', 'f850lp', 'f125w', 'f160w']
     else:
         raise Exception("Unknown z_range_key " + z_range_key)
 
@@ -657,7 +657,8 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     wd = opts.prefixname + "/dataset_V_%03i/" % dataset_ind
     subprocess.getoutput("mkdir " + wd)
     make_dataset(wd, cal_offsets = cal_offsets)
-    
+
+    """
     wd = opts.prefixname + "/dataset_H_%03i/" % dataset_ind
     subprocess.getoutput("mkdir " + wd)
     make_dataset(wd, cal_offsets = cal_offsets)
@@ -665,7 +666,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     wd = opts.prefixname + "/dataset_L_%03i/" % dataset_ind
     subprocess.getoutput("mkdir " + wd)
     make_dataset(wd, cal_offsets = cal_offsets)
-
+    """
 
     for include_low in [0, 1]:
         for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
