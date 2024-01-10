@@ -77,10 +77,8 @@ def fit_delta_cosmo(zs, delta_mus, pltzs, fit_w):
     return modelfn(P, [[pltzs, None]]), "%.4f %.4f" % (P[1], P[2])
 
 
-
-
-"""    
-all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
+def read_dat():
+    all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                true_x1 = [], delta_x1 = [], obs_sig_x1 = [],
                delta_mag = [],
                delta_mu = [],
@@ -93,89 +91,98 @@ all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
                redshift = [],
                resfl = [])
 
-if len(sys.argv) > 1:
-    globstr = "dataset_*/*00*/result_deriv.dat"
+
+    allderivs = []
+    for v1fl in glob.glob("*_v1.txt"):
+        [SNe] = readcol(v1fl, 'a')
+        derivs = [item.replace("$UNION/", "") + "/result_deriv.dat" for item in SNe]
+        allderivs += derivs
+
+        
+    for resfl in tqdm.tqdm(allderivs):
+        resfl = resfl.replace("result_deriv.dat", "result_salt2.dat")
+
+        obs_c = read_param(resfl, "Color")
+        if obs_c != None:
+            obs_sig_c = read_param(resfl, "Color", ind = 2)
+
+
+            obs_x0 = read_param(resfl, "X0")
+            obs_mag = -2.5*np.log10(obs_x0)
+            obs_x1 = read_param(resfl, "X1")
+            obs_sig_x1 = read_param(resfl, "X1", ind = 2)
+
+
+            redshift = read_param(resfl, "Redshift")
+
+            paramsfl = resfl.replace("/SN", "/SN_params/params_").replace("/result_salt2.dat", ".dat").replace("dataset_", "UNITY_")
+
+
+            true_x0 = read_param(paramsfl, "x0")
+            true_mag = -2.5*np.log10(true_x0)
+
+            true_x1 = read_param(paramsfl, "x1")
+            true_c = read_param(paramsfl, "c")
+
+
+            all_dat["resfl"].append(resfl)
+
+            all_dat["true_c"].append(true_c)
+            all_dat["delta_c"].append(obs_c - true_c)
+            all_dat["obs_sig_c"].append(obs_sig_c)
+
+            if resfl.count("_L_"):
+                LH = "L"
+            elif resfl.count("_H_"):
+                LH = "H"
+            elif resfl.count("_V_"):
+                LH = "V"
+            else:
+                assert 0, resfl
+
+            all_dat["LH"].append(LH)
+
+            all_dat["delta_mag"].append(obs_mag - true_mag)
+
+            all_dat["true_x1"].append(true_x1)
+            all_dat["delta_x1"].append(obs_x1 - true_x1)
+            all_dat["obs_sig_x1"].append(obs_sig_x1)
+
+
+            all_dat["delta_mu"].append((obs_mag + 0.14*obs_x1 - 3.1*obs_c) - (true_mag + 0.14*true_x1 - 3.1*true_c))
+            all_dat["obs_sig_mu"].append(read_param(resfl, "dmu_estimate"))
+
+
+            all_dat["redshift"].append(redshift)
+
+            dmudzps = get_dmu("griz", resfl)
+            for band in "griz":
+                all_dat["dmud" + band].append(dmudzps[band])
+
+    for key in all_dat:
+        all_dat[key] = np.array(all_dat[key])
+
+    all_dat["pulls_c"] = all_dat["delta_c"]/all_dat["obs_sig_c"]
+    all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
+
+
+    pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
+    return all_dat
+
+
+if sys.argv[1] == "read":
+    all_dat = read_dat()
+elif sys.argv[1] == "load":
+    all_dat = pickle.load(open("all_dat.pickle", 'rb'))
 else:
-    globstr = "dataset_*/*/result_deriv.dat"
+    raise "Unknown option " + sys.argv[1]
 
-    
-for resfl in tqdm.tqdm(glob.glob(globstr)):
-    resfl = resfl.replace("result_deriv.dat", "result_salt2.dat")
-
-    obs_c = read_param(resfl, "Color")
-    if obs_c != None:
-        obs_sig_c = read_param(resfl, "Color", ind = 2)
-
-
-        obs_x0 = read_param(resfl, "X0")
-        obs_mag = -2.5*np.log10(obs_x0)
-        obs_x1 = read_param(resfl, "X1")
-        obs_sig_x1 = read_param(resfl, "X1", ind = 2)
-
-        
-        redshift = read_param(resfl, "Redshift")
-
-        paramsfl = resfl.replace("/SN", "/SN_params/params_").replace("/result_salt2.dat", ".dat").replace("dataset_", "UNITY_")
-
-        
-        true_x0 = read_param(paramsfl, "x0")
-        true_mag = -2.5*np.log10(true_x0)
-        
-        true_x1 = read_param(paramsfl, "x1")
-        true_c = read_param(paramsfl, "c")
-
-
-        all_dat["resfl"].append(resfl)
-
-        all_dat["true_c"].append(true_c)
-        all_dat["delta_c"].append(obs_c - true_c)
-        all_dat["obs_sig_c"].append(obs_sig_c)
-
-        if resfl.count("_L_"):
-            LH = "L"
-        elif resfl.count("_H_"):
-            LH = "H"
-        elif resfl.count("_V_"):
-            LH = "V"
-        else:
-            assert 0, resfl
-        
-        all_dat["LH"].append(LH)
-
-        all_dat["delta_mag"].append(obs_mag - true_mag)
-
-        all_dat["true_x1"].append(true_x1)
-        all_dat["delta_x1"].append(obs_x1 - true_x1)
-        all_dat["obs_sig_x1"].append(obs_sig_x1)
-
-
-        all_dat["delta_mu"].append((obs_mag + 0.14*obs_x1 - 3.1*obs_c) - (true_mag + 0.14*true_x1 - 3.1*true_c))
-        all_dat["obs_sig_mu"].append(read_param(resfl, "dmu_estimate"))
-
-        
-        all_dat["redshift"].append(redshift)
-
-        dmudzps = get_dmu("griz", resfl)
-        for band in "griz":
-            all_dat["dmud" + band].append(dmudzps[band])
-
-for key in all_dat:
-    all_dat[key] = np.array(all_dat[key])
-
-all_dat["pulls_c"] = all_dat["delta_c"]/all_dat["obs_sig_c"]
-all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
-
-
-pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
-"""
-
-all_dat = pickle.load(open("all_dat.pickle", 'rb'))
 
 print(len(all_dat["redshift"]))
 
 plt.figure(figsize = (36, 32))
 
-zbins = 200
+zbins = 400
 
 for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("redshift", "delta_c", 0),
@@ -187,6 +194,7 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                           ("redshift", "delta_mag", zbins),
                           ("redshift", "delta_c", zbins),
                           ("redshift", "true_c", zbins),
+                          ("redshift", "obs_sig_mu", zbins),
                           ("true_c", "delta_mu", 35),
                           ("true_x1", "delta_mu", 35),
                           ("true_c", "delta_c", 35),

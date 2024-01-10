@@ -629,6 +629,21 @@ source ~/.bash_profile
     f_UNITY[include_low].write("cd " + opts.prefixname + '\n')
     f_UNITY[include_low].write("~/.conda/envs/py39/bin/python $PATHMODEL/python_code/cut_fits.py dataset*\n")
 
+
+f_interleave = open(opts.prefixname + "/run_interleave.sh", 'w')
+f_interleave.write("""#!/bin/bash
+#SBATCH --job-name=runU
+#SBATCH --partition=shared
+#SBATCH --time=1-12:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=6G # Memory per node my job requires
+#SBATCH --error=runU-%A.err # %A - filled with jobid, where to write the stderr
+#SBATCH --output=runU-%A.out # %A - filled with jobid, wher to write the stdout
+source ~/.bash_profile
+""")
+
+    
 for dataset_ind in tqdm.trange(opts.ndataset):
     cal_offsets = {}
     for band in dict_of_obsframe_filt:
@@ -668,6 +683,11 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     make_dataset(wd, cal_offsets = cal_offsets)
     """
 
+    f_interleave.write("cd " + pwd + '\n')
+    f_interleave.write("cd " + opts.prefixname + '\n')
+    f_interleave.write("~/.conda/envs/py39/bin/python $PATHMODEL/python_code/cut_fits.py dataset_?_%03i\n" % dataset_ind)
+
+    
     for include_low in [0, 1]:
         for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
             for cosmomodel in [1]*(1 - include_low) + [3]*include_low:
@@ -681,5 +701,10 @@ for dataset_ind in tqdm.trange(opts.ndataset):
                 f_UNITY[include_low].write("cd " + wd + '\n')
                 f_UNITY[include_low].write("sbatch run.sh\n")
 
+                f_interleave.write("cd " + pwd + '\n')
+                f_interleave.write("cd " + wd + '\n')
+                f_interleave.write("sbatch run.sh\n")
+
 f_UNITY[0].close()
 f_UNITY[1].close()
+f_interleave.close()
