@@ -477,6 +477,7 @@ parser.add_argument('--prefixname', help='Prefix Name for Directory', type = str
 parser.add_argument('--skewdist', help='x1 and c distributions have skew', type = int)
 parser.add_argument('--volumelimited', help='volume-limited, not magnitude-limited datasets', type=int)
 parser.add_argument('--obsmagselection', help="If magnitude-limited, select based on observer-frame magntiudes, not rest-frame x0", type=int)
+parser.add_argument('--zrangekeys', help="LHV for low-z, high-z, very high-z", type=str)
 
 
 opts = parser.parse_args()
@@ -668,20 +669,11 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     for param in params:
         f.write(param + "  " + str(params[param]) + '\n')
     f.close()
-    
-    wd = opts.prefixname + "/dataset_V_%03i/" % dataset_ind
-    subprocess.getoutput("mkdir " + wd)
-    make_dataset(wd, cal_offsets = cal_offsets)
 
-    """
-    wd = opts.prefixname + "/dataset_H_%03i/" % dataset_ind
-    subprocess.getoutput("mkdir " + wd)
-    make_dataset(wd, cal_offsets = cal_offsets)
-    
-    wd = opts.prefixname + "/dataset_L_%03i/" % dataset_ind
-    subprocess.getoutput("mkdir " + wd)
-    make_dataset(wd, cal_offsets = cal_offsets)
-    """
+    for z_range_key in opts.zrangekeys:
+        wd = opts.prefixname + "/dataset_%s_%03i/" % (z_range_key, dataset_ind)
+        subprocess.getoutput("mkdir " + wd)
+        make_dataset(wd, cal_offsets = cal_offsets)
 
     f_interleave.write("cd " + pwd + '\n')
     f_interleave.write("cd " + opts.prefixname + '\n')
