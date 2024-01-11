@@ -504,7 +504,7 @@ params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 10., nsneper
               Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
               tot_sig_unexplained = 0.12, alpha = 0.15,
-              beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, delta_h = 0.5, MB = -19.1)
+              beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1)
 
 subprocess.getoutput("rm -fr " + opts.prefixname)
 subprocess.getoutput("mkdir " + opts.prefixname)
@@ -653,6 +653,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     frac_var_mBx1c = np.random.exponential(scale=1.0, size=3)
     frac_var_mBx1c /= sum(frac_var_mBx1c)
 
+    params["delta_h"] = np.random.random()
     params["frac_var_mBx1c"] = frac_var_mBx1c
     
     params["sigma_unexplained_3d"] = [params["tot_sig_unexplained"]*np.sqrt(params["frac_var_mBx1c"][0]),

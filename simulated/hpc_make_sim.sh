@@ -9,6 +9,6 @@
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 cd /home/drubin/union3/simulated
-python step1_make_simLCs.py --ndataset 80 --addnoise 1 --addcalibration 1 --modeluncertainty 1 --prefixname /home/drubin/koa_scratch/sim_data_simplex --skewdist 1 --volumelimited 0 --obsmagselection 1 --zrangekeys VHL > log.txt
+python step1_make_simLCs.py --ndataset 100 --addnoise 1 --addcalibration 1 --modeluncertainty 1 --prefixname /home/drubin/koa_scratch/sim_data_simplex --skewdist 1 --volumelimited 0 --obsmagselection 1 --zrangekeys LHV > log.txt
 cd /home/drubin/koa_scratch/sim_data_simplex
-python /home/drubin/salt2_union//python_code/slurmfit.py 10 dontsort
+python /home/drubin/salt2_union//python_code/slurmfit.py 20 dontsort
