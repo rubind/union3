@@ -237,7 +237,7 @@ def make_dataset(wd, cal_offsets):
 
     if params["volume_limited"] == 0:
         if z_range_key == "V":
-            observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, mag_limit = 26.6, sigma_mag_limit = 0.25, z_range_key = z_range_key)
+            observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, mag_limit = 26.0, sigma_mag_limit = 0.25, z_range_key = z_range_key)
         else:
             observed_SNe = get_observed_SNe_followup_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, z_range_key = z_range_key)
     else:
@@ -514,7 +514,7 @@ f = open(opts.prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(opts.ndataset):
     f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/SDSS_r_selection.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/SDSS_i_selection.txt    23.0            0.5\n" % dataset_ind)
-    f.write("dataset_V_%03i_v1.txt  $UNITY/paramfiles/WFC3_f125w_selection.txt	26.6		0.25\n" % dataset_ind)
+    f.write("dataset_V_%03i_v1.txt  $UNITY/paramfiles/WFC3_f125w_selection.txt	26.0		0.25\n" % dataset_ind)
 f.close()
 
 f = open(opts.prefixname + "/mag_cuts_x0.txt", 'w')
