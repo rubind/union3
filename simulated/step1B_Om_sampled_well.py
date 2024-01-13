@@ -5,13 +5,13 @@ except:
 import sys
 import glob
 
-def check_param(logfl, param, leave_running_jobs_alone):
+def check_param(logfl, param, leave_running_jobs_alone, threshold = 1.05):
     grepout = getoutput("grep '" + param + " ' " + logfl).split(None)
     print(grepout)
     
     if grepout == []:
         return leave_running_jobs_alone # Still running and leave_running_jobs_alone => 1
-    elif float(grepout[-1]) < 1.05:
+    elif float(grepout[-1]) < threshold:
         return 1
     else:
         return 0
@@ -28,7 +28,12 @@ for logfl in glob.glob("UNITY*/log.txt"):
     check_Om = check_param(logfl, param = "Om", leave_running_jobs_alone = leave_running_jobs_alone)
     check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone)
 
-    if check_Om and check_wDE:
+    other_checks = 1
+    for key in ["beta_B"]:
+        other_checks *= check_param(logfl, param = key, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
+
+        
+    if check_Om and check_wDE and other_checks:
         print("Good!")
     else:
         cmd = "cd " + logfl.split("/")[0] + "\nsbatch run.sh"
