@@ -795,6 +795,11 @@ else:
     
 
     BAOCMB_Om_w0_wa_mean, BAOCMB_Om_w0_wa_covmatrix = pickle.load(open(os.environ["UNITY"] + "/other_cosmology/BAOCMB_Omw0wa.pickle", 'rb'))
+
+    if params["fix_Om"] > 0:
+        print("fix_Om, so turning off BAOCMB cov mat!")
+        BAOCMB_Om_w0_wa_mean = [0.3, -1, 0.]
+        BAOCMB_Om_w0_wa_covmatrix = np.diag([100, 100., 100.])
     
     stan_data = {"n_sne": n_sne, "nzadd": nzadd,
                  "n_samples": len(the_data["sample_names"]),

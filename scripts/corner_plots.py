@@ -84,4 +84,4 @@ fit_params["mean_sigma_int"] = np.mean(fit_params["sigma_int"], axis = 1)
 
 make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB:0", "delta_0", "delta_h"], "standardization_coeffs.pdf")
 make_plot(["Om", "mean_sigma_int", "mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac", "outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"], "uncertainty_parameters.pdf")
-
+make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int", "mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")
