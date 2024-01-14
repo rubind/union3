@@ -17,8 +17,13 @@ pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_
 try:
     suffix = sys.argv[1]
 except:
-    print("Needs suffix like LH")
+    print("Needs suffix like LH or H")
     assert 0
+
+if suffix == "H":
+    cosmomodel = "1"
+else:
+    cosmomodel = "5"
 
 labels = {"Om": "$\Omega_m$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
           "beta_B": "$\\beta_B$",
@@ -51,10 +56,11 @@ for x1c	in ["x1", "c"]:
 all_txt_grid = []
 
 for matchstr, description in [
-        ("UNITY" + suffix + "_nosel_???/log.txt", "No Selection Effects"),
-        ("UNITY" + suffix + "_???/log.txt", "Nominal UNITY1.5 Model"),
-        ("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
-        ("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
+        ("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???/log.txt", "No Selection Effects"),
+        ("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???/log.txt", "No Selection Effects"),
+        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???/log.txt", "Nominal UNITY1.5 Model")):
+        #("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
+        #("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 ]:
     logs = glob.glob(matchstr)
     
