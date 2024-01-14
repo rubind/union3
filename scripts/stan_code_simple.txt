@@ -94,7 +94,7 @@ parameters {
 
     real <lower = 0, upper = 1> Om;
     real <lower = -2, upper = 0> wDE;
-    real <lower = -4, upper = 2> waDE;
+    real <lower = -4, upper = 4> waDE;
     real <lower = -2, upper = 2> q0;
     real <lower = -5, upper = 5> j0;
     
