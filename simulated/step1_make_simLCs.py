@@ -379,14 +379,27 @@ def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_l
     dataset_list = ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
     dataset_list = str(dataset_list).replace(" ", "")
 
-    if twopop:
-        population_model = "a 2"
+    if noselection:
+        # No selection effects
+        if twopop:
+            if include_low:
+                population_model = "a 3"
+            else:
+                population_model = "a 2"
+        else:
+            # No selection effects, one pop.
+            population_model = "sample 0.5"
     else:
         if include_low:
             population_model = "sample 0.5 0.0 1.0"
         else:
             population_model = "sample 0.5"
 
+    if cosmomodel == 5:
+        fix_Om = "0.3"
+    else:
+        fix_Om = "0"
+            
 
     f = open(wd + "paramfile.txt", 'w')
     f.write("""
@@ -434,7 +447,7 @@ n_jobs			4
 chains			4
 
 do_host_mass		1
-fix_Om			0
+fix_Om			%s
 MB_by_sample		0
 include_pec_cov		0
 separate_mass_x1c	1
@@ -442,7 +455,7 @@ separate_mass_x1c	1
            '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
            '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
            '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
-           population_model, 1 - oneDint))
+           population_model, 1 - oneDint, fix_Om))
     f.close()
 
     f = open(wd + "run.sh", 'w')
@@ -683,7 +696,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     
     for include_low in [0, 1]:
         for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
-            for cosmomodel in [1]*(1 - include_low) + [3]*include_low:
+            for cosmomodel in [1]*(1 - include_low) + [5]*include_low:
                 wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
                                                                      "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
                 subprocess.getoutput("mkdir " + wd)
