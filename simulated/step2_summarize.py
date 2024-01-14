@@ -58,7 +58,7 @@ all_txt_grid = []
 for matchstr, description in [
         ("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???/log.txt", "No Selection Effects"),
         ("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???/log.txt", "No Selection Effects"),
-        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???/log.txt", "Nominal UNITY1.5 Model")):
+        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???/log.txt", "Nominal UNITY1.5 Model")]:
         #("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
         #("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 ]:
