@@ -9,7 +9,11 @@ from FileRead import read_param
 import sys
 
 def fmt(val, unc, mean_unc):
-    return "$%.3f \pm %.3f \pm %.3f$" % (val, unc, mean_unc)
+    if np.isnan(val):
+        assert np.isnan(unc)
+        return "\\nodata"
+    else:
+        return "$%.3f \pm %.3f \pm %.3f$" % (val, unc, mean_unc)
 
 
 pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int\[1\]", "mBx1c_int_variance\[1\]", "mBx1c_int_variance\[2\]", "mBx1c_int_variance\[3\]"]
@@ -39,6 +43,7 @@ labels = {"Om": "$\Omega_m$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$"
           "mBx1c_int_variance\[3\]": "$f^{c}$"}
 
 
+"""
 for x1c	in ["x1", "c"]:
     for	x1cfmt in ["%s_star", "R_%s", "tau_%s"]:
         for i in range(2):
@@ -51,7 +56,7 @@ for x1c	in ["x1", "c"]:
                 labels[the_par] = "$R^{%s}_%s$" % (x1c.replace("x1", "x_1"), LH)
             if x1cfmt.count("tau"):
                 labels[the_par] = "$\\tau_{%s%s}$" % (x1c.replace("x1", "x_1"), LH)
-
+"""
 
 all_txt_grid = []
 
