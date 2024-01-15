@@ -85,8 +85,10 @@ for matchstr, description in [
         for par in pars:
             if par.count("[") == 1:
                 ind = int(par.split("[")[-1].split("]")[0])
-                all_pars[par].append(np.median(fit_params[par][:, ind - 1]))
-                all_uncs[par].append(0.5*(scoreatpercentile(fit_params[par][:,ind - 1], 84.1345) - scoreatpercentile(fit_params[par][:, ind - 1], 15.8655)))
+                parnoind = par.split("[")[0]
+                
+                all_pars[par].append(np.median(fit_params[parnoind][:, ind - 1]))
+                all_uncs[par].append(0.5*(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - scoreatpercentile(fit_params[parnoind][:, ind - 1], 15.8655)))
 
             else:
                 all_pars[par].append(np.median(fit_params[par]))
