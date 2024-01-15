@@ -103,7 +103,7 @@ for matchstr, description in [
                     all_pars[par][-1] = np.sqrt(-1)
                     all_uncs[par][-1] = np.sqrt(-1)
                         
-    print("all_pars", all_pars, len(all_pars["Om"]))
+    print("all_pars", all_pars, len(all_pars["beta_B"]))
     towrite = [description]
     for par in pars:
         the_mean = np.mean(all_pars[par])
