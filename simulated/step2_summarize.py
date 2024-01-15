@@ -27,7 +27,7 @@ if suffix == "H":
 else:
     cosmomodel = "5"
 
-pars = ["Om"]*(cosmomodel == "1") + ["wDE", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts[1]", "mobs_cut_sigmas[1]", "sigma_int[1]", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"]
+pars = ["Om"]*(cosmomodel == "1") + ["wpivot", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts[1]", "mobs_cut_sigmas[1]", "sigma_int[1]", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"]
 
 
 labels = {"Om": "$\Omega_m$", "wpivot": "$w_0 + 0.15\;w_a$", "waDE": "$w_a$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
