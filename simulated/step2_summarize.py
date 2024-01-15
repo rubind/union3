@@ -15,21 +15,23 @@ def fmt(val, unc, mean_unc):
     else:
         return "$%.3f \pm %.3f \pm %.3f$" % (val, unc, mean_unc)
 
-
-pars = ["Om", "alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int\[1\]", "mBx1c_int_variance\[1\]", "mBx1c_int_variance\[2\]", "mBx1c_int_variance\[3\]"]
+    
 
 try:
     suffix = sys.argv[1]
 except:
     print("Needs suffix like LH or H")
     assert 0
-
+    
 if suffix == "H":
     cosmomodel = "1"
 else:
     cosmomodel = "5"
 
-labels = {"Om": "$\Omega_m$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
+pars = ["Om"]*(cosmomodel == 1) + ["wDE", "waDE"]*(cosmomodel == 5) + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "mobs_cuts\[1\]", "mobs_cut_sigmas\[1\]", "sigma_int\[1\]", "mBx1c_int_variance\[1\]", "mBx1c_int_variance\[2\]", "mBx1c_int_variance\[3\]"]
+
+
+labels = {"Om": "$\Omega_m$", "wDE": "$w_0$", "waDE": "$w_a$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
           "beta_B": "$\\beta_B$",
           "beta_R_low": "$\\beta_{RL}$",
           "beta_R_high": "$\\beta_{RH}$",
