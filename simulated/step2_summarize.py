@@ -96,7 +96,7 @@ for matchstr, description in [
 
                 
             if ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"].count(par):
-                if read_param(log.split("/")[0] + "/paramfile.txt", "threeD_unexplained") == 0:
+                if read_param(sampfl.split("/")[0] + "/paramfile.txt", "threeD_unexplained") == 0:
                     if par == "mBx1c_int_variance\[1\]":
                         all_pars[par][-1] = 1
                         all_uncs[par][-1] = 0
@@ -105,7 +105,7 @@ for matchstr, description in [
                         all_uncs[par][-1] = 0                        
 
             if par.count("mobs_cut"):
-                if read_param(log.split("/")[0] + "/paramfile.txt", "stan_code").count("no_sel"):
+                if read_param(sampfl.split("/")[0] + "/paramfile.txt", "stan_code").count("no_sel"):
                     all_pars[par][-1] = np.sqrt(-1)
                     all_uncs[par][-1] = np.sqrt(-1)
                         
