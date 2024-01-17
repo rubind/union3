@@ -111,6 +111,8 @@ def read_dat():
             obs_mag = -2.5*np.log10(obs_x0)
             obs_x1 = read_param(resfl, "X1")
             obs_sig_x1 = read_param(resfl, "X1", ind = 2)
+            
+            obs_sig_mag = (2.5/np.log(10.))*read_param(resfl, "X0", ind = 2)/obs_x0
 
 
             redshift = read_param(resfl, "Redshift")
@@ -143,6 +145,7 @@ def read_dat():
             all_dat["LH"].append(LH)
 
             all_dat["delta_mag"].append(obs_mag - true_mag)
+            all_dat["obs_sig_mag"].append(obs_sig_mag)
 
             all_dat["true_x1"].append(true_x1)
             all_dat["delta_x1"].append(obs_x1 - true_x1)
@@ -162,6 +165,7 @@ def read_dat():
     for key in all_dat:
         all_dat[key] = np.array(all_dat[key])
 
+    all_dat["pulls_mag"] = all_dat["delta_mag"]/all_dat["obs_sig_mag"]
     all_dat["pulls_c"] = all_dat["delta_c"]/all_dat["obs_sig_c"]
     all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
 
@@ -314,3 +318,7 @@ for key in all_dat:
 plt.tight_layout()
 plt.savefig("high_dmudg.pdf", bbox_inches = 'tight')
 plt.close()
+
+plt.figure(figsize = (12, 6))
+nplt = 4
+plt.subplot(1, nplt, 1)
