@@ -79,17 +79,17 @@ def fit_delta_cosmo(zs, delta_mus, pltzs, fit_w):
 
 def read_dat():
     all_dat = dict(true_c = [], delta_c = [], obs_sig_c = [],
-               true_x1 = [], delta_x1 = [], obs_sig_x1 = [],
-               delta_mag = [],
-               delta_mu = [],
-               obs_sig_mu = [],
-               dmudg = [],
-               dmudr = [],
-               dmudi = [],
-               dmudz = [],
-               LH = [],
-               redshift = [],
-               resfl = [])
+                   true_x1 = [], delta_x1 = [], obs_sig_x1 = [],
+                   delta_mag = [], obs_sig_mag = [],
+                   delta_mu = [],
+                   obs_sig_mu = [],
+                   dmudg = [],
+                   dmudr = [],
+                   dmudi = [],
+                   dmudz = [],
+                   LH = [],
+                   redshift = [],
+                   resfl = [])
 
 
     allderivs = []
