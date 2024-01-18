@@ -431,7 +431,7 @@ lensing_disp		0.055
 MWEBV_zeropoint_EBV	0.0001
 outl_frac		0.02
 redshift_coeff_type     %s
-electron_coeff		[0.0042,0.00042]
+electron_coeff		[0.000042,0.0000042]
 IG_extinction_coeff	0.0001
 
 
@@ -465,7 +465,7 @@ separate_mass_x1c	1
 #SBATCH --time=0-""" + str(12 + 6*include_low) + """:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=12G # Memory per node my job requires
+#SBATCH --mem=""" + str(12 + 4*include_low) +  """G # Memory per node my job requires
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile

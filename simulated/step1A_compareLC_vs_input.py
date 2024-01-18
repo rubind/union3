@@ -6,7 +6,7 @@ from subprocess import getoutput
 import tqdm
 import sys
 from scipy.stats import scoreatpercentile
-from astropy.cosmology import FlatLambdaCDM, FlatwCDM
+from astropy.cosmology import FlatLambdaCDM, FlatwCDM, Flatw0waCDM
 from DavidsNM import miniLM_new
 import pickle
 
@@ -55,26 +55,26 @@ def get_dmu(bands, resfl):
 
 
 def modelfn(P, passdata):
-    [zs, delta_mus] = passdata[0]
+    [zs, delta_mus, mu_uncs] = passdata[0]
 
-    cosmo = FlatwCDM(Om0 = P[1], H0 = 70., w0 = P[2])
-    cosmo3 = FlatwCDM(Om0 = 0.3, H0 = 70., w0 = -1)
+    cosmo = Flatw0waCDM(Om0 = P[1], H0 = 70., w0 = P[2], wa = P[3])
+    cosmo3 = Flatw0waCDM(Om0 = 0.3, H0 = 70., w0 = -1, wa = 0)
     mu = cosmo.distmod(zs).value
     mu3 = cosmo3.distmod(zs).value
     return mu - mu3 + P[0]
     
 
 def pullfn(P, passdata):
-    [zs, delta_mus] = passdata[0]
+    [zs, delta_mus, mu_uncs] = passdata[0]
     delta_mu_model = modelfn(P, passdata)
     
-    return delta_mus - delta_mu_model
+    return (delta_mus - delta_mu_model)/mu_uncs
 
 
-def fit_delta_cosmo(zs, delta_mus, pltzs, fit_w):
-    P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1], miniscale = [1., 1., fit_w], residfn = pullfn, passdata = [zs, delta_mus])
+def fit_delta_cosmo(zs, delta_mus, mu_uncs, pltzs, fit_Om, fit_w0, fit_wa, verbose = False):
+    P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1, 0.], miniscale = [1., fit_Om, fit_w0, fit_wa], residfn = pullfn, passdata = [zs, delta_mus, mu_uncs], verbose = verbose)
 
-    return modelfn(P, [[pltzs, None]]), "%.4f %.4f" % (P[1], P[2])
+    return modelfn(P, [[pltzs, None, None]]), "%.4f %.4f %.4f" % (P[1], P[2], P[3])
 
 
 def read_dat():
@@ -165,6 +165,7 @@ def read_dat():
     for key in all_dat:
         all_dat[key] = np.array(all_dat[key])
 
+    all_dat["pulls_mu"] = all_dat["delta_mu"]/all_dat["obs_sig_mu"]
     all_dat["pulls_mag"] = all_dat["delta_mag"]/all_dat["obs_sig_mag"]
     all_dat["pulls_c"] = all_dat["delta_c"]/all_dat["obs_sig_c"]
     all_dat["pulls_x1"] = all_dat["delta_x1"]/all_dat["obs_sig_x1"]
@@ -255,9 +256,9 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                 pltx = np.linspace(0.01, xlim[1], 200)
                 
                 if keys[0] == "redshift" and keys[1] == "delta_mu":
-                    plty, label = fit_delta_cosmo(binx, biny, pltx, fit_w = 0)
+                    plty, label = fit_delta_cosmo(zs = binx, delta_mus = biny, pltzs = pltx, mu_uncs = np.ones(len(binx), dtype=np.float64), fit_Om = 1, fit_w0 = 0, fit_wa = 0)
                     plt.plot(pltx, plty, label = label)
-                    plty, label = fit_delta_cosmo(binx, biny, pltx, fit_w = 1)
+                    plty, label = fit_delta_cosmo(zs = binx, delta_mus = biny, pltzs = pltx, mu_uncs = np.ones(len(binx), dtype=np.float64), fit_Om = 1, fit_w0 = 1, fit_wa = 0)
                     plt.plot(pltx, plty, label = label)
                 
 
@@ -319,6 +320,102 @@ plt.tight_layout()
 plt.savefig("high_dmudg.pdf", bbox_inches = 'tight')
 plt.close()
 
-plt.figure(figsize = (12, 6))
+plt.figure(1, figsize = (24, 6))
 nplt = 4
-plt.subplot(1, nplt, 1)
+
+all_dat["pulls_mu"] = all_dat["delta_mu"]/all_dat["obs_sig_mu"]
+all_dat["weight_mu_with0.12"] = 1/(0.12**2. + all_dat["obs_sig_mu"]**2.)
+
+
+for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
+
+    for LH in "LHV":
+        pltcolor = dict(L = 'b', H = 'g', V = 'r')[LH]
+
+        inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] > 0.01))
+        zs = all_dat["redshift"][inds]
+
+        bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
+        bin_edges[0] -= 0.001
+        bin_edges[-1] += 0.001
+
+        print("bin_edges", bin_edges)
+
+        for i in range(len(bin_edges) - 1):
+            inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1]))
+
+            rms = np.std(all_dat["pulls_" + key][inds], ddof=1)
+            uncrms = rms/np.sqrt(2.*len(inds[0]))
+
+            mean = np.mean(all_dat["pulls_" + key][inds])
+            uncmean = rms/np.sqrt(len(inds[0]))
+
+            mean_bin = 0.5*(bin_edges[i] + bin_edges[i+1])
+            #plt.plot(mean_bin, rms, '.', color = pltcolor)
+            #plt.plot([mean_bin]*2, [rms - uncrms - 0.9, rms + uncrms - 0.9], color = pltcolor)
+            plt.figure(1)
+            plt.subplot(2, nplt, 1 + pltind)
+            plt.plot(mean_bin, mean, '.', color = pltcolor)
+            plt.subplot(2, nplt, nplt + 1 + pltind)
+            plt.plot(mean_bin, rms, '.', color = pltcolor)
+
+    plt.figure(1)
+    plt.subplot(2, nplt, 1 + pltind)
+    plt.axhline(0, color = 'k', linewidth = 0.8)
+    plt.xscale('log')
+    plt.subplot(2, nplt, nplt + 1 + pltind)
+    plt.axhline(1, color = 'k', linewidth = 0.8)
+    plt.xscale('log')
+    plt.xlabel("Redshift")
+
+plt.figure(1)
+plt.savefig("LC_compare_pulls.pdf", bbox_inches = 'tight')
+plt.close()
+
+plt.figure(2, figsize = (5, 6))
+for pltind, LH in enumerate(["H", "LHV"]):
+    LH_mask = np.array([LH.count(item) for item in all_dat["LH"]])
+    inds = np.where(LH_mask*(all_dat["redshift"] > 0.01))
+    zs = all_dat["redshift"][inds]
+
+    pltzs = np.linspace(0.01, 3, 300)
+
+    pltys, thelabel = fit_delta_cosmo(zs = zs, delta_mus = all_dat["delta_mu"][inds], mu_uncs = 1./np.sqrt(all_dat["weight_mu_with0.12"][inds]), pltzs = pltzs,
+                                      fit_Om = (LH == "H"), fit_w0 = (LH == "LHV"), fit_wa = (LH == "LHV"), verbose = True)
+
+    pltys_unweight, thelabel_unweight = fit_delta_cosmo(zs = zs, delta_mus = all_dat["delta_mu"][inds], mu_uncs = np.ones(len(inds[0]), dtype=np.float64), pltzs = pltzs,
+                                                        fit_Om = (LH == "H"), fit_w0 = (LH == "LHV"), fit_wa = (LH == "LHV"), verbose = True)
+    
+    
+    bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
+    bin_edges[0] -= 0.001
+    bin_edges[-1] += 0.001
+
+    print("bin_edges", bin_edges)
+
+    for i in range(len(bin_edges) - 1):
+        inds = np.where(LH_mask*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1]))
+
+        mean_bin = 0.5*(bin_edges[i] + bin_edges[i+1])
+        weighted_mean = np.sum(all_dat["delta_mu"][inds]*all_dat["weight_mu_with0.12"][inds])/np.sum(all_dat["weight_mu_with0.12"][inds])
+
+        plt.figure(2)
+        plt.subplot(2, 1, 1 + pltind)
+        plt.plot(mean_bin, weighted_mean, '.', color = 'k')
+
+
+    plt.figure(2)
+    plt.subplot(2, 1, 1 + pltind)
+    plt.axhline(0, color = 'k', linewidth = 0.8)
+    plt.xlabel("Redshift")
+
+    xlim = plt.xlim()
+
+    plt.plot(pltzs, pltys, label = thelabel)
+    plt.plot(pltzs, pltys_unweight, label = thelabel_unweight)
+    plt.legend(loc = 'best')
+    plt.xlim(xlim)
+    
+plt.figure(2)
+plt.savefig("sim_weighted_mean.pdf", bbox_inches = 'tight')
+plt.close()
