@@ -72,9 +72,13 @@ def pullfn(P, passdata):
 
 
 def fit_delta_cosmo(zs, delta_mus, mu_uncs, pltzs, fit_Om, fit_w0, fit_wa, verbose = False):
-    P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1, 0.], miniscale = [1., fit_Om, fit_w0, fit_wa], residfn = pullfn, passdata = [zs, delta_mus, mu_uncs], verbose = verbose)
+    P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1, 0.], miniscale = [1., fit_Om, fit_w0, fit_wa], residfn = pullfn, passdata = [zs, delta_mus, mu_uncs], verbose = verbose, maxiter = 4)
 
-    return modelfn(P, [[pltzs, None, None]]), "%.4f %.4f %.4f" % (P[1], P[2], P[3])
+    the_label = "(Unbinned) Fit:\n$\Omega_m = %.3f$" % P[1]
+    if fit_w0:
+        the_label = the_label.replace("\n", " ") + ", $w_0 = %.3f$,\n$w_0 + 0.15\;w_a= %.3f$, $w_a = %.3f$" % (P[2], P[2] + 0.15*P[3], P[3])
+        
+    return modelfn(P, [[pltzs, None, None]]), the_label
 
 
 def read_dat():
@@ -152,7 +156,7 @@ def read_dat():
             all_dat["obs_sig_x1"].append(obs_sig_x1)
 
 
-            all_dat["delta_mu"].append((obs_mag + 0.14*obs_x1 - 3.1*obs_c) - (true_mag + 0.14*true_x1 - 3.1*true_c))
+            all_dat["delta_mu"].append((obs_mag + global_alpha*obs_x1 - global_beta*obs_c) - (true_mag + global_alpha*true_x1 - global_beta*true_c))
             all_dat["obs_sig_mu"].append(read_param(resfl, "dmu_estimate"))
 
 
@@ -174,6 +178,9 @@ def read_dat():
     pickle.dump(all_dat, open("all_dat.pickle", 'wb'))
     return all_dat
 
+
+global_alpha = 0.15
+global_beta = 3.1
 
 if sys.argv[1] == "read":
     all_dat = read_dat()
@@ -320,6 +327,12 @@ plt.tight_layout()
 plt.savefig("high_dmudg.pdf", bbox_inches = 'tight')
 plt.close()
 
+
+plt.plot(all_dat["redshift"], all_dat["obs_sig_mu"], '.', alpha = 0.1)
+plt.savefig("sig_mu_vs_z.pdf")
+plt.close()
+
+
 plt.figure(1, figsize = (24, 6))
 nplt = 4
 
@@ -334,7 +347,7 @@ for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
 
         inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] > 0.01))
         zs = all_dat["redshift"][inds]
-
+                
         bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
         bin_edges[0] -= 0.001
         bin_edges[-1] += 0.001
@@ -372,50 +385,65 @@ plt.figure(1)
 plt.savefig("LC_compare_pulls.pdf", bbox_inches = 'tight')
 plt.close()
 
-plt.figure(2, figsize = (5, 6))
+plt.figure(2, figsize = (5, 7))
 for pltind, LH in enumerate(["H", "LHV"]):
     LH_mask = np.array([LH.count(item) for item in all_dat["LH"]])
     inds = np.where(LH_mask*(all_dat["redshift"] > 0.01))
     zs = all_dat["redshift"][inds]
+    delta_mu = all_dat["delta_mu"][inds]
 
+    all_weights = all_dat["obs_sig_mu"][inds]**-2.    
     pltzs = np.linspace(0.01, 3, 300)
 
     pltys, thelabel = fit_delta_cosmo(zs = zs, delta_mus = all_dat["delta_mu"][inds], mu_uncs = 1./np.sqrt(all_dat["weight_mu_with0.12"][inds]), pltzs = pltzs,
                                       fit_Om = (LH == "H"), fit_w0 = (LH == "LHV"), fit_wa = (LH == "LHV"), verbose = True)
 
+    """
     pltys_unweight, thelabel_unweight = fit_delta_cosmo(zs = zs, delta_mus = all_dat["delta_mu"][inds], mu_uncs = np.ones(len(inds[0]), dtype=np.float64), pltzs = pltzs,
                                                         fit_Om = (LH == "H"), fit_w0 = (LH == "LHV"), fit_wa = (LH == "LHV"), verbose = True)
+    """
     
+    z_sort_inds = np.argsort(zs)
+
+
+    if LH == "H":
+        n_bins = 250
+    else:
+        n_bins = 1000
     
-    bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
-    bin_edges[0] -= 0.001
-    bin_edges[-1] += 0.001
+    for i in tqdm.trange(n_bins + 1):
+        tot_z = 0.
+        tot_delta_mu = 0.
+        tot_weight = 0.
+        n_count = 0
+        
+        while tot_weight < sum(all_weights)/n_bins and len(z_sort_inds) > 0:
+            tot_weight += all_weights[z_sort_inds[-1]]
+            n_count += 1
+            tot_z += zs[z_sort_inds[-1]]
+            tot_delta_mu += delta_mu[z_sort_inds[-1]]
 
-    print("bin_edges", bin_edges)
-
-    for i in range(len(bin_edges) - 1):
-        inds = np.where(LH_mask*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1]))
-
-        mean_bin = 0.5*(bin_edges[i] + bin_edges[i+1])
-        weighted_mean = np.sum(all_dat["delta_mu"][inds]*all_dat["weight_mu_with0.12"][inds])/np.sum(all_dat["weight_mu_with0.12"][inds])
-
+            z_sort_inds = z_sort_inds[:-1]
+                        
         plt.figure(2)
         plt.subplot(2, 1, 1 + pltind)
-        plt.plot(mean_bin, weighted_mean, '.', color = 'k')
-
+        if n_count > 0:
+            plt.plot(tot_z/n_count, tot_delta_mu/n_count, '.', color = 'k')
+        print("Remaining", len(z_sort_inds))
 
     plt.figure(2)
     plt.subplot(2, 1, 1 + pltind)
     plt.axhline(0, color = 'k', linewidth = 0.8)
     plt.xlabel("Redshift")
+    plt.ylabel("Binned $\Delta (m_B + %.2f\;x_1 - %.2f\;c)$,\nEqual Weight per Bin")
 
     xlim = plt.xlim()
 
-    plt.plot(pltzs, pltys, label = thelabel)
-    plt.plot(pltzs, pltys_unweight, label = thelabel_unweight)
+    plt.plot(pltzs, pltys, label = thelabel, color = 'b')
+    #plt.plot(pltzs, pltys_unweight, label = thelabel_unweight)
     plt.legend(loc = 'best')
     plt.xlim(xlim)
     
 plt.figure(2)
-plt.savefig("sim_weighted_mean.pdf", bbox_inches = 'tight')
+plt.savefig("sim_mean_resid.pdf", bbox_inches = 'tight')
 plt.close()
