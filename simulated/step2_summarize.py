@@ -13,12 +13,18 @@ import pystan
 
 
 
-def fmt(val, unc, mean_unc):
+def fmt(val, unc, mean_unc, chi2_DoF):
     if np.isnan(val):
         assert np.isnan(unc)
         return "\\nodata"
     else:
-        return "$%.3f \pm %.3f \pm %.3f$" % (val, unc, mean_unc)
+        if type(chi2_DoF) == str:
+            chi2_DoF_fmt = chi2_DoF
+        else:
+            chi2_DoF_fmt = "%.2f" % chi2_DoF
+
+
+        return "$%.3f \pm %.3f \pm %.3f (%s)$" % (val, unc, mean_unc, chi2_DoF_fmt)
 
     
 
@@ -41,7 +47,7 @@ for tmpind in range(1 + (suffix == "LH")*2):
     datasetkeys.append("sigma_int[%i]" % (tmpind + 1))
 
     
-pars = ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot12", "wpivot15", "wpivot18", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"]
+pars = ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot12", "wpivot15", "wpivot18", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
 
 
 labels = {"Om": "$\Omega_m$", "wDE": "$w_0$",
@@ -57,13 +63,31 @@ labels = {"Om": "$\Omega_m$", "wDE": "$w_0$",
           "sigma_int[1]": "$\sigma^{\mathrm{unexpl}}$",
           "mBx1c_int_variance[1]": "$f^{m_B}$",
           "mBx1c_int_variance[2]": "$f^{x_1}$",
-          "mBx1c_int_variance[3]": "$f^{c}$"}
+          "mBx1c_int_variance[3]": "$f^{c}$",
+          "outl_frac": "$f^{\mathrm{outl}}$"}
+
+inputs = {"Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
+          "alpha": 0.15, "beta_B": 3.1, "beta_R_low": 3.1, "beta_R_high": 3.1,
+          "delta_0": 0.08,
+          "delta_h": "$\mathcal{U}(0,\ 1)$",
+          "mobs_cuts[1]": "\\nodata",
+          "mobs_cut_sigmas[1]": "\\nodata",
+          "sigma_int[1]": 0.12,
+          "mBx1c_int_variance[1]": "Simplex",
+          "mBx1c_int_variance[2]": "Simplex",
+          "mBx1c_int_variance[3]": "Simplex",
+          "outl_frac": 0}
+
 
 if suffix == "LH":
     for tmpind, tmpkey in enumerate(["Low", "Mid", "High"]):
         labels["mobs_cuts[%i]" % (tmpind + 1)] = "$m_{50}$ %s-$z$" % tmpkey
         labels["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "$\sigma_m$ %s-$z$" % tmpkey
         labels["sigma_int[%i]" % (tmpind + 1)] = "$\sigma^{\mathrm{unexpl}}$ %s-$z$" % tmpkey
+
+        inputs["mobs_cuts[%i]" % (tmpind + 1)] = "\\nodata"
+        inputs["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "\\nodata"
+        inputs["sigma_int[%i]" % (tmpind + 1)] = 0.12
         
 """
 for x1c	in ["x1", "c"]:
@@ -97,17 +121,19 @@ for matchstr, description in [
 
     all_pars = {}
     all_uncs = {}
+    all_trues = {}
 
     for par in pars:
         all_pars[par] = []
         all_uncs[par] = []
+        all_trues[par] = []
     
     for sampfl in tqdm.tqdm(sampfls):
         fit_params = pickle.load(gzip.open(sampfl, 'rb'))
         if cosmomodel == "5":
-            fit_params["wpivot12"] = fit_params["wDE"] + 0.12*fit_params["waDE"]
+            #fit_params["wpivot12"] = fit_params["wDE"] + 0.12*fit_params["waDE"]
             fit_params["wpivot15"] = fit_params["wDE"] + 0.15*fit_params["waDE"]
-            fit_params["wpivot18"] = fit_params["wDE"] + 0.18*fit_params["waDE"]
+            #fit_params["wpivot18"] = fit_params["wDE"] + 0.18*fit_params["waDE"]
 
         if description == "Nominal UNITY1.5 Model":
             fmB_true = read_param("params_" + sampfl.split("/")[0].split("_")[-1] + ".dat", "frac_var_mBx1c")
@@ -147,12 +173,18 @@ for matchstr, description in [
                         all_uncs[par][-1] = 0
                     else:
                         all_pars[par][-1] = 0
-                        all_uncs[par][-1] = 0                        
+                        all_uncs[par][-1] = 0
+            
+                f_true = read_param("params_" + sampfl.split("/")[0].split("_")[-1] + ".dat", "frac_var_mBx1c", ind = int(par[-2]))
+                f_true = f_true.replace("[", "")
+                all_trues[par][-1] = float
+
 
             if par.count("mobs_cut"):
                 if read_param(sampfl.split("/")[0] + "/paramfile.txt", "stan_code").count("no_sel"):
                     all_pars[par][-1] = np.sqrt(-1)
                     all_uncs[par][-1] = np.sqrt(-1)
+                    all_trues[par][-1] = np.sqrt(-1)
                         
     print("all_pars", all_pars, len(all_pars["beta_B"]))
     towrite = [description]
@@ -162,8 +194,11 @@ for matchstr, description in [
         sqrtn = np.sqrt(float(len(all_pars[par])))
 
         mean_unc = np.mean(all_uncs[par])
-        
-        towrite.append(fmt(the_mean, the_std/sqrtn, mean_unc))
+
+        chi2_DoF = (np.array(all_pars[par]) - np.array(all_trues[par]))/np.array(all_uncs[par])
+        chi2_DoF = sum(chi2_DoF**2.)/len(all_pars[par])
+            
+        towrite.append(fmt(the_mean, the_std, mean_unc = mean_unc, chi2_DoF = chi2_DoF))
 
         #the_mean = np.mean(all_uncs[par])
         #the_std = np.std(all_uncs[par], ddof=1)
@@ -178,10 +213,16 @@ all_txt_grid = np.array(all_txt_grid)
 print("all_txt_grid", all_txt_grid, all_txt_grid.shape)
 
 
-print("Parameter & " + " & ".join(all_txt_grid[:,0]))
+print("Parameter & Input & " + " & ".join(all_txt_grid[:,0]))
 for i in range(len(pars)):
     for valunc in range(1):
-        towrite = labels[pars[i]] + " & "
+        try:
+            float(inputs[pars[i]])
+            input_txt = "%.3f" % inputs[pars[i]]
+        except:
+            input_txt = inputs[pars[i]]
+            
+        towrite = labels[pars[i]] + " & " + input_txt + " & "
         
         for j in range(len(all_txt_grid)):
             towrite += all_txt_grid[j][i+1+valunc]
