@@ -41,10 +41,12 @@ for tmpind in range(1 + (suffix == "LH")*2):
     datasetkeys.append("sigma_int[%i]" % (tmpind + 1))
 
     
-pars = ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"]
+pars = ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot12", "wpivot15", "wpivot18", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"]
 
 
-labels = {"Om": "$\Omega_m$", "wDE": "$w_0$", "wpivot": "$w_0 + 0.15\;w_a$", "waDE": "$w_a$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
+labels = {"Om": "$\Omega_m$", "wDE": "$w_0$",
+          "wpivot12": "$w_0 + 0.12\;w_a$", "wpivot15": "$w_0 + 0.15\;w_a$", "wpivot18": "$w_0 + 0.18\;w_a$",
+          "waDE": "$w_a$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
           "beta_B": "$\\beta_B$",
           "beta_R_low": "$\\beta_{RL}$",
           "beta_R_high": "$\\beta_{RH}$",
@@ -103,7 +105,9 @@ for matchstr, description in [
     for sampfl in tqdm.tqdm(sampfls):
         fit_params = pickle.load(gzip.open(sampfl, 'rb'))
         if cosmomodel == "5":
-            fit_params["wpivot"] = fit_params["wDE"] + 0.15*fit_params["waDE"]
+            fit_params["wpivot12"] = fit_params["wDE"] + 0.12*fit_params["waDE"]
+            fit_params["wpivot15"] = fit_params["wDE"] + 0.15*fit_params["waDE"]
+            fit_params["wpivot18"] = fit_params["wDE"] + 0.18*fit_params["waDE"]
 
         if description == "Nominal UNITY1.5 Model":
             fmB_true = read_param("params_" + sampfl.split("/")[0].split("_")[-1] + ".dat", "frac_var_mBx1c")
@@ -282,7 +286,7 @@ plt.xlim(0, 1)
 plt.ylim(0, 1)
 plt.gca().set_aspect('equal')
 
-plt.xlabel("Simulation $f^{m_B}$")
-plt.ylabel("Posterior $f^{m_B}$")
+plt.xlabel("Simulation Fraction of Unexplained\nVariance in $m_B$ ($f^{m_B}$)")
+plt.ylabel("Posterior Fraction of Unexplained\nVariance in $m_B$ ($f^{m_B}$)")
 plt.savefig("f_mB_recovered_" + suffix + ".pdf", bbox_inches = 'tight')
 plt.close()

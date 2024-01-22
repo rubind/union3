@@ -9,10 +9,10 @@
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
-for i in {1..36}
+for i in {1..72}
 do
     cd /home/drubin/koa_scratch/sim_data_simplex/
     python /home/drubin/union3//simulated/step1B_Om_sampled_well.py 1
     
-    sleep 1800
+    sleep 900
 done

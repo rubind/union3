@@ -6,6 +6,7 @@ from FileRead import read_param
 from astropy.cosmology import FlatLambdaCDM
 from DavidsNM import miniNM_new
 import sys
+import pickle
 
 def dobin(xs, ys, xbins):
     ybins = []
@@ -25,9 +26,9 @@ def dobin(xs, ys, xbins):
 
 fig = plt.figure(figsize = (8, 6))
 
-for lowhigh in "LH":
-    pltcolor = dict(L = 'b', H = 'r')[lowhigh]
-    datalabel = dict(L = 'Low-$z$', H = 'High-$z$')[lowhigh]
+for lowhigh in "LHV":
+    pltcolor = dict(L = 'b', H = 'g', V = 'r')[lowhigh]
+    datalabel = dict(L = 'Low-$z$', H = 'Mid-$z$', V = "High-$z$")[lowhigh]
     
     all_mags = []
     all_obs = []
@@ -44,11 +45,13 @@ for lowhigh in "LH":
         all_obs.append(read_param(fl, "observed"))
         all_dm.append(read_param(fl, "delta_mu"))
         all_z.append(read_param(fl, "z"))
-
+        
     all_mags = np.array(all_mags)
     all_obs = np.array(all_obs)
     all_dm = np.array(all_dm)
     all_z = np.array(all_z)
+
+    pickle.dump([all_mags, all_obs, all_dm, all_z], open("sim_truth_" + lowhigh + ".pickle", 'wb'))
 
 
     if lowhigh == "H":

@@ -36,6 +36,12 @@ for logfl in glob.glob("UNITY*/log.txt"):
     if check_Om and check_wDE and other_checks:
         print("Good!")
     else:
-        cmd = "cd " + logfl.split("/")[0] + "\nsbatch run.sh"
+        wd = logfl.split("/")[0]
+        getoutput("rm -f " + wd + "/samples*pickle")
+        getoutput("rm -f " + wd + "/log.txt")
+        getoutput("rm -f " + wd + "/*.err")
+        getoutput("rm -f " + wd + "/*.out")
+
+        cmd = "cd " + wd + "\nsbatch run.sh"
         print(cmd)
         print(getoutput(cmd))
