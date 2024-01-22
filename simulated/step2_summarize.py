@@ -20,11 +20,13 @@ def fmt(val, unc, mean_unc, chi2_DoF):
     else:
         if type(chi2_DoF) == str:
             chi2_DoF_fmt = chi2_DoF
+        elif np.isnan(chi2_DoF):
+            chi2_DoF_fmt = "\\nodata"
         else:
             chi2_DoF_fmt = "%.2f" % chi2_DoF
 
 
-        return "$%.3f \pm %.3f \pm %.3f (%s)$" % (val, unc, mean_unc, chi2_DoF_fmt)
+        return "$%.3f \pm %.3f \pm %.3f \ (%s)$" % (val, unc, mean_unc, chi2_DoF_fmt)
 
 def verify_filenamelist(sampfl):
     filenamelist = read_param(sampfl.split("/")[0] + "/paramfile.txt", "filenamelist")
@@ -58,7 +60,7 @@ for tmpind in range(1 + (suffix == "LH")*2):
     datasetkeys.append("sigma_int[%i]" % (tmpind + 1))
 
     
-pars = ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot12", "wpivot15", "wpivot18", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
+pars = ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
 
 
 labels = {"Om": "$\Omega_m$", "wDE": "$w_0$",
@@ -96,10 +98,14 @@ if suffix == "LH":
         labels["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "$\sigma_m$ %s-$z$" % tmpkey
         labels["sigma_int[%i]" % (tmpind + 1)] = "$\sigma^{\mathrm{unexpl}}$ %s-$z$" % tmpkey
 
-        true_vals["mobs_cuts[%i]" % (tmpind + 1)] = "\\nodata"
-        true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "\\nodata"
         true_vals["sigma_int[%i]" % (tmpind + 1)] = 0.12
-        
+        if tmpkey != "High":
+            true_vals["mobs_cuts[%i]" % (tmpind + 1)] = "\\nodata"
+            true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "\\nodata"
+        else:
+            true_vals["mobs_cuts[%i]" % (tmpind + 1)] = 26.0
+            true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = 0.25
+
 """
 for x1c	in ["x1", "c"]:
     for	x1cfmt in ["%s_star", "R_%s", "tau_%s"]:
@@ -152,7 +158,7 @@ for matchstr, description in [
         if description == "Nominal UNITY1.5 Model":
             fmB_true = read_param(sim_paramfl, "frac_var_mBx1c")
             assert fmB_true[0] == "["
-            fmB_true = fmB_true.replace("[", "")
+            fmB_true = fmB_true.replace("[", "").replace("]", "")
             all_fmB_true.append(float(fmB_true))
             all_fmB_posterior.append(fit_params["mBx1c_int_variance"][:,0])
             
@@ -168,7 +174,12 @@ for matchstr, description in [
             else:
                 all_pars[par].append(np.median(fit_params[par]))
                 all_uncs[par].append(0.5*(scoreatpercentile(fit_params[par], 84.1345) - scoreatpercentile(fit_params[par], 15.8655)))
-            all_trues[par].append(true_vals[par])
+
+            try:
+                float(true_vals[par])
+                all_trues[par].append(true_vals[par])
+            except:
+                all_trues[par].append(np.sqrt(-1.))
                 
             if ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"].count(par):
                 if read_param(UNITY_paramfl, "threeD_unexplained") == 0:
@@ -180,7 +191,7 @@ for matchstr, description in [
                         all_uncs[par][-1] = 0
             
                 f_true = str(read_param(sim_paramfl, "frac_var_mBx1c", ind = int(par[-2])))
-                f_true = f_true.replace("[", "")
+                f_true = f_true.replace("[", "").replace("]", "")
                 all_trues[par][-1] = float(f_true)
 
 
@@ -188,7 +199,10 @@ for matchstr, description in [
                 if read_param(sampfl.split("/")[0] + "/paramfile.txt", "stan_code").count("no_sel"):
                     all_pars[par][-1] = np.sqrt(-1)
                     all_uncs[par][-1] = np.sqrt(-1)
-                    all_trues[par][-1] = np.sqrt(-1)
+                #all_trues[par][-1] = np.sqrt(-1)
+
+            if par == "delta_h":
+                all_trues[par][-1] = read_param(sim_paramfl, "delta_h")
                         
     print("all_pars", all_pars, len(all_pars["beta_B"]))
     towrite = [description]
@@ -199,10 +213,11 @@ for matchstr, description in [
 
         mean_unc = np.mean(all_uncs[par])
 
+        print(par, all_trues[par])
         chi2_DoF = (np.array(all_pars[par]) - np.array(all_trues[par]))/np.array(all_uncs[par])
         chi2_DoF = sum(chi2_DoF**2.)/len(all_pars[par])
             
-        towrite.append(fmt(the_mean, the_std, mean_unc = mean_unc, chi2_DoF = chi2_DoF))
+        towrite.append(fmt(the_mean, the_std/sqrtn, mean_unc = mean_unc, chi2_DoF = chi2_DoF))
 
         #the_mean = np.mean(all_uncs[par])
         #the_std = np.std(all_uncs[par], ddof=1)
