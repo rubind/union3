@@ -74,6 +74,8 @@ def pullfn(P, passdata):
 def fit_delta_cosmo(zs, delta_mus, mu_uncs, pltzs, fit_Om, fit_w0, fit_wa, verbose = False):
     P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1, 0.], miniscale = [1., fit_Om, fit_w0, fit_wa], residfn = pullfn, passdata = [zs, delta_mus, mu_uncs], verbose = verbose, maxiter = 4)
 
+    # Don't bother with uncertainties. The mu_uncs have 0.12 added in quadrature, so the uncertainties are overestimated compared to just the LC fit uncertainties.
+    
     the_label = "(Unbinned) Fit:\n$\Omega_m = %.3f$" % P[1]
     if fit_w0:
         the_label = the_label.replace("\n", " ") + ", $w_0 = %.3f$,\n$w_0 + 0.15\;w_a= %.3f$, $w_a = %.3f$" % (P[2], P[2] + 0.15*P[3], P[3])
@@ -333,7 +335,7 @@ plt.savefig("sig_mu_vs_z.pdf")
 plt.close()
 
 
-plt.figure(1, figsize = (24, 6))
+plt.figure(1, figsize = (12, 5))
 nplt = 4
 
 all_dat["pulls_mu"] = all_dat["delta_mu"]/all_dat["obs_sig_mu"]
@@ -344,6 +346,8 @@ for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
 
     for LH in "LHV":
         pltcolor = dict(L = 'b', H = 'g', V = 'r')[LH]
+        pltsymb = dict(L = '.', H = '^', V = '*')[LH]
+        pltlabel = dict(L = "Low-$z$", H = "Mid-$z$", V = "High-$z$")[LH]
 
         inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] > 0.01))
         zs = all_dat["redshift"][inds]
@@ -368,20 +372,35 @@ for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
             #plt.plot([mean_bin]*2, [rms - uncrms - 0.9, rms + uncrms - 0.9], color = pltcolor)
             plt.figure(1)
             plt.subplot(2, nplt, 1 + pltind)
-            plt.plot(mean_bin, mean, '.', color = pltcolor)
+            plt.plot(mean_bin, mean, pltsymb, color = pltcolor, label = (i == 0)*pltlabel)
             plt.subplot(2, nplt, nplt + 1 + pltind)
-            plt.plot(mean_bin, rms, '.', color = pltcolor)
+            plt.plot(mean_bin, rms, pltsymb, color = pltcolor)
 
     plt.figure(1)
     plt.subplot(2, nplt, 1 + pltind)
+    if pltind == 0:
+        plt.legend(loc = 'upper right', bbox_to_anchor = (1.05, 1.05))
+        
     plt.axhline(0, color = 'k', linewidth = 0.8)
+    plt.title(dict(mu = "$m_B + %.2f %s x_1 - %.2f %s c$" % (global_alpha, '\,', global_beta, '\,'),
+                   mag = "$m_B$", x1 = "$x_1$", c = "$c$")[key])
+              
     plt.xscale('log')
     plt.subplot(2, nplt, nplt + 1 + pltind)
     plt.axhline(1, color = 'k', linewidth = 0.8)
     plt.xscale('log')
-    plt.xlabel("Redshift")
+    plt.xlabel("Sim LC Redshift Bin")
+    if pltind == 0:
+        plt.subplot(2, nplt, 1 + pltind)
+        plt.ylabel("Sim LC Mean Pull,\nEqual Number per Bin")
+        plt.subplot(2, nplt, nplt + 1 + pltind)
+        plt.ylabel("Sim LC RMS Pull,\nEqual Number per Bin")
 
-plt.figure(1)
+
+fig = plt.figure(1)
+fig.align_ylabels()
+plt.tight_layout()
+
 plt.savefig("LC_compare_pulls.pdf", bbox_inches = 'tight')
 plt.close()
 
@@ -410,6 +429,9 @@ for pltind, LH in enumerate(["H", "LHV"]):
         n_bins = 250
     else:
         n_bins = 1000
+
+
+    target_weight_per_bin = sum(all_weights)/n_bins
     
     for i in tqdm.trange(n_bins + 1):
         tot_z = 0.
@@ -417,7 +439,7 @@ for pltind, LH in enumerate(["H", "LHV"]):
         tot_weight = 0.
         n_count = 0
         
-        while tot_weight < sum(all_weights)/n_bins and len(z_sort_inds) > 0:
+        while tot_weight < target_weight_per_bin and len(z_sort_inds) > 0:
             tot_weight += all_weights[z_sort_inds[-1]]
             n_count += 1
             tot_z += zs[z_sort_inds[-1]]
@@ -434,16 +456,18 @@ for pltind, LH in enumerate(["H", "LHV"]):
     plt.figure(2)
     plt.subplot(2, 1, 1 + pltind)
     plt.axhline(0, color = 'k', linewidth = 0.8)
-    plt.xlabel("Redshift")
-    plt.ylabel("Binned $\Delta (m_B + %.2f\;x_1 - %.2f\;c)$,\nEqual Weight per Bin")
+    plt.xlabel("Sim LC Redshift Bin")
+    plt.ylabel("Binned $\Delta (m_B + %.2f %s x_1 - %.2f %s c)$\nfrom Sim LCs,\nEqual Weight per Bin" % (global_alpha, '\,', global_beta, '\,'))
 
-    xlim = plt.xlim()
+    xlim = list(plt.xlim())
+    xlim[0] = max(xlim[0], 0)
 
     plt.plot(pltzs, pltys, label = thelabel, color = 'b')
     #plt.plot(pltzs, pltys_unweight, label = thelabel_unweight)
     plt.legend(loc = 'best')
     plt.xlim(xlim)
-    
+
+
 plt.figure(2)
 plt.savefig("sim_mean_resid.pdf", bbox_inches = 'tight')
 plt.close()
