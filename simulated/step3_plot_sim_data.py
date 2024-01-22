@@ -25,9 +25,9 @@ def dobin(xs, ys, xbins):
 
 fig = plt.figure(figsize = (8, 6))
 
-for lowhigh in "LH":
-    pltcolor = dict(L = 'b', H = 'r')[lowhigh]
-    datalabel = dict(L = 'Low-$z$', H = 'High-$z$')[lowhigh]
+for lowhigh in "LHV":
+    pltcolor = dict(L = 'b', H = 'g', V = 'r')[lowhigh]
+    datalabel = dict(L = 'Low-$z$', H = 'Mid-$z$', V = 'High-$z$')[lowhigh]
     
     all_mags = []
     all_obs = []
@@ -53,6 +53,8 @@ for lowhigh in "LH":
 
     if lowhigh == "H":
         zbins = np.arange(all_z.min(), all_z.max() + 0.05, 0.05)
+    elif lowhigh == "V":
+        zbins = np.arange(all_z.min(), all_z.max() + 0.05, 0.2)
     else:
         zbins = np.arange(all_z.min(), all_z.max() + 0.005, 0.005)
 
