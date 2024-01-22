@@ -26,6 +26,17 @@ def fmt(val, unc, mean_unc, chi2_DoF):
 
         return "$%.3f \pm %.3f \pm %.3f (%s)$" % (val, unc, mean_unc, chi2_DoF_fmt)
 
+def verify_filenamelist(sampfl):
+    filenamelist = read_param(sampfl.split("/")[0] + "/paramfile.txt", "filenamelist")
+    if suffix == "LH":
+        assert filenamelist[0].count("_L_")
+        assert filenamelist[1].count("_H_")
+        assert filenamelist[2].count("_V_")
+    elif suffix == "H":
+        assert filenamelist[0].count("_H_")
+    else:
+        raise "Uknown suffix " + suffix
+
     
 
 try:
@@ -66,17 +77,17 @@ labels = {"Om": "$\Omega_m$", "wDE": "$w_0$",
           "mBx1c_int_variance[3]": "$f^{c}$",
           "outl_frac": "$f^{\mathrm{outl}}$"}
 
-inputs = {"Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
-          "alpha": 0.15, "beta_B": 3.1, "beta_R_low": 3.1, "beta_R_high": 3.1,
-          "delta_0": 0.08,
-          "delta_h": "$\mathcal{U}(0,\ 1)$",
-          "mobs_cuts[1]": "\\nodata",
-          "mobs_cut_sigmas[1]": "\\nodata",
-          "sigma_int[1]": 0.12,
-          "mBx1c_int_variance[1]": "Simplex",
-          "mBx1c_int_variance[2]": "Simplex",
-          "mBx1c_int_variance[3]": "Simplex",
-          "outl_frac": 0}
+true_vals = {"Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
+             "alpha": 0.15, "beta_B": 3.1, "beta_R_low": 3.1, "beta_R_high": 3.1,
+             "delta_0": 0.08,
+             "delta_h": "$\mathcal{U}(0,\ 1)$",
+             "mobs_cuts[1]": "\\nodata",
+             "mobs_cut_sigmas[1]": "\\nodata",
+             "sigma_int[1]": 0.12,
+             "mBx1c_int_variance[1]": "Simplex",
+             "mBx1c_int_variance[2]": "Simplex",
+             "mBx1c_int_variance[3]": "Simplex",
+             "outl_frac": 0}
 
 
 if suffix == "LH":
@@ -85,9 +96,9 @@ if suffix == "LH":
         labels["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "$\sigma_m$ %s-$z$" % tmpkey
         labels["sigma_int[%i]" % (tmpind + 1)] = "$\sigma^{\mathrm{unexpl}}$ %s-$z$" % tmpkey
 
-        inputs["mobs_cuts[%i]" % (tmpind + 1)] = "\\nodata"
-        inputs["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "\\nodata"
-        inputs["sigma_int[%i]" % (tmpind + 1)] = 0.12
+        true_vals["mobs_cuts[%i]" % (tmpind + 1)] = "\\nodata"
+        true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "\\nodata"
+        true_vals["sigma_int[%i]" % (tmpind + 1)] = 0.12
         
 """
 for x1c	in ["x1", "c"]:
@@ -129,6 +140,9 @@ for matchstr, description in [
         all_trues[par] = []
     
     for sampfl in tqdm.tqdm(sampfls):
+        UNITY_paramfl = sampfl.split("/")[0] + "/paramfile.txt"
+        sim_paramfl = "params_" + sampfl.split("/")[0].split("_")[-1] + ".dat"
+        
         fit_params = pickle.load(gzip.open(sampfl, 'rb'))
         if cosmomodel == "5":
             #fit_params["wpivot12"] = fit_params["wDE"] + 0.12*fit_params["waDE"]
@@ -136,23 +150,14 @@ for matchstr, description in [
             #fit_params["wpivot18"] = fit_params["wDE"] + 0.18*fit_params["waDE"]
 
         if description == "Nominal UNITY1.5 Model":
-            fmB_true = read_param("params_" + sampfl.split("/")[0].split("_")[-1] + ".dat", "frac_var_mBx1c")
+            fmB_true = read_param(sim_paramfl, "frac_var_mBx1c")
             assert fmB_true[0] == "["
             fmB_true = fmB_true.replace("[", "")
             all_fmB_true.append(float(fmB_true))
             all_fmB_posterior.append(fit_params["mBx1c_int_variance"][:,0])
             
-        
-        filenamelist = read_param(sampfl.split("/")[0] + "/paramfile.txt", "filenamelist")
-        if suffix == "LH":
-            assert filenamelist[0].count("_L_")
-            assert filenamelist[1].count("_H_")
-            assert filenamelist[2].count("_V_")
-        elif suffix == "H":
-            assert filenamelist[0].count("_H_")
-        else:
-            raise "Uknown suffix " + suffix
-        
+        verify_filenamelist(sampfl)
+            
         for par in pars:
             if par.count("[") == 1:
                 ind = int(par.split("[")[-1].split("]")[0])
@@ -160,14 +165,13 @@ for matchstr, description in [
                 
                 all_pars[par].append(np.median(fit_params[parnoind][:, ind - 1]))
                 all_uncs[par].append(0.5*(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - scoreatpercentile(fit_params[parnoind][:, ind - 1], 15.8655)))
-
             else:
                 all_pars[par].append(np.median(fit_params[par]))
                 all_uncs[par].append(0.5*(scoreatpercentile(fit_params[par], 84.1345) - scoreatpercentile(fit_params[par], 15.8655)))
-
+            all_trues[par].append(true_vals[par])
                 
             if ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"].count(par):
-                if read_param(sampfl.split("/")[0] + "/paramfile.txt", "threeD_unexplained") == 0:
+                if read_param(UNITY_paramfl, "threeD_unexplained") == 0:
                     if par == "mBx1c_int_variance\[1\]":
                         all_pars[par][-1] = 1
                         all_uncs[par][-1] = 0
@@ -175,9 +179,9 @@ for matchstr, description in [
                         all_pars[par][-1] = 0
                         all_uncs[par][-1] = 0
             
-                f_true = read_param("params_" + sampfl.split("/")[0].split("_")[-1] + ".dat", "frac_var_mBx1c", ind = int(par[-2]))
+                f_true = str(read_param(sim_paramfl, "frac_var_mBx1c", ind = int(par[-2])))
                 f_true = f_true.replace("[", "")
-                all_trues[par][-1] = float
+                all_trues[par][-1] = float(f_true)
 
 
             if par.count("mobs_cut"):
@@ -217,10 +221,10 @@ print("Parameter & Input & " + " & ".join(all_txt_grid[:,0]))
 for i in range(len(pars)):
     for valunc in range(1):
         try:
-            float(inputs[pars[i]])
-            input_txt = "%.3f" % inputs[pars[i]]
+            float(true_vals[pars[i]])
+            input_txt = "%.3f" % true_vals[pars[i]]
         except:
-            input_txt = inputs[pars[i]]
+            input_txt = true_vals[pars[i]]
             
         towrite = labels[pars[i]] + " & " + input_txt + " & "
         
