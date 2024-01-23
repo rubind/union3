@@ -7,7 +7,34 @@ from astropy.cosmology import FlatLambdaCDM
 from DavidsNM import miniNM_new
 import sys
 import pickle
+from scipy.special import erf
 
+def chi2fn_mag(P, passdata):
+    all_mags, all_incl = passdata[0]
+
+    if P[1] < 0.01:
+        return 1e100
+
+    """
+    if P[2]*2 + P[3] > 1:
+        return 1e100
+
+    if P[3] < 0:
+        return 1e100
+
+    if P[2] < 0:
+        return 1e100
+    """
+    
+    mod = P[2]*(1. + erf((P[0] - all_mags)/P[1])) + P[3]
+
+
+    chi2 = all_incl - mod
+    return np.dot(chi2, chi2)
+    #chi2 = -((-1 + all_incl)*np.log(1 - mod)) + all_incl*np.log(mod)
+    return sum(chi2)
+
+    
 def dobin(xs, ys, xbins):
     ybins = []
     sigybins = []
@@ -62,7 +89,7 @@ def read_or_load(lowhigh):
                 
         pickle.dump(all_data, open("sim_truth_" + lowhigh + ".pickle", 'wb'))
     elif sys.argv[1] == "load":
-        all_data = pickle.load(open("sim_truth_" + lowhigh + ".pikcle", 'rb'))
+        all_data = pickle.load(open("sim_truth_" + lowhigh + ".pickle", 'rb'))
 
         
     return all_data
@@ -186,3 +213,12 @@ plt.tight_layout()
 plt.savefig("sim_data.pdf", bbox_inches = 'tight')
 plt.close()
 
+for lowhigh in "LHV":
+    all_data = read_or_load(lowhigh)
+
+    for key in ["found", "incl"]:
+        P, NA, Cmat, = miniNM_new(ministart = [20., 5., 0.5, 0.0], miniscale = [2., 1., 0.1, 0.1], chi2fn = chi2fn_mag, passdata = [all_data["all_mags"], all_data["all_" + key]], verbose = False, compute_Cmat = False)
+        print(lowhigh, key, P)
+
+    
+                            

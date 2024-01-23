@@ -99,13 +99,14 @@ if suffix == "LH":
         labels["sigma_int[%i]" % (tmpind + 1)] = "$\sigma^{\mathrm{unexpl}}$ %s-$z$" % tmpkey
 
         true_vals["sigma_int[%i]" % (tmpind + 1)] = 0.12
-        if tmpkey != "High":
-            true_vals["mobs_cuts[%i]" % (tmpind + 1)] = "\\nodata"
-            true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "\\nodata"
-        else:
-            true_vals["mobs_cuts[%i]" % (tmpind + 1)] = 26.0
-            true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = 0.25
-
+        #if tmpkey != "High":
+        true_vals["mobs_cuts[%i]" % (tmpind + 1)] = "\\nodata"
+        true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "\\nodata"
+        #else:
+        #    true_vals["mobs_cuts[%i]" % (tmpind + 1)] = 26.0
+        #    true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = 0.25
+        # The problem with these nominal numbers is that they ignore the effect of cadence.
+        
 """
 for x1c	in ["x1", "c"]:
     for	x1cfmt in ["%s_star", "R_%s", "tau_%s"]:
