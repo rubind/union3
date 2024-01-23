@@ -250,7 +250,7 @@ def make_dataset(wd, cal_offsets):
 
             p["delta_mu"] = p["delta_mB"] + 0.14*p["delta_x1"] - 3.*p["delta_c"]
 
-            all_SNe.append(p)
+        all_SNe.append(p)
 
 
 
