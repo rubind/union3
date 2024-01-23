@@ -223,14 +223,14 @@ def make_dataset(wd, cal_offsets):
                      delta_c = np.sqrt(-1.),
                      delta_mu = np.sqrt(-1.))
 
-
-        p = dict(z = z,
-                 outlier = 0,
-                 t0 = np.random.uniform(min_date, max_date),
-                 latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
-                 latentc = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"],
-                 mass = 10. + np.random.normal())
-
+        else:
+            p = dict(z = z,
+                     outlier = 0,
+                     t0 = np.random.uniform(min_date, max_date),
+                     latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
+                     latentc = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"],
+                     mass = 10. + np.random.normal())
+            
             relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
             relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
             mass_term = -params["delta"]*relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*0.05)   ))
