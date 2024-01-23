@@ -204,34 +204,53 @@ def make_dataset(wd, cal_offsets):
     nsne = len(zlist)
     
     all_SNe = []
-    for z in zlist:
+    for z in zlist:        
+        if np.random.random() < 0.02:
+            # Outlier
+            p = dict(z = z, t0 = np.random.uniform(min_date, max_date),
+                     outlier = 1,
+                     MB = params["MB"] + np.random.normal()*0.5,
+                     x1 = np.random.normal()*2,
+                     c = np.random.normal()*0.2,
+                     mass = 10. + np.random.normal(),
+
+                     latentMB = np.sqrt(-1.),
+                     latentx1 = np.sqrt(-1.),
+                     latentc = np.sqrt(-1.),
+                     delta_mBx1c = np.sqrt(-1*np.ones(3)),
+                     delta_mB = np.sqrt(-1.),
+                     delta_x1 = np.sqrt(-1.),
+                     delta_c = np.sqrt(-1.),
+                     delta_mu = np.sqrt(-1.))
+
+
         p = dict(z = z,
+                 outlier = 0,
                  t0 = np.random.uniform(min_date, max_date),
                  latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
                  latentc = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"],
                  mass = 10. + np.random.normal())
 
-        
-        relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
-        relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
-        mass_term = -params["delta"]*relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*0.05)   ))
+            relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
+            relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
+            mass_term = -params["delta"]*relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*0.05)   ))
 
-        p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
+            p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
 
-        p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + (0.00217/z)**2.),
-                                                           params["sigma_unexplained_3d"][1],
-                                                           params["sigma_unexplained_3d"][2]])
-        p["MB"] = p["latentMB"] + p["delta_mBx1c"][0]
-        p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
-        p["c"] = p["latentc"] + p["delta_mBx1c"][2]
+            p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + (0.00217/z)**2.),
+                                                               params["sigma_unexplained_3d"][1],
+                                                               params["sigma_unexplained_3d"][2]])
+            p["MB"] = p["latentMB"] + p["delta_mBx1c"][0]
+            p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
+            p["c"] = p["latentc"] + p["delta_mBx1c"][2]
 
-        p["delta_mB"] = p["delta_mBx1c"][0]
-        p["delta_x1"] = p["delta_mBx1c"][1]
-        p["delta_c"] = p["delta_mBx1c"][2]
+            p["delta_mB"] = p["delta_mBx1c"][0]
+            p["delta_x1"] = p["delta_mBx1c"][1]
+            p["delta_c"] = p["delta_mBx1c"][2]
 
-        p["delta_mu"] = p["delta_mB"] + 0.14*p["delta_x1"] - 3.*p["delta_c"]
-        
-        all_SNe.append(p)
+            p["delta_mu"] = p["delta_mB"] + 0.14*p["delta_x1"] - 3.*p["delta_c"]
+
+            all_SNe.append(p)
 
 
 
@@ -499,7 +518,7 @@ opts = parser.parse_args()
 salt2_version = "salt3-f22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
 
-nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "delta_mB", "delta_x1", "delta_c", "delta_mu"]
+nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "delta_mB", "delta_x1", "delta_c", "delta_mu", "outlier"]
 
 dict_of_obsframe_filt = {}
 for filt in "griz":
