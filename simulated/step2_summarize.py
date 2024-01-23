@@ -21,7 +21,7 @@ def fmt(val, unc, mean_unc, chi2_DoF):
         if type(chi2_DoF) == str:
             chi2_DoF_fmt = chi2_DoF
         elif np.isnan(chi2_DoF):
-            chi2_DoF_fmt = "\\nodata"
+            chi2_DoF_fmt = "$\\nodata$"
         else:
             chi2_DoF_fmt = "%.2f" % chi2_DoF
 
@@ -238,7 +238,7 @@ for i in range(len(pars)):
     for valunc in range(1):
         try:
             float(true_vals[pars[i]])
-            input_txt = "%.3f" % true_vals[pars[i]]
+            input_txt = "$%.3f$" % true_vals[pars[i]]
         except:
             input_txt = true_vals[pars[i]]
             
