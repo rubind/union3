@@ -277,7 +277,7 @@ try:
     if sc != skew_code:
         time_to_raise
 except:
-    sk = pystan.StanModel(model_code=skew_code)
+    sm = pystan.StanModel(model_code=skew_code)
     pickle.dump([sm, skew_code], open("skew.pickle", 'wb'))
 
         
