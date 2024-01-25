@@ -94,6 +94,7 @@ def read_dat():
                    dmudi = [],
                    dmudz = [],
                    LH = [],
+                   outlier = [],
                    redshift = [],
                    resfl = [])
 
@@ -132,6 +133,7 @@ def read_dat():
             true_x1 = read_param(paramsfl, "x1")
             true_c = read_param(paramsfl, "c")
 
+            all_data["outlier"].append(read_param(paramsfl, "outlier"))
 
             all_dat["resfl"].append(resfl)
 

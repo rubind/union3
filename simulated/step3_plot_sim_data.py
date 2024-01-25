@@ -58,6 +58,7 @@ def read_or_load(lowhigh):
         all_data["all_mags"] = []
         all_data["all_found"] = []
         all_data["all_incl"] = []
+        all_data["all_outl"] = []
         all_data["all_dm"] = []
         all_data["all_z"] = []
 
@@ -74,6 +75,7 @@ def read_or_load(lowhigh):
             # E.g., UNITY_H_000/SN_params/params_0000.dat
             all_data["all_mags"].append(read_param(fl, "peak_mag"))
             all_data["all_found"].append(read_param(fl, "observed"))
+            all_data["all_outl"].append(read_param(fl, "outlier"))
 
             SN_path = fl.replace("UNITY", "dataset").replace("SN_params/params_", "SN").replace(".dat", "")
 

@@ -29,7 +29,7 @@ for logfl in glob.glob("UNITY*/log.txt"):
     check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone)
 
     other_checks = 1
-    for key in ["beta_B", "mBx1c_int_variance\[1\]"]:
+    for key in ["beta_B", "mBx1c_int_variance\[1\]", "beta_R_low", "beta_R_high"]:
         other_checks *= check_param(logfl, param = key, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
 
         
@@ -45,3 +45,5 @@ for logfl in glob.glob("UNITY*/log.txt"):
         cmd = "cd " + wd + "\nsbatch run.sh"
         print(cmd)
         print(getoutput(cmd))
+
+print("Done checking!")
