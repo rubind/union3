@@ -133,7 +133,7 @@ def read_dat():
             true_x1 = read_param(paramsfl, "x1")
             true_c = read_param(paramsfl, "c")
 
-            all_data["outlier"].append(read_param(paramsfl, "outlier"))
+            all_dat["outlier"].append(read_param(paramsfl, "outlier"))
 
             all_dat["resfl"].append(resfl)
 
