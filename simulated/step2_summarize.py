@@ -139,9 +139,9 @@ all_fmB_true = []
 all_fmB_posterior = []
 
 for matchstr, description in [
+        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "Nominal UNITY1.5 Model"),
         ("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???", "No Selection Effects"),
-        ("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Selection Effects"),
-        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "Nominal UNITY1.5 Model")]:
+        ("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Selection Effects")]:
         #("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
         #("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 
@@ -229,8 +229,9 @@ for matchstr, description in [
 
         print(par, all_trues[par])
         chi2_DoF = (np.array(all_pars[par]) - np.array(all_trues[par]))/np.array(all_uncs[par])
-        chi2_DoF = sum(chi2_DoF**2.)/len(all_pars[par])
-            
+        chi2_DoF = np.sqrt(sum(chi2_DoF**2. / len(all_pars[par])))
+        #chi2_DoF = sum(chi2_DoF**2.)/len(all_pars[par])
+        
         towrite.append(fmt(the_mean, the_std/sqrtn, mean_unc = mean_unc, chi2_DoF = chi2_DoF))
 
         #the_mean = np.mean(all_uncs[par])
@@ -247,7 +248,11 @@ print("all_txt_grid", all_txt_grid, all_txt_grid.shape)
 
 
 print("Parameter & Input & " + " & ".join(all_txt_grid[:,0]))
+print("\cutinhead{Cosmology Parameters} %& ")
+
 for i in range(len(pars)):
+    if pars[i] == "alpha":
+        print("\cutinhead{Other Parameters} % &")
     for valunc in range(1):
         try:
             float(true_vals[pars[i]])
@@ -290,7 +295,7 @@ try:
     if sc != skew_code:
         time_to_raise
 except:
-    sm = pystan.StanModel(model_code=skew_code)
+    sk = pystan.StanModel(model_code=skew_code)
     pickle.dump([sm, skew_code], open("skew.pickle", 'wb'))
 
         
