@@ -3,7 +3,7 @@ import pickle
 import gzip
 from scipy.stats import scoreatpercentile
 import numpy as np
-from FileRead import read_param
+from FileRead import read_param, readcol
 import sys
 import tqdm
 import matplotlib.pyplot as plt
@@ -39,7 +39,18 @@ def verify_filenamelist(sampfl):
     else:
         raise "Uknown suffix " + suffix
 
+    [v1s, total, outliers] = readcol("outliers_by_dataset.txt", 'aff')
+
+    total_SNe = 0.
+    total_outliers = 0.
     
+    for flnm in filenamelist:
+        ind = v1s.index(flnm.split("/")[-1])
+        
+        total_SNe += total[ind]
+        total_outliers += outliers[ind]
+    return total_outliers/total_SNe
+        
 
 try:
     suffix = sys.argv[1]
@@ -163,7 +174,7 @@ for matchstr, description in [
             all_fmB_true.append(float(fmB_true))
             all_fmB_posterior.append(fit_params["mBx1c_int_variance"][:,0])
             
-        verify_filenamelist(sampfl)
+        true_outl_frac = verify_filenamelist(sampfl)
             
         for par in pars:
             if par.count("[") == 1:
@@ -204,7 +215,9 @@ for matchstr, description in [
 
             if par == "delta_h":
                 all_trues[par][-1] = read_param(sim_paramfl, "delta_h")
-                        
+            if par == "outl_frac":
+                all_trues[par][-1] = true_outl_frac
+                
     print("all_pars", all_pars, len(all_pars["beta_B"]))
     towrite = [description]
     for par in pars:

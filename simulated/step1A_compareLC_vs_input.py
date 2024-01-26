@@ -242,9 +242,9 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
             pltcolor = dict(L = 'b', H = 'g', V = 'r')[LH]
 
             if keys[0] != "redshift":
-                inds = np.where((all_dat["LH"] == LH))#*(all_dat["redshift"] < 0.055))
+                inds = np.where((all_dat["LH"] == LH)*(all_dat["outlier"] == 0))#*(all_dat["redshift"] < 0.055))
             else:
-                inds = np.where((all_dat["redshift"] > -1))#*(all_dat["redshift"] < 0.055))
+                inds = np.where((all_dat["redshift"] > -1)*(all_dat["outlier"] == 0))#*(all_dat["redshift"] < 0.055))
                 
             nsne = len(all_dat[keys[0]][inds])
             binx, biny = do_med_bins(all_dat[keys[0]][inds], all_dat[keys[1]][inds], np.ones(nsne, dtype=np.float64), keys[2])
@@ -299,22 +299,22 @@ plt_ind = 1
 for key in all_dat:
     if all_dat[key].dtype == np.float64:
         plt.subplot(5,5,plt_ind)
-        inds = np.where(all_dat["LH"] == "L")
+        inds = np.where((all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
         counts, bins, NA = plt.hist(all_dat[key][inds], bins = 80, color = 'b')
 
-        inds = np.where((all_dat["dmudg"] > -0.9)*(all_dat["LH"] == "L"))
+        inds = np.where((all_dat["dmudg"] > -0.9)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
         the_med = np.median(all_dat[key][inds])
         the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
         
         plt.hist(all_dat[key][inds], bins = bins, color = 'g', label = "Median %.2g +- %.2g" % (the_med, the_unc))
 
-        inds = np.where((all_dat["dmudg"] > -0.85)*(all_dat["LH"] == "L"))
+        inds = np.where((all_dat["dmudg"] > -0.85)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
         the_med = np.median(all_dat[key][inds])
         the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
 
         plt.hist(all_dat[key][inds], bins = bins, color = 'orange', label = "Median %.2g +- %.2g" % (the_med, the_unc))
 
-        inds = np.where((all_dat["dmudg"] > -0.8)*(all_dat["LH"] == "L"))
+        inds = np.where((all_dat["dmudg"] > -0.8)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
 
         the_med = np.median(all_dat[key][inds])
         the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
@@ -351,7 +351,7 @@ for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
         pltsymb = dict(L = '.', H = '^', V = '*')[LH]
         pltlabel = dict(L = "Low-$z$", H = "Mid-$z$", V = "High-$z$")[LH]
 
-        inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] > 0.01))
+        inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] > 0.01)*(all_dat["outlier"] == 0))
         zs = all_dat["redshift"][inds]
                 
         bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
@@ -361,7 +361,7 @@ for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
         print("bin_edges", bin_edges)
 
         for i in range(len(bin_edges) - 1):
-            inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1]))
+            inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1])*(all_dat["outlier"] == 0))
 
             rms = np.std(all_dat["pulls_" + key][inds], ddof=1)
             uncrms = rms/np.sqrt(2.*len(inds[0]))
@@ -409,7 +409,7 @@ plt.close()
 plt.figure(2, figsize = (5, 7))
 for pltind, LH in enumerate(["H", "LHV"]):
     LH_mask = np.array([LH.count(item) for item in all_dat["LH"]])
-    inds = np.where(LH_mask*(all_dat["redshift"] > 0.01))
+    inds = np.where(LH_mask*(all_dat["redshift"] > 0.01)*(all_dat["outlier"] == 0))
     zs = all_dat["redshift"][inds]
     delta_mu = all_dat["delta_mu"][inds]
 

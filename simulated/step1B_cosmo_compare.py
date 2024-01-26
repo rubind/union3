@@ -116,12 +116,15 @@ def fit_delta_cosmo(zs, delta_mus, pltzs, dmudg, dmudr, dmudi, dmudz):
 
     plt.savefig("cosmo_compare.pdf", bbox_inches = 'tight')
     plt.close()
-    
+
+
+print("This is an old frequentist fitter for checking for d sys biases")
 
 all_dat = pickle.load(open("all_dat.pickle", 'rb'))
 for key in all_dat:
     print("all_dat", key, all_dat[key].shape)
-    
+
+
 
 fit_delta_cosmo(all_dat["redshift"], all_dat["delta_mu"], None, all_dat["dmudg"], all_dat["dmudr"], all_dat["dmudi"], all_dat["dmudz"])
 
