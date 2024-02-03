@@ -140,6 +140,7 @@ all_fmB_posterior = []
 
 for matchstr, description in [
         ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "Nominal UNITY1.5 Model"),
+        ("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "UNITY1.6 Model"),
         ("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???", "No Selection Effects"),
         ("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Selection Effects")]:
         #("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
@@ -248,17 +249,27 @@ print("all_txt_grid", all_txt_grid, all_txt_grid.shape)
 
 
 print("Parameter & Input & " + " & ".join(all_txt_grid[:,0]))
-print("\cutinhead{Cosmology Parameters} %& ")
+
+print("\hline % &")
+print("\multicolumn{5}{c}{Cosmology Parameters}\\\\ % &")
+print("\hline % &")
+
 
 for i in range(len(pars)):
     if pars[i] == "alpha":
-        print("\cutinhead{Other Parameters} % &")
+        print("\hline % &")
+        print("\multicolumn{5}{c}{Other Parameters}\\\\ % &")
+        print("\hline % &")
+        
     for valunc in range(1):
         try:
             float(true_vals[pars[i]])
             input_txt = "$%.3f$" % true_vals[pars[i]]
         except:
             input_txt = true_vals[pars[i]]
+
+        if pars[i] == "outl_frac":
+            input_txt = "%.3f--%.3f" % (min(all_trues[par]), max(all_trues[par]))
             
         towrite = labels[pars[i]] + " & " + input_txt + " & "
         
