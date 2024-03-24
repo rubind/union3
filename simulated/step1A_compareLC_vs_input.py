@@ -35,7 +35,7 @@ def do_med_bins(x, y, sigy, nbins, average_not_median = 0):
         else:
             binx.append(np.median(x[inds]))
             biny.append(np.median(y[inds]))
-    return binx, biny
+    return np.array(binx), np.array(biny)
 
 def get_dmu(bands, resfl):
     f = open(resfl.replace("result_salt2.dat", "result_deriv.dat"), 'r')
@@ -71,14 +71,28 @@ def pullfn(P, passdata):
     return (delta_mus - delta_mu_model)/mu_uncs
 
 
-def fit_delta_cosmo(zs, delta_mus, mu_uncs, pltzs, fit_Om, fit_w0, fit_wa, verbose = False):
-    P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1, 0.], miniscale = [1., fit_Om, fit_w0, fit_wa], residfn = pullfn, passdata = [zs, delta_mus, mu_uncs], verbose = verbose, maxiter = 4)
+def fit_delta_cosmo(zs, delta_mus, mu_uncs, pltzs, fit_Om, fit_w0, fit_wa, verbose = False, n_boot = 20):
+    P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1, 0.], miniscale = [1., fit_Om, fit_w0, fit_wa], residfn = pullfn, passdata = [zs, delta_mus, mu_uncs], verbose = verbose, maxiter = 3)
+    # The mu_uncs have 0.12 added in quadrature, so the uncertainties are overestimated compared to just the LC fit uncertainties. Need to bootstrap.
 
-    # Don't bother with uncertainties. The mu_uncs have 0.12 added in quadrature, so the uncertainties are overestimated compared to just the LC fit uncertainties.
-    
-    the_label = "(Unbinned) Fit:\n$\Omega_m = %.3f$" % P[1]
+    P_reals = []
+    for i in tqdm.trange(n_boot):
+        new_inds = np.random.choice(np.arange(len(zs), dtype=np.int32), size = len(zs), replace = True)
+
+        P_tmp, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1, 0.], miniscale = [1., fit_Om, fit_w0, fit_wa], residfn = pullfn, passdata = [zs[new_inds], delta_mus[new_inds], mu_uncs[new_inds]], verbose = verbose, maxiter = 3)
+        P_reals.append(P_tmp)
+
+    P_reals = np.array(P_reals).T
+
+    if fit_Om == 0:
+        the_label = "(Unbinned) Fit:\n$\Omega_m = %.3f (\mathrm{fixed})$" % (P[1])
+    else:
+        the_label = "(Unbinned) Fit:\n$\Omega_m = %.3f \pm %.3f$" % (P[1], np.std(P_reals[1], ddof=1))
+        
     if fit_w0:
-        the_label = the_label.replace("\n", " ") + ", $w_0 = %.3f$,\n$w_0 + 0.15\;w_a= %.3f$, $w_a = %.3f$" % (P[2], P[2] + 0.15*P[3], P[3])
+        the_label = the_label.replace("\n", " ") + ", $w_0 = %.3f \pm %.3f$,\n$w_0 + 0.15\;w_a= %.3f \pm %.3f$, $w_a = %.3f \pm %.3f$" % (P[2], np.std(P_reals[2], ddof=1),
+                                                                                                                                          P[2] + 0.15*P[3], np.std(P_reals[2] + 0.15*P_reals[3], ddof=1),
+                                                                                                                                          P[3], np.std(P_reals[3], ddof=1))
         
     return modelfn(P, [[pltzs, None, None]]), the_label
 
@@ -287,6 +301,7 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
 
             
 plt.tight_layout()
+plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 plt.savefig("compare_LC_vs_input.pdf", bbox_inches = 'tight')
 plt.close()
 
@@ -333,6 +348,7 @@ plt.close()
 
 
 plt.plot(all_dat["redshift"], all_dat["obs_sig_mu"], '.', alpha = 0.1)
+plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 plt.savefig("sig_mu_vs_z.pdf")
 plt.close()
 
@@ -408,7 +424,9 @@ for include_outlier in [0, 1]:
 
     fig = plt.figure(1)
     fig.align_ylabels()
+    
     plt.tight_layout()
+    plt.figtext(0.98, 1.00, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 
     plt.savefig("LC_compare_pulls_incloutl=%i.pdf" % include_outlier, bbox_inches = 'tight')
     plt.close()
@@ -478,6 +496,7 @@ for pltind, LH in enumerate(["H", "LHV"]):
 
 
 plt.figure(2)
+plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 plt.savefig("sim_mean_resid.pdf", bbox_inches = 'tight')
 plt.close()
 
@@ -490,6 +509,7 @@ plt.subplot(2,1,1)
 plt.plot(all_dat["redshift"][inds], all_dat["true_c"][inds], '.', color = 'b')
 plt.subplot(2,1,2)
 plt.plot(all_dat["redshift"][inds], all_dat["true_x1"][inds], '.', color = 'b')
+plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 
 plt.savefig("outlier_populations.pdf", bbox_inches = 'tight')
 plt.close()

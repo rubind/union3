@@ -97,22 +97,23 @@ def read_or_load(lowhigh):
         
     return all_data
 
+def get_cosmo_label(cos_default, cos_offset):
+    if cos_offset.w0 == cos_default.w0:
+        return "\mu(\Omega_m=%.2f) - \mu(\Omega_m=%.2f)" % (cos_offset.Om0, cos_default.Om0)
+    else:
+        return "\mu(\Omega_m=%.2f,\ w_0=%.2f,\ w_a=%.2f)$\n$ - \mu(\Omega_m=%.2f,\ w_0=%.2f,\ w_a=%.2f)" % (cos_offset.Om0, cos_offset.w0, cos_offset.wa,
+                                                                                                          cos_default.Om0, cos_default.w0, cos_default.wa)
 
 def show_other_cosmos(all_data, inds, cosmo, cosmo2, cosmo3):
-    z_step = 0.05
-    zbins = np.arange(all_data["all_z"].min(), all_data["all_z"].max() + z_step, z_step)
+    #z_step = 0.05
+    #zbins = np.arange(all_data["all_z"].min(), all_data["all_z"].max() + z_step, z_step)
 
 
-    plt.subplot(2,2,3)
 
 
-    print("all_dm[inds]", all_data["all_dm"][inds])
-    x,y, sigy=dobin(all_data["all_z"][inds], all_data["all_dm"][inds], zbins)
-    plt.errorbar(x, y, yerr = sigy, fmt = '.', color = pltcolor)
-
-    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
-    cosmo2 = FlatLambdaCDM(Om0 = 0.5, H0 = 70.)
-    cosmo3 = FlatLambdaCDM(Om0 = 0.38, H0 = 70.)
+    #print("all_dm[inds]", all_data["all_dm"][inds])
+    #x,y, sigy=dobin(all_data["all_z"][inds], all_data["all_dm"][inds], zbins)
+    #plt.errorbar(x, y, yerr = sigy, fmt = '.', color = pltcolor)
 
 
     xlim = plt.xlim()
@@ -125,18 +126,21 @@ def show_other_cosmos(all_data, inds, cosmo, cosmo2, cosmo3):
 
     plt.axhline(0, color = 'k')
 
+    
     mean_resid = np.mean(all_data["all_dm"][inds] - (cosmo2.distmod(z=all_data["all_z"][inds]).value - cosmo.distmod(z=all_data["all_z"][inds]).value))
-    plt.plot(pltz, mu2-mu + mean_resid, color = 'r', label = "$\mu(\Omega_m=0.5) - \mu(\Omega_m = 0.3)$")
+    plt.plot(pltz, mu2-mu + mean_resid, color = 'orange', label = "$%s$" % get_cosmo_label(cosmo, cosmo2), linewidth = 2, zorder = 5)
 
     mean_resid = np.mean(all_data["all_dm"][inds] - (cosmo3.distmod(z=all_data["all_z"][inds]).value - cosmo.distmod(z=all_data["all_z"][inds]).value))
-    plt.plot(pltz, mu3-mu + mean_resid, '--', color = 'g', label = "$\mu(\Omega_m=0.38) - \mu(\Omega_m = 0.3)$")
+    plt.plot(pltz, mu3-mu + mean_resid, '--', color = 'purple', label = "$%s$" % get_cosmo_label(cosmo, cosmo3), linewidth = 2, zorder = 5)
 
 
     plt.legend(loc = 'best')
 
     
 
-fig = plt.figure(figsize = (8, 6))
+fig = plt.figure(figsize = (10, 8))
+
+all_for_cosmo = {}
 
 for lowhigh in "LHV":
     pltcolor = dict(L = 'b', H = 'g', V = 'r')[lowhigh]
@@ -180,38 +184,64 @@ for lowhigh in "LHV":
     plt.ylim(0,1)
 
     inds = np.where((all_data["all_incl"] == 1)*(all_data["all_outl"] == 0))
+    for key in all_data:
+        if key in all_for_cosmo:
+            all_for_cosmo[key] = np.concatenate((all_for_cosmo[key], all_data[key][inds]))
+        else:
+            all_for_cosmo[key] = all_data[key][inds]
 
     plt.subplot(2,2,2)
     #plt.hist(all_z, bins = zbins, color = 'w', edgecolor='black', label = "All " + datalabel + " SNe")
-    plt.hist(all_data["all_z"], bins = zbins, color = pltcolor, label = "All " + datalabel + " SNe", alpha = 0.3)
+    plt.hist(all_data["all_z"], bins = zbins, color = pltcolor, label = "All " + datalabel + " SNe Simulated", alpha = 0.3)
     plt.hist(all_data["all_z"][inds], bins = zbins, color = pltcolor, label = datalabel + " SNe Selected")
     plt.legend(loc = 'best')
-    plt.ylabel("Number of SNe per Bin")
+    plt.ylabel("Number of Simulated SNe per Bin")
     plt.xlabel("Redshift")
     plt.xscale('log')
-    plt.xlim(0.01, 3.5)
+    plt.xlim(0.01, 3.0)
 
     if lowhigh == "H":
+        plt.subplot(2,2,3)
 
+        print("all_dm[inds]", all_data["all_dm"][inds])
+        x,y, sigy=dobin(all_data["all_z"][inds], all_data["all_dm"][inds], zbins)
+        plt.errorbar(x, y, yerr = sigy, fmt = '.', color = pltcolor)
+        plt.ylabel("Mean Hubble Residual of Non-Outlier\nSelected Simulated SNe (Magnitudes)")
 
+        
+        cosmo = Flatw0waCDM(Om0 = 0.3, H0 = 70., w0 = -1, wa = 0)
+        cosmo2 = Flatw0waCDM(Om0 = 0.52, H0 = 70., w0 = -1, wa = 0)
+        cosmo3 = Flatw0waCDM(Om0 = 0.36, H0 = 70., w0 = -1, wa = 0)
+        show_other_cosmos(all_data, inds, cosmo, cosmo2, cosmo3)
+        plt.xlim(0, plt.xlim()[1])
 
     plt.subplot(2,2,4)
-    
+
     
     print("all_dm[inds]", all_data["all_dm"][inds])
     x,y, sigy=dobin(all_data["all_z"][inds], all_data["all_dm"][inds], zbins)
     plt.errorbar(x, y, yerr = sigy, fmt = '.', color = pltcolor)
 
+plt.subplot(2,2,4)
 
+cosmo = Flatw0waCDM(Om0 = 0.3, H0 = 70., w0 = -1, wa = 0)
+cosmo2 = Flatw0waCDM(Om0 = 0.3, H0 = 70., w0 = -1.06, wa = 0.72)
+cosmo3 = Flatw0waCDM(Om0 = 0.3, H0 = 70., w0 = -1.18, wa = 1.11)
+show_other_cosmos(all_for_cosmo, inds = np.where(all_for_cosmo["all_mags"] > 0), cosmo = cosmo, cosmo2 = cosmo2, cosmo3 = cosmo3)
+plt.xscale('log')
+plt.xlim(0.01, 3)
 
 plt.xlabel("Redshift")
 #plt.xscale('log')
 #plt.xlim(0.01, 3.5)
-plt.ylabel("Hubble Residual (Magnitudes)")
+#plt.ylabel("Hubble Residual (Magnitudes)")
+plt.ylabel("Mean Hubble Residual of Non-Outlier\nSelected Simulated SNe (Magnitudes)")
 
 fig.align_ylabels()
 
 plt.tight_layout()
+
+plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 
 plt.savefig("sim_data.pdf", bbox_inches = 'tight')
 plt.close()

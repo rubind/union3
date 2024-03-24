@@ -165,6 +165,17 @@ def make_dataset(wd, cal_offsets):
 
             
     if z_range_key == "L":
+        # Swope g
+        #20, 50, 80 [20.30159178 21.16237294 21.76663019]
+        #20, 50, 80 visits [10. 16. 26.]
+        #20, 50, 80 cadences [2.    3.    3.998]
+
+        # Foundation r
+        #20, 50, 80 [20.00699841 20.42337682 20.8160337 ]
+        #20, 50, 80 visits [ 5.  6. 10.]
+        #20, 50, 80 cadences [5.0454 7.098  9.498 ]
+
+        
         obs_err = 200. # ZP = 27.5, so depth of 20.0 at 5 sigma
         bands_to_use = ['sdssg', 'sdssr', 'sdssi', 'sdssz']
     elif z_range_key == "H":

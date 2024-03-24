@@ -19,6 +19,10 @@ def get_label(key):
                 "mean_sigma_int": "$<\sigma^{\mathrm{unexpl.}}>$",
                 "outl_frac": "$f^{\mathrm{outl}}$",
                 "delta_0": "$\delta(z=0)$",
+                "outl_mBx1c_uncertainties_mB": "$\sigma^{\mathrm{outl}}_{m_B}$",
+                "outl_mBx1c_uncertainties_x1": "$\sigma^{\mathrm{outl}}_{x_1}$",
+                "outl_mBx1c_uncertainties_cB": "$\sigma^{\mathrm{outl}}_{c_B}$",
+                "outl_mBx1c_uncertainties_cR_unit": "$\sigma^{\mathrm{outl}}_{c_R}/\\tau^c$",
                 "delta_h": "$\delta(z=\infty)/\delta(z=0)$"}[key]
     except:
         pass
@@ -29,10 +33,11 @@ def get_label(key):
             mBx1c = ["{m_B}", "{x_1}", "c"][int(key.split(":")[-1])]
             return "$f^%s$" % mBx1c
         
-        if key.count("outl_mBx1c_uncertainties"):
+        if key.count("outl_mBx1c_uncertainties:"):
             mBx1c = ["{m_B}", "{x_1}", "{c_B}", "{c_R}"][int(key.split(":")[-1])]
             return "$\sigma^{\mathrm{outl}}_%s$" % mBx1c
-    
+
+
     return key
 
 
@@ -58,30 +63,48 @@ def make_plot(keys, pltname):
     plt.close()
 
 
-try:
-    fit_params = pickle.load(open(sys.argv[1], 'rb'))
-except:
-    fit_params = pickle.load(gzip.open(sys.argv[1], 'rb'))
+plt_choice = int(sys.argv[1]) # 0, 1, 2
 
-for key in fit_params:
-    print("fit_params", key, fit_params[key].shape)
+pfls = sys.argv[2:]
+
+fit_params_list = []
+
+for pfl in pfls:
+    try:
+        fit_params = pickle.load(open(pfl, 'rb'))
+    except:
+        fit_params = pickle.load(gzip.open(pfl, 'rb'))
+
+    for key in fit_params:
+        print("fit_params", key, fit_params[key].shape)
 
     
-"""
-for thresh in [0, 0.25, 0.5, 0.75, 1.0]:
+    """
+    for thresh in [0, 0.25, 0.5, 0.75, 1.0]:
     inds = np.where(fit_params["outl_mBx1c_uncertainties"][:, 3] > thresh)
     print(len(inds[0]))
     print(thresh, "Om", np.median(fit_params["Om"][inds]))
-
-fdlksjfljk
-""" 
-
-
-fit_params["beta_R"] = 0.5*(fit_params["beta_R_high"] + fit_params["beta_R_low"])
-fit_params["delta_beta_R"] = fit_params["beta_R_high"] - fit_params["beta_R_low"]
-fit_params["mean_sigma_int"] = np.mean(fit_params["sigma_int"], axis = 1)
+    
+    fdlksjfljk
+    """ 
 
 
-make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB:0", "delta_0", "delta_h"], "standardization_coeffs.pdf")
-make_plot(["Om", "mean_sigma_int", "mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac", "outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"], "uncertainty_parameters.pdf")
-make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int", "mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")
+    fit_params["beta_R"] = 0.5*(fit_params["beta_R_high"] + fit_params["beta_R_low"])
+    fit_params["delta_beta_R"] = fit_params["beta_R_high"] - fit_params["beta_R_low"]
+    fit_params["mean_sigma_int"] = np.mean(fit_params["sigma_int"], axis = 1)
+
+    fit_params_list.append(fit_params)
+
+
+if plt_choice == 0:
+    make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB:0", "delta_0", "delta_h"], "standardization_coeffs.pdf")
+elif plt_choice == 1:
+    try:
+        fit_params["outl_mBx1c_uncertainties_mB"]
+        indiv_labels = 1
+    except:
+        indiv_labels = 0
+
+    make_plot(["Om", "mean_sigma_int", "mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac"] + (indiv_labels == 0)*["outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"] + indiv_labels*["outl_mBx1c_uncertainties_mB", "outl_mBx1c_uncertainties_x1", "outl_mBx1c_uncertainties_cB", "outl_mBx1c_uncertainties_cR_unit"], "uncertainty_parameters.pdf")
+elif plt_choice == 2:
+    make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int", "mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")

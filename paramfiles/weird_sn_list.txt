@@ -99,23 +99,23 @@ LSQ12fhs		02cx-like
 #PTF11mkx                91T-like      SNfactory, not excluding these
 #PTF11bju                91T-like      SNfactory, not excluding these
 
-SN2005hk	Ia-02cx	 SOUSA
-SN2008A		Ia-02cx	 SOUSA
-SN2008ae	Ia-02cx	 SOUSA
-SN2012Z		Ia-02cx	 SOUSA
-SN2014dt	Ia-02cx	 SOUSA
-SN2005ke	Ia-91bg	 SOUSA
-SN2005mz	Ia-91bg	 SOUSA
-SN2007ax	Ia-91bg	 SOUSA
-SN2008dx	Ia-91bg	 SOUSA
-SN2011eh	Ia-91bg	 SOUSA
-SN2012ij	Ia-91bg	 SOUSA
-SN2014ba	Ia-91bg	 SOUSA
-SN2015bp	Ia-91bg	 SOUSA
-SN2016ajf	Ia-91bg	 SOUSA
-SN2011ek	Ia-91bg?	 SOUSA
-SN2005gj	Ia-CSM	SOUSA
-SN2010ae	Ia-p	SOUSA
-SN2010el	Ia-p	SOUSA
-ASASSN-14dc	Ia-pec	SOUSA
-ASASSN-14eu	Ia-pec?	SOUSA
+#SN2005hk	Ia-02cx	 SOUSA
+#SN2008A		Ia-02cx	 SOUSA
+#SN2008ae	Ia-02cx	 SOUSA
+#SN2012Z		Ia-02cx	 SOUSA
+#SN2014dt	Ia-02cx	 SOUSA
+#SN2005ke	Ia-91bg	 SOUSA
+#SN2005mz	Ia-91bg	 SOUSA
+#SN2007ax	Ia-91bg	 SOUSA
+#SN2008dx	Ia-91bg	 SOUSA
+#SN2011eh	Ia-91bg	 SOUSA
+#SN2012ij	Ia-91bg	 SOUSA
+#SN2014ba	Ia-91bg	 SOUSA
+#SN2015bp	Ia-91bg	 SOUSA
+#SN2016ajf	Ia-91bg	 SOUSA
+#SN2011ek	Ia-91bg?	 SOUSA
+#SN2005gj	Ia-CSM	SOUSA
+#SN2010ae	Ia-p	SOUSA
+#SN2010el	Ia-p	SOUSA
+#ASASSN-14dc	Ia-pec	SOUSA
+#ASASSN-14eu	Ia-pec?	SOUSA
