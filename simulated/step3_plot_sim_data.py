@@ -214,6 +214,7 @@ for lowhigh in "LHV":
         cosmo3 = Flatw0waCDM(Om0 = 0.36, H0 = 70., w0 = -1, wa = 0)
         show_other_cosmos(all_data, inds, cosmo, cosmo2, cosmo3)
         plt.xlim(0, plt.xlim()[1])
+        plt.xlabel("Redshift")
 
     plt.subplot(2,2,4)
 
@@ -237,11 +238,13 @@ plt.xlabel("Redshift")
 #plt.ylabel("Hubble Residual (Magnitudes)")
 plt.ylabel("Mean Hubble Residual of Non-Outlier\nSelected Simulated SNe (Magnitudes)")
 
+fig.align_xlabels()
 fig.align_ylabels()
 
 plt.tight_layout()
 
 plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
+
 
 plt.savefig("sim_data.pdf", bbox_inches = 'tight')
 plt.close()
