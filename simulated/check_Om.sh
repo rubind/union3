@@ -13,6 +13,10 @@ for i in {1..72}
 do
     cd /home/drubin/koa_scratch/sim_data_simplex/
     python /home/drubin/union3//simulated/step1B_Om_sampled_well.py 1
+
+    cd /home/drubin/koa_scratch/Union3_fixed_outlier_cB/
+    python /home/drubin/union3//simulated/step1B_Om_sampled_well.py 1 */log.txt
+
     
     sleep 900
 done

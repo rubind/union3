@@ -24,7 +24,12 @@ grepout = getoutput("squeue | grep " + whoami + " | grep -v ' R '")
 
 assert grepout.strip() == "", "Some jobs are still queued"
 
-for logfl in glob.glob("UNITY*/log.txt"):
+if len(sys.argv) == 2:
+    logfls = glob.glob("UNITY*/log.txt")
+else:
+    logfls = sys.argv[2:]
+
+for logfl in logfls:
     check_Om = check_param(logfl, param = "Om", leave_running_jobs_alone = leave_running_jobs_alone)
     check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone)
 

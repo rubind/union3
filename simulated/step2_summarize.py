@@ -379,7 +379,7 @@ plt.gca().set_aspect('equal')
 plt.xlabel("Simulation Fraction of Unexplained\nVariance in $m_B$ ($f^{m_B}$)")
 plt.ylabel("Posterior Fraction of Unexplained\nVariance in $m_B$ ($f^{m_B}$)")
 
-plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
+plt.figtext(0.91, 0.93, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 
 plt.savefig("f_mB_recovered_" + suffix + ".pdf", bbox_inches = 'tight')
 plt.close()

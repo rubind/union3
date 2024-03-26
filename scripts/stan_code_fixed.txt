@@ -133,7 +133,7 @@ parameters {
     
     real <lower = 0.2, upper = 2> outl_mBx1c_uncertainties_mB;
     real <lower = 1, upper = 10> outl_mBx1c_uncertainties_x1;
-    real <lower = 0.2, upper = 1> outl_mBx1c_uncertainties_cB;
+    real <lower = 0.1, upper = 1> outl_mBx1c_uncertainties_cB;
     real <lower = 1, upper = 10> outl_mBx1c_uncertainties_cR_unit;
 }
 

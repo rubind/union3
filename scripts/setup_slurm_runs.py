@@ -47,7 +47,7 @@ n_copy = int(sys.argv[3])
 cosmomodels = [int(item) for item in sys.argv[4]]
 redo_runs = int(sys.argv[5])
 leave_running_jobs_alone = int(sys.argv[6])
-
+max_params_to_save = int(sys.argv[7])
 
 
 for i in range(n_copy):
@@ -88,11 +88,9 @@ for i in range(n_copy):
 
             (the_data, stan_data, params) = pickle.load(gzip.open(pfl, 'rb'))
 
-            if cosmomodel != 1:
-                print("cosmomodel", cosmomodel, " so restricting saved parameters!")
-                params["max_params_to_save"] = min(params["max_params_to_save"], 1000)
+            params["max_params_to_save"] = min(params["max_params_to_save"], max_params_to_save)
 
-                pickle.dump((the_data, stan_data, params), gzip.open(pfl, "wb"))
+            pickle.dump((the_data, stan_data, params), gzip.open(pfl, "wb"))
 
 
             if cosmomodel != 6:
