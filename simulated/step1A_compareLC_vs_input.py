@@ -496,7 +496,7 @@ for pltind, LH in enumerate(["H", "LHV"]):
 
 
 plt.figure(2)
-plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
+plt.figtext(0.98, 0.92, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 plt.savefig("sim_mean_resid.pdf", bbox_inches = 'tight')
 plt.close()
 

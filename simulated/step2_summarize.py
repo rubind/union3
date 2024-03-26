@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import multiprocessing
 multiprocessing.set_start_method("fork")
 import pystan 
+import matplotlib,pyplot as plt
 
 
 
@@ -138,6 +139,8 @@ all_txt_grid = []
 all_fmB_true = []
 all_fmB_posterior = []
 
+plt.figure(figsize = (8, 12))
+
 for matchstr, description in [
         ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "Nominal UNITY1.5 Model"),
         ("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "UNITY1.6 Model"),
@@ -152,11 +155,15 @@ for matchstr, description in [
     all_pars = {}
     all_uncs = {}
     all_trues = {}
+    all_posterior_stacks = {}
 
     for par in pars:
         all_pars[par] = []
         all_uncs[par] = []
         all_trues[par] = []
+        all_posterior_stacks[par] = []
+
+    
     
     for sampfl in tqdm.tqdm(sampfls):
         UNITY_paramfl = sampfl.split("/")[0] + "/paramfile.txt"
@@ -184,9 +191,12 @@ for matchstr, description in [
                 
                 all_pars[par].append(np.median(fit_params[parnoind][:, ind - 1]))
                 all_uncs[par].append(0.5*(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - scoreatpercentile(fit_params[parnoind][:, ind - 1], 15.8655)))
+                all_posterior_stacks[par].extend(fit_params[parnoind][:, ind - 1])
             else:
                 all_pars[par].append(np.median(fit_params[par]))
                 all_uncs[par].append(0.5*(scoreatpercentile(fit_params[par], 84.1345) - scoreatpercentile(fit_params[par], 15.8655)))
+                all_posterior_stacks[par].extend(fit_params[par])
+
 
             try:
                 float(true_vals[par])
@@ -221,7 +231,10 @@ for matchstr, description in [
                 
     print("all_pars", all_pars, len(all_pars["beta_B"]))
     towrite = [description]
-    for par in pars:
+    for i, par in enumerate(pars):
+        plt.subplot(len(pars), 2, 2*i + 1)
+        plt.hist(all_posterior_stacks[par], alpha = 0.5, label = description)
+        
         the_mean = np.mean(all_pars[par])
         the_std = np.std(all_pars[par], ddof=1)
         sqrtn = np.sqrt(float(len(all_pars[par])))
@@ -242,6 +255,13 @@ for matchstr, description in [
         
     all_txt_grid.append(towrite)
     
+for i, par in enumerate(pars):
+    plt.subplot(len(pars), 2, 2*i + 1)
+    plt.legend(loc = 'best')
+plt.tight_layout()
+plt.savefig("sim_parameters.pdf", bbox_inches = 'tight')
+plt.close()
+
 
 all_txt_grid = np.array(all_txt_grid)    
 
