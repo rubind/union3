@@ -61,6 +61,7 @@
 ('Zeropoint', 'ZTF|ztfr'):										0.02
 ('Zeropoint', 'ZTF|ZTF_g'):										0.02
 ('Zeropoint', 'ZTF|ZTF_r'):										0.02
+('Zeropoint', 'ZTF|ZTF_i'):										0.02
 ('Zeropoint', 'ATLAS|c'):										0.02
 ('Zeropoint', 'ATLAS|o'):										0.02
 ('Zeropoint', 'UKIRT|J'):										0.02
@@ -69,6 +70,7 @@
 ('Lambda', 'ZTF|ztfr'):											20
 ('Lambda', 'ZTF|ZTF_g'):											20
 ('Lambda', 'ZTF|ZTF_r'):											20
+('Lambda', 'ZTF|ZTF_i'):											20
 ('Lambda', 'ATLAS|c'):											20
 ('Lambda', 'ATLAS|o'):											20
 ('Lambda', 'UKIRT|J'):											20
