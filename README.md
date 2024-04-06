@@ -1,6 +1,11 @@
 # union3
 Union3/UNITY1.5 repo
 
+# UNITY1.5 requires:
+
+```numpy==1.22.4```
+```pystan==2.19.1.1```
+
 # Need to set these environment variables:
 
 ```export UNITY=path/to/union3```
