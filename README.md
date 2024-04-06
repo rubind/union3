@@ -5,6 +5,7 @@ Union3/UNITY1.5 repo
 
 ```numpy==1.22.4```
 ```pystan==2.19.1.1```
+```cython==3.0.10```
 
 # Need to set these environment variables:
 
