@@ -20,6 +20,7 @@ CNIa02_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   16.0		1.0
 Foundation_v1.txt     	$UNITY/paramfiles/CalanTololo_R_selection.txt   17.5            1.0
 sim_sne_list.txt 	$UNITY/paramfiles/sim_sne_selection.txt		22. 		0.5
 SNf_sim.txt		$UNITY/paramfiles/SDSS_r_selection.txt		19		1.0
+ZTF_v1.txt		$UNITY/paramfiles/SDSS_r_selection.txt		18.75		1.0
 NB99_v1.txt		$UNITY/paramfiles/SDSS_r_selection.txt		19.5		1.0
 UKIRT_v1.txt		$UNITY/paramfiles/SDSS_r_selection.txt		19.5		1.0
 
