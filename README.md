@@ -13,6 +13,8 @@ Union3/UNITY1.5 repo
 
 ```export UNION=path/to/lcfits```
 
+```export PATHMODEL=path/to/salt```
+
 # For making the LC fits:
 
 From Union3_Photometry:
@@ -33,9 +35,19 @@ From the Union3 directory, run:
 
 where 4 is the number of LC fits to do at once.
 
-```python $PATHMODEL/python_code/cutfits.py```
+```python $PATHMODEL/python_code/cutfits.py [optional directories to look in]```
 
 For making the v1 files of SNe that pass cuts. Note that cutfits.py takes arguments if you only want to check some directories but not others.
+
+# For running UNITY:
+
+```python read_and_sample.py paramfile_Union3.txt 1```
+
+1 is the cosmology model. read_and_sample.py also makes a pickle file that can be used as input:
+
+```python read_and_sample.py inputs_XXX.pickle 1```
+
+This is much more portable/reproducable than making read_and_sample.py read in LC fits.
 
 # For updating filters or magnitude systems (magsys):
 
