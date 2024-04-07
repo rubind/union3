@@ -43,7 +43,7 @@ For making the v1 files of SNe that pass cuts. Note that cutfits.py takes argume
 
 ```python read_and_sample.py paramfile_Union3.txt 1```
 
-1 is the cosmology model. read_and_sample.py also makes a pickle file that can be used as input:
+'1' is the cosmology model (flat LCDM, also available are flat Om-w, flat-w0wa with a BAO+CMB prior, and spline mu(z) for releasing distances). read_and_sample.py also makes a pickle file that can be used as input:
 
 ```python read_and_sample.py inputs_XXX.pickle 1```
 
