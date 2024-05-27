@@ -71,7 +71,7 @@ def pullfn(P, passdata):
     return (delta_mus - delta_mu_model)/mu_uncs
 
 
-def fit_delta_cosmo(zs, delta_mus, mu_uncs, pltzs, fit_Om, fit_w0, fit_wa, verbose = False, n_boot = 20):
+def fit_delta_cosmo(zs, delta_mus, mu_uncs, pltzs, fit_Om, fit_w0, fit_wa, verbose = False, n_boot = 50):
     P, NA, NA = miniLM_new(ministart = [0.0, 0.3, -1, 0.], miniscale = [1., fit_Om, fit_w0, fit_wa], residfn = pullfn, passdata = [zs, delta_mus, mu_uncs], verbose = verbose, maxiter = 3)
     # The mu_uncs have 0.12 added in quadrature, so the uncertainties are overestimated compared to just the LC fit uncertainties. Need to bootstrap.
 
@@ -432,7 +432,7 @@ for include_outlier in [0, 1]:
     plt.close()
 
 plt.figure(2, figsize = (5, 7))
-for pltind, LH in enumerate(["H", "LHV"]):
+for pltind, LH in enumerate(["LHV", "H"]):
     LH_mask = np.array([LH.count(item) for item in all_dat["LH"]])
     inds = np.where(LH_mask*(all_dat["redshift"] > 0.01)*(all_dat["outlier"] == 0))
     zs = all_dat["redshift"][inds]
