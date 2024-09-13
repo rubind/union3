@@ -6,9 +6,13 @@ import sys
 import tqdm
 import matplotlib.pyplot as plt
 import multiprocessing
+from DavidsNM import miniNM_new
+from FileRead import readcol
+import os
 multiprocessing.set_start_method("fork")
 import time
 
+UNION = os.environ["UNION"]
 
 def randomexp():
     ind_choice = np.random.choice(np.arange(len(exp_approx_norm)), size = 1, replace = True, p = exp_approx_norm)[0]
@@ -17,7 +21,10 @@ def randomexp():
 def normal_cdf(x, mu, sig):
     return 0.5*(1. + erf(  (x - mu)/(np.sqrt(2.) * sig)  ))
 
-def make_a_SN(samp_ind, sn_ind):
+
+
+
+def make_a_SN(samp_ind, sn_ind, sn_pars):
     p_high_mass_eff = (1.9*(1 - fit_params["delta_h"][samp_ind])/(1 + 0.9*np.exp(0.95*np.log(10.)*stan_data["redshifts"][sn_ind])) + fit_params["delta_h"][samp_ind])*stan_data["p_high_mass"][sn_ind]
     beta_R = fit_params["beta_R_low"][samp_ind]*(1. - p_high_mass_eff) + fit_params["beta_R_high"][samp_ind]*p_high_mass_eff
     
@@ -27,7 +34,25 @@ def make_a_SN(samp_ind, sn_ind):
     true_x1 = np.random.normal()*fit_params["R_x1_by_SN"][samp_ind][sn_ind] + randomexp()*fit_params["tau_x1_by_SN"][samp_ind][sn_ind] + fit_params["x1_star_by_SN"][samp_ind][sn_ind]
     true_mB = fit_params["MB"][samp_ind][0] + fit_params["model_mu"][samp_ind][sn_ind] - fit_params["alpha"][samp_ind]*true_x1 + fit_params["beta_B"][samp_ind]*true_cB + beta_R*true_cR - fit_params["delta_0"][samp_ind]*p_high_mass_eff
 
-    obs_mBx1c = np.array([true_mB, true_x1, true_cB + true_cR]) + np.random.multivariate_normal([0., 0., 0.], fit_params["model_mBx1c_cov"][samp_ind][sn_ind])
+
+    obs_cov_mat = np.zeros([3,3], dtype=np.float64)
+    obs_cov_mat[0,0] = modelfn_var(P = sn_pars["mBmB"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+    obs_cov_mat[1,1] = modelfn_var(P = sn_pars["x1x1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+    obs_cov_mat[2,2] = modelfn_var(P = sn_pars["cc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+
+    obs_cov_mat[0,1] = modelfn_var(P = sn_pars["mBx1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+    obs_cov_mat[1,0] = modelfn_var(P = sn_pars["mBx1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+
+    obs_cov_mat[0,2] = modelfn_var(P = sn_pars["mBc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+    obs_cov_mat[2,0] = modelfn_var(P = sn_pars["mBc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+
+    obs_cov_mat[1,2] = modelfn_var(P = sn_pars["x1c"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+    obs_cov_mat[2,1] = modelfn_var(P = sn_pars["x1c"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+
+    cov_mat_unexpl_disp = fit_params["model_mBx1c_cov"][samp_ind][sn_ind] - stan_data["obs_mBx1c_cov"][sn_ind]
+    
+    obs_mBx1c = np.array([true_mB, true_x1, true_cB + true_cR]) + np.random.multivariate_normal([0., 0., 0.], cov_mat_unexpl_disp + obs_cov_mat)
+    obs_mBx1c -= np.dot(stan_data["d_mBx1c_d_calib"][sn_ind], fit_params["calibs"][samp_ind]) # d_mBx1c_d_calib[i] * calibs
     obs_mag = obs_mBx1c[0] + stan_data["mobs_cut0"][sn_ind] + stan_data["mobs_cut1"][sn_ind]*obs_mBx1c[2]
 
 
@@ -42,10 +67,11 @@ def make_a_SN(samp_ind, sn_ind):
         
     return dict(obs_mBx1c = obs_mBx1c,
                 obs_mag = obs_mag,
+                model_mu = fit_params["model_mu"][samp_ind][sn_ind],
                 true_mBx1cBcR = [true_mB, true_x1, true_cB, true_cR],
                 found = found)
 
-def make_a_SN_conditional(samp_ind, sn_ind, needs_to_be_found = 1):
+def make_a_SN_conditional(samp_ind, sn_ind, sn_pars, needs_to_be_found = 1):
     found = 0
     close_x1c = 0
     closest_out_of_tries = 1000
@@ -53,7 +79,7 @@ def make_a_SN_conditional(samp_ind, sn_ind, needs_to_be_found = 1):
     tries = 0
     
     while ((found == 0) or (close_x1c == 0)) and tries < 1e6:
-        SN_dict = make_a_SN(samp_ind = samp_ind, sn_ind = sn_ind)
+        SN_dict = make_a_SN(samp_ind = samp_ind, sn_ind = sn_ind, sn_pars = sn_pars)
 
         if needs_to_be_found:
             found = SN_dict["found"]
@@ -76,16 +102,17 @@ def make_a_SN_conditional(samp_ind, sn_ind, needs_to_be_found = 1):
 
 
 def single_SN_fn(both_inds):
-    sn_ind, samp_ind = both_inds
+    sn_ind, samp_ind, sn_pars = both_inds
     
     return_dict = {}
 
     
-    SN_dict = make_a_SN(samp_ind = samp_ind, sn_ind = sn_ind)
+    SN_dict = make_a_SN(samp_ind = samp_ind, sn_ind = sn_ind, sn_pars = sn_pars)
 
     return_dict["obs_mBx1c"] = SN_dict["obs_mBx1c"]
     return_dict["true_mBx1cBcR"] = SN_dict["true_mBx1cBcR"]
     return_dict["found"] = SN_dict["found"]
+    return_dict["model_mu"] = SN_dict["model_mu"]
     return_dict["mB_unc"] = np.sqrt(fit_params["model_mBx1c_cov"][samp_ind][sn_ind][0,0])
     return_dict["x1_unc"] = np.sqrt(fit_params["model_mBx1c_cov"][samp_ind][sn_ind][1,1])
     return_dict["c_unc"] = np.sqrt(fit_params["model_mBx1c_cov"][samp_ind][sn_ind][2,2])
@@ -104,6 +131,47 @@ def single_SN_fn(both_inds):
     """
     return return_dict
 
+
+def modelfn_var(P, mB, c, mB0):
+    return P[0] + P[1]*10**(0.8*(mB - mB0)) + P[2]*10**(0.8*c)
+
+def chi2fn(P, passdata):
+    [mB, c, mB0, var] = passdata[0]
+    the_mod = modelfn_var(P, mB = mB, c = c, mB0 = mB0)
+    pulls = (var - the_mod)/0.001
+
+    return np.dot(pulls, pulls)
+
+
+def get_cmat_interp_fns(snpath):
+    [mB, c, mBmB, x1x1, cc, mBx1, mBc, x1c] = readcol(snpath + "/mBx1c_cov_by_mag_color.txt", 'ff,fff,fff')
+    mB0 = np.mean(mB)
+
+    assert mB0 > 0
+    
+    sn_pars = {"mB0": mB0}
+    for var, var_name in [(mBmB, "mBmB"),
+                          (x1x1, "x1x1"),
+                          (cc, "cc"),
+                          (mBx1, "mBx1"),
+                          (mBc, "mBc"),
+                          (x1c, "x1c")]:
+        P, NA, NA = miniNM_new(ministart = [0.01, 0.01, 0.01], miniscale = [0.01, 0.01, 0.01],
+                               chi2fn = chi2fn, passdata = [mB, c, mB0, var], compute_Cmat = False, verbose = False)
+        
+        sn_pars[var_name] = P
+    return sn_pars
+
+
+"""
+sn_pars = get_cmat_interp_fns("/Users/rubind/Dropbox/Shared/Union3_Photometry/Union3_Union3_Submitted_2023-11_with_uncfit/Krisciunas/SN2000ca")
+
+print(np.sqrt(modelfn_var(P = sn_pars["cc"], mB0 = sn_pars["mB0"], mB = 18., c = -0.2)))
+print(np.sqrt(modelfn_var(P = sn_pars["cc"], mB0 = sn_pars["mB0"], mB = 18., c = 0.)))
+print(np.sqrt(modelfn_var(P = sn_pars["cc"], mB0 = sn_pars["mB0"], mB = 18., c = 0.5)))
+""" 
+
+
 input_fl = sys.argv[1]
 sample_fl = sys.argv[2]
 
@@ -120,7 +188,8 @@ for key in the_data:
 
 for key in fit_params:
     print("fit_params", key)
-    
+
+
     
 
 assert stan_data["MB_by_sample"] == 0
@@ -135,6 +204,7 @@ PPD["true_mBx1cBcR"] = []
 PPD["mB_unc"] = []
 PPD["x1_unc"] = []
 PPD["c_unc"] =	[]
+PPD["model_mu"] = []
 
 """
 PPD["obs_mBx1c|foundobsx1c"] = []
@@ -151,12 +221,16 @@ n_samples = len(fit_params["alpha"])
 for sn_ind in tqdm.trange(stan_data["n_sne"]):
     in_minus_out = np.median(fit_params["inl_loglike_by_SN"][:, sn_ind]) - np.median(fit_params["outl_loglike_by_SN"][:, sn_ind])
     print(the_data["snpaths"][sn_ind], in_minus_out)
+
     
     for key in PPD:
         PPD[key].append([])
         
     if in_minus_out > 0:
-        all_return_dicts = pool.map(single_SN_fn, zip([sn_ind]*n_samples, np.arange(n_samples)))
+        new_path = UNION + "/".join(the_data["snpaths"][sn_ind].split("/")[-2:])
+        
+        sn_pars = get_cmat_interp_fns(new_path)
+        all_return_dicts = pool.map(single_SN_fn, zip([sn_ind]*n_samples, np.arange(n_samples), [sn_pars]*n_samples))
 
         for return_dict in all_return_dicts:
             for key in return_dict:

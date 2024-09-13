@@ -3,10 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gzip
 import sys
-from scipy.stats import percentileofscore, scoreatpercentile, gamma, poisson
+from scipy.stats import percentileofscore, scoreatpercentile, gamma, poisson, norm
 import tqdm
 import time
 from helper_functions import bin_samples_in_redshift
+import matplotlib.colors as mcolors
+from matplotlib import cm
+
 
 def do_bin(xvals, yvals):
     bins = np.linspace(xvals.min(), xvals.max(), 10)
@@ -21,12 +24,79 @@ def do_bin(xvals, yvals):
         bin_y.append(np.median(yvals[inds]))
     return bin_x, bin_y
 
+
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+    new_cmap = mcolors.LinearSegmentedColormap.from_list(
+        "truncated",
+        cmap(np.linspace(minval, maxval, n))
+    )
+    return new_cmap
+
+
+def get_mBx1cbins(mBx1c_ind, observed_vals):
+    if mBx1c_ind == 2:
+        bins = np.linspace(-0.35, 0.35, 15)
+    elif mBx1c_ind == 1:
+        bins = np.linspace(-4, 4, 15)
+    else:
+        bins = np.linspace(-1.2, 1.2, 15) + np.mean(observed_vals)
+    return bins
+
+
+def p_value_to_sigma(p_value):
+    """
+    Convert a p-value to a Gaussian sigma equivalent (z-score).
+    """
+    # Convert p-value to two-tailed z-score
+    return norm.isf(p_value / 2)
+
+def poisson_zscore(observed, expected):
+    """
+    Compute the p-value for observing counts at least as extreme as `observed`,
+    given the expected Poisson-distributed mean `expected`. Then convert a p-value to a Gaussian sigma equivalent (z-score).
+    """
+
+    if observed >= expected:
+        # Right-tail probability: sum of Poisson probabilities for counts >= observed
+        right_tail_p = 1 - poisson.cdf(observed - 1, expected)
+        # Left-tail probability: sum of Poisson probabilities for counts <= lower side of expected
+        left_tail_p = poisson.cdf(2 * expected - observed, expected)
+    else:
+        # Left-tail probability: sum of Poisson probabilities for counts <= observed
+        left_tail_p = poisson.cdf(observed, expected)
+        # Right-tail probability: sum of Poisson probabilities for counts >= upper side of expected
+        right_tail_p = 1 - poisson.cdf(2 * expected - observed - 1, expected)
+
+    # Two-sided p-value is the sum of the left and right tail probabilities
+    p_value = left_tail_p + right_tail_p
+
+        
+    return p_value_to_sigma(p_value)
+
+
+for observed, expected in [(100, 100.),
+                           (110, 100.),
+                           (120, 100.),
+                           (140, 100.),
+                           (90, 100.),
+                           (0, 1.),
+                           (1, 1.),
+                           (2, 1.)]:
+                           
+    print("observed", observed, "expected", expected, poisson_zscore(observed = observed, expected = expected))
+
+expected = 100.
+for observed in np.arange(95, 106, 1):
+    print("observed", observed, "expected", expected, poisson_zscore(observed = observed, expected = expected))
+
+
 def bin_into_panels(all_processed_data):
     plt.figure(figsize = (9, 15))
     
     for mBx1c_ind in [0, 1, 2]:
         label = ["Magnitude", "Light-Curve Shape", "Color"][mBx1c_ind]
         x1cname = ["mB", "x1", "c"][mBx1c_ind]
+        bins = get_mBx1cbins(mBx1c_ind = mBx1c_ind, observed_vals = all_processed_data[x1cname]["tmp_c_obs"])
 
         z_dataset = []
         for dataset_match_ind in np.unique(all_processed_data[x1cname]["per_dataset_ind"]):
@@ -36,22 +106,21 @@ def bin_into_panels(all_processed_data):
 
         z_dataset.sort()
         z_dataset = z_dataset[::-1]
+        tmp_ind = 1
 
         for NA, dataset_match_ind in z_dataset:
             median_sample_z = -1 # show all SNe rather than above median np.median(per_z[np.where(per_dataset_ind == dataset_match_ind)])
 
-            inds = np.where((per_dataset_ind == dataset_match_ind)*(all_processed_data[x1cname]["per_z"] >= median_sample_z))
+            inds = np.where((all_processed_data[x1cname]["per_dataset_ind"] == dataset_match_ind)*(all_processed_data[x1cname]["per_z"] >= median_sample_z))
+            
             set_color = samp_bins["colors"][samp_bins["inds"].index(dataset_match_ind - 1)]
 
             plt.subplot(len(z_dataset), 3, tmp_ind*3 + mBx1c_ind - 2)
             PPD1D = (all_processed_data[x1cname]["tmp_c_PPD_found"][inds]).flatten()
             PPD1D_found_or_not = (all_processed_data[x1cname]["tmp_c_PPD_found_or_not"][inds]).flatten()
+            tmp_c_obs = all_processed_data[x1cname]["tmp_c_obs"]*1.
 
-            if mBx1c_ind == 0: # If mB
-                tmp_c_obs[inds] -= np.mean(PPD1D)
-                PPD1D_found_or_not -= np.mean(PPD1D)
-                PPD1D -= np.mean(PPD1D)
-
+            
             #plt.hist(PPD1D_found_or_not, bins = bins, label = "PPD", density=True, color = 'b', histtype = "step")
             plt.hist(PPD1D, bins = bins, label = "PPD", density=True, color = 'k', histtype = "step")
             #plt.title(the_data["sample_names"][dataset_match_ind - 1].split("/")[-1].split("_v1")[0])
@@ -63,7 +132,7 @@ def bin_into_panels(all_processed_data):
             chi2s = []
 
             for i in range(len(bins) - 1):
-                the_count = sum((per_dataset_ind == dataset_match_ind)*(tmp_c_obs >= bins[i])*(tmp_c_obs < bins[i+1])*(per_z >= median_sample_z))
+                the_count = sum((all_processed_data[x1cname]["per_dataset_ind"] == dataset_match_ind)*(tmp_c_obs >= bins[i])*(tmp_c_obs < bins[i+1])*(all_processed_data[x1cname]["per_z"] >= median_sample_z))
                 the_count_PPD = sum((PPD1D >= bins[i])*(PPD1D < bins[i+1])) * the_gain
 
                 """
@@ -91,9 +160,11 @@ def bin_into_panels(all_processed_data):
                 plt.plot([0.5*(bins[i] + bins[i+1])]*2,
                          [lower_bound*the_norm, upper_bound*the_norm], color = 'k', zorder = 0)
 
+                
                 if the_count_PPD > 0:
-                    chi2s.append((the_count - the_count_PPD)**2./the_count_PPD)
-
+                    zscore = poisson_zscore(observed = the_count, expected = the_count_PPD)
+                    chi2s.append(zscore**2.) #(the_count - the_count_PPD)**2./the_count_PPD)
+                    
                 plt.yticks([])
 
 
@@ -107,12 +178,12 @@ def bin_into_panels(all_processed_data):
             plt.xlim(bins[0], bins[-1])
 
             if tmp_ind == 1:
-                plt.title(label + [" $m_B - $ Sample Mean", " $x_1$", " $c$"][mBx1c_ind], fontsize = 12)
+                plt.title(label + [" $m_B - \mu(z)$", " $x_1$", " $c$"][mBx1c_ind], fontsize = 12)
             if mBx1c_ind == 0:
                 plt.ylabel(samp_bins["short_labels"][samp_bins["inds"].index(dataset_match_ind - 1)].replace("(", "\n("), fontsize = 9)
 
             tmp_ind += 1
-        plt.xlabel(label + [" $m_B - $ Sample Mean", " $x_1$", " $c$"][mBx1c_ind], fontsize = 12)
+        plt.xlabel(label + [" $m_B - \mu(z)$", " $x_1$", " $c$"][mBx1c_ind], fontsize = 12)
 
 
     plt.tight_layout(h_pad = 0.3)
@@ -120,6 +191,129 @@ def bin_into_panels(all_processed_data):
     plt.close()
 
 
+
+def bin_by_percentile(all_processed_data, key_to_bin, percentile_edges, ylabel, yfmt, x1cname_to_bin, plot_best_measured, indiv_chi2):
+    n_bins = len(percentile_edges) - 1
+    plt.figure(figsize = (9, 2*n_bins))
+
+    for mBx1c_ind in [0, 1, 2]:
+        label = ["Magnitude", "Light-Curve Shape", "Color"][mBx1c_ind]
+        x1cname = ["mB", "x1", "c"][mBx1c_ind]
+        bins = get_mBx1cbins(mBx1c_ind = mBx1c_ind, observed_vals = all_processed_data[x1cname]["tmp_c_obs"])
+
+
+        bin_edges = scoreatpercentile(all_processed_data[x1cname_to_bin][key_to_bin], percentile_edges)
+        bin_edges[0] -= 0.00001
+        bin_edges[-1] += 0.00001
+        
+        
+        for tmp_ind in range(n_bins):
+            set_color = 'b'
+            
+            inds_in_bin = np.where((all_processed_data[x1cname_to_bin][key_to_bin] >= bin_edges[tmp_ind])*(all_processed_data[x1cname_to_bin][key_to_bin] < bin_edges[tmp_ind+1]))
+            if plot_best_measured:
+                tmp_median = np.median(all_processed_data[x1cname]["median_dc"][inds_in_bin])
+            else:
+                tmp_median = np.max(all_processed_data[x1cname]["median_dc"][inds_in_bin]) + 100
+            print("plot_best_measured", plot_best_measured, "tmp_median", tmp_median, "x1cname", x1cname)
+                
+            inds = np.where((all_processed_data[x1cname_to_bin][key_to_bin] >= bin_edges[tmp_ind])*(all_processed_data[x1cname_to_bin][key_to_bin] < bin_edges[tmp_ind+1])*(all_processed_data[x1cname]["median_dc"] <= tmp_median))
+            
+            plt.subplot(n_bins, 3, (n_bins - 1 - tmp_ind)*3 + mBx1c_ind + 1)
+            PPD1D = (all_processed_data[x1cname]["tmp_c_PPD_found"][inds]).flatten()
+            print("len(PPD1D)", len(PPD1D))
+
+            tmp_c_obs = all_processed_data[x1cname]["tmp_c_obs"]*1.
+            
+            
+            the_norm_PPD1D = 1./((bins[1] - bins[0])*(len(PPD1D)))
+            
+            
+            plt.hist(PPD1D, bins = bins, label = "PPD", color = 'k', histtype = "step", weights = np.ones(len(PPD1D), dtype=np.float64)*the_norm_PPD1D)
+            
+            the_norm = 1./((bins[1] - bins[0])*(len(inds[0])))
+            the_gain = len(inds[0])/len(PPD1D)
+            
+            chi2s = []
+
+
+            all_plot_x = []
+            all_plot_y = []
+            all_plot_sigma = []
+            
+            for i in range(len(bins) - 1):
+                
+                the_count = sum((tmp_c_obs >= bins[i])*(tmp_c_obs < bins[i+1])*(all_processed_data[x1cname_to_bin][key_to_bin] >= bin_edges[tmp_ind])*(all_processed_data[x1cname_to_bin][key_to_bin] < bin_edges[tmp_ind+1])*(all_processed_data[x1cname]["median_dc"] <= tmp_median))
+                
+                the_count_PPD = sum((PPD1D >= bins[i])*(PPD1D < bins[i+1])) * the_gain
+
+                all_plot_x.append(0.5*(bins[i] + bins[i+1]))
+                all_plot_y.append(the_count*the_norm)
+                
+                lower_bound = poisson.ppf(0.158655, the_count_PPD)
+                upper_bound = poisson.ppf(0.841345, the_count_PPD)
+                
+                
+                plt.plot([0.5*(bins[i] + bins[i+1])]*2,
+                         [lower_bound*the_norm, upper_bound*the_norm], color = 'k', zorder = 0)
+
+                if the_count_PPD > 0:
+                    zscore = poisson_zscore(observed = the_count, expected = the_count_PPD)
+                    chi2s.append(zscore**2.) #(the_count - the_count_PPD)**2./the_count_PPD)
+                    all_plot_sigma.append(np.abs(zscore))
+                    
+                    if indiv_chi2:
+                        plt.text(0.5*(bins[i] + bins[i+1]), upper_bound*the_norm, "%.1f" % chi2s[-1], size = 6, ha = 'center', va = 'bottom')
+                        
+                else:
+                    all_plot_sigma.append(0.)
+                    
+                plt.yticks([])
+
+
+
+            plt.scatter(all_plot_x,
+                        all_plot_y, marker = '.', c = all_plot_sigma,
+                        label = "$\chi^2/N_{\mathrm{bins}}$\n= %.1f/%i" % (sum(chi2s), len(chi2s)), zorder = 5, vmin = 0, vmax = 4., cmap = truncate_colormap(cm.get_cmap('inferno'), minval = 0., maxval = 0.9),
+                        clip_on = False)
+
+            if mBx1c_ind == 2:
+                colorbar = plt.colorbar(label = "$Z$-Score ($\sigma$)", shrink=0.6, anchor = (0, 0.0))
+
+                
+                
+            legend = plt.legend(loc = 'upper right', fontsize = 8, bbox_to_anchor=(1.4, 1.05))
+            #texts = legend.get_texts()
+            #texts[1].set_text("$\chi^2/N_{\mathrm{bins}}$\n= %.1f/%i" % (sum(chi2s), len(chi2s))) # texts[-1].get_text() + 
+
+            plt.xlim(bins[0], bins[-1])
+            if tmp_ind != 0:#!= n_bins - 1:
+                plt.xticks(visible=False)
+            plt.xlim(bins[0], bins[-1])
+
+            if tmp_ind == n_bins - 1:
+                plt.title(label + [" $m_B - \mu(z)$", " $x_1$", " $c$"][mBx1c_ind], fontsize = 12)
+            if mBx1c_ind == 0:
+                plt.ylabel(("$" + yfmt + " < " + ylabel + " < " + yfmt + "$") % (bin_edges[tmp_ind], bin_edges[tmp_ind+1]), fontsize = 9)
+                
+            if tmp_ind == 0:
+                plt.xlabel(label + [" $m_B - \mu(z)$", " $x_1$", " $c$"][mBx1c_ind], fontsize = 12)
+
+
+    plt.tight_layout(h_pad = 0.3)
+    plt.savefig("PPD_by_%s_%s%s%s.pdf" % (x1cname_to_bin, key_to_bin, "_best_measured"*plot_best_measured, "_indiv_chi2"*indiv_chi2), bbox_inches = 'tight')
+    plt.close()
+
+
+
+
+
+
+
+
+
+
+    
 
 input_fl = sys.argv[1]
 
@@ -205,14 +399,21 @@ for mBx1c_ind in [0, 1, 2]:
         tmp_c_PPD_found = [],
         tmp_c_PPD_found_or_not = [],
         tmp_c_PPD_RMS = [],
-        median_dc = [])
+        median_dc = [],
+        model_mu = [])
 
     for SN in tqdm.trange(len(PPD["obs_mBx1c"])):
         if len(PPD["obs_mBx1c"][SN]) > 0:
             inds = np.where(PPD["found"][SN])
             c_found = PPD["obs_mBx1c"][SN][:, mBx1c_ind][inds]
-            c_found_or_not = PPD["obs_mBx1c"][SN][:, mBx1c_ind]
             c_obs = stan_data["obs_mBx1c"][SN][mBx1c_ind]
+
+            if mBx1c_ind == 0:
+                c_found -= np.array(PPD["model_mu"][SN])[inds]
+                c_obs -= np.median(np.array(PPD["model_mu"][SN])[inds])
+
+                
+            c_found_or_not = PPD["obs_mBx1c"][SN][:, mBx1c_ind]
 
             all_processed_data[x1cname]["median_dc"].append(np.median(PPD[x1cname + "_unc"][SN]))
                             
@@ -281,20 +482,17 @@ for mBx1c_ind in [0, 1, 2]:
     plt.close()
 
 
-    tmp_ind = 1
     #bins = np.linspace(min(np.min(tmp_c_obs), np.min(tmp_c_PPD_found)),
     #                   max(np.max(tmp_c_obs), np.max(tmp_c_PPD_found)), 21)
 
-    if mBx1c_ind == 2:
-        bins = np.linspace(-0.35, 0.35, 15)
-    elif mBx1c_ind == 1:
-        bins = np.linspace(-4, 4, 15)
-    else:
-        bins = np.linspace(-3, 3, 15)
-
+    bins = get_mBx1cbins(mBx1c_ind = mBx1c_ind, observed_vals = all_processed_data[x1cname]["tmp_c_obs"])
         
     
     plt.figure(4)
+
+    zbins = scoreatpercentile(all_processed_data[x1cname]["per_z"], np.linspace(0, 100., 51))
+    zbins[0] -= 0.0001
+    zbins[-1] += 0.0001
     
     for mean_not_median in [0, 1]*(mBx1c_ind > 0):
         c_not_x1 = mBx1c_ind - 1
@@ -351,6 +549,12 @@ for mBx1c_ind in [0, 1, 2]:
         plt.ylabel(label + ", Equal-SN Bins")
         #plt.savefig("median"*(mean_not_median == 0) + "mean"*mean_not_median + "_" + x1cname + "_vs_z.pdf", bbox_inches = 'tight')
         #plt.close()
+
+all_processed_data["mBstandard"] = {}
+for key in all_processed_data["mB"]:
+    all_processed_data["mBstandard"][key] = all_processed_data["mB"][key] + 0.15*all_processed_data["x1"][key] - 3.1*all_processed_data["c"][key]
+
+    
 plt.figure(4)
 plt.tight_layout()
 plt.savefig("mean_and_median_vs_z.pdf", bbox_inches = 'tight')
@@ -366,7 +570,19 @@ plt.ylim(0, 1)
 plt.savefig("prob_sel.pdf", bbox_inches = 'tight')
 plt.close()
 
+bin_into_panels(all_processed_data)
 
+for plot_best_measured in [0]:
+    for indiv_chi2 in [0]:
+        bin_by_percentile(all_processed_data, key_to_bin = "per_z", percentile_edges = np.linspace(0, 100., 6), ylabel = "z", yfmt = "%.2f", x1cname_to_bin = "mB", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
+        bin_by_percentile(all_processed_data, key_to_bin = "per_sel", percentile_edges = [0., 5., 10., 17.5, 25., 50., 100], ylabel = "P_{\mathrm{sel}}", yfmt = "%.2f", x1cname_to_bin = "mB", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
+        bin_by_percentile(all_processed_data, key_to_bin = "per_sel", percentile_edges = [0., 5., 10., 17.5, 25., 50., 100], ylabel = "P_{\mathrm{sel}}", yfmt = "%.2f", x1cname_to_bin = "c", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
+        bin_by_percentile(all_processed_data, key_to_bin = "tmp_c_obs", percentile_edges = np.linspace(0, 100., 6), ylabel = "c", yfmt = "%.2f", x1cname_to_bin = "c", plot_best_measured = plot_best_measured, indiv_chi2 = 0)
+
+
+
+
+ffffff
 
 plt.figure(figsize = (8, 18))
 
@@ -392,11 +608,7 @@ plt.close()
 
 
 
-bin_into_panels(all_processed_data)
 
-
-
-ffffff
 
 fit_params = pickle.load(gzip.open(sys.argv[2], 'rb'))
 
