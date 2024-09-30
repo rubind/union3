@@ -162,7 +162,8 @@ transformed parameters {
 
 
     vector [n_sne] mobs_by_SN_except_c_R;
-    vector [n_sne] <lower = 0.0001> mobs_var_by_SN_except_c_R; // Thanks Aaron Do!
+    vector <lower = 0.0001> [n_sne]  mobs_var_by_SN_except_c_R; // Thanks Aaron Do!
+    
 
     real Hinv_sort_fill [2*(n_sne + nzadd) - 1];
     real r_com_sort[n_sne + nzadd];

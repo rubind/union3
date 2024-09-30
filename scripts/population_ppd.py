@@ -25,37 +25,49 @@ def normal_cdf(x, mu, sig):
 
 
 def make_a_SN(samp_ind, sn_ind, sn_pars):
-    p_high_mass_eff = (1.9*(1 - fit_params["delta_h"][samp_ind])/(1 + 0.9*np.exp(0.95*np.log(10.)*stan_data["redshifts"][sn_ind])) + fit_params["delta_h"][samp_ind])*stan_data["p_high_mass"][sn_ind]
-    beta_R = fit_params["beta_R_low"][samp_ind]*(1. - p_high_mass_eff) + fit_params["beta_R_high"][samp_ind]*p_high_mass_eff
+    bad_fit = 1
     
-    
-    true_cB = np.random.normal()*fit_params["R_c_by_SN"][samp_ind][sn_ind] + fit_params["c_star_by_SN"][samp_ind][sn_ind]
-    true_cR = randomexp()*fit_params["tau_c_by_SN"][samp_ind][sn_ind]
-    true_x1 = np.random.normal()*fit_params["R_x1_by_SN"][samp_ind][sn_ind] + randomexp()*fit_params["tau_x1_by_SN"][samp_ind][sn_ind] + fit_params["x1_star_by_SN"][samp_ind][sn_ind]
-    true_mB = fit_params["MB"][samp_ind][0] + fit_params["model_mu"][samp_ind][sn_ind] - fit_params["alpha"][samp_ind]*true_x1 + fit_params["beta_B"][samp_ind]*true_cB + beta_R*true_cR - fit_params["delta_0"][samp_ind]*p_high_mass_eff
+    while bad_fit == 1:
+        p_high_mass_eff = (1.9*(1 - fit_params["delta_h"][samp_ind])/(1 + 0.9*np.exp(0.95*np.log(10.)*stan_data["redshifts"][sn_ind])) + fit_params["delta_h"][samp_ind])*stan_data["p_high_mass"][sn_ind]
+        beta_R = fit_params["beta_R_low"][samp_ind]*(1. - p_high_mass_eff) + fit_params["beta_R_high"][samp_ind]*p_high_mass_eff
 
 
-    obs_cov_mat = np.zeros([3,3], dtype=np.float64)
-    obs_cov_mat[0,0] = modelfn_var(P = sn_pars["mBmB"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-    obs_cov_mat[1,1] = modelfn_var(P = sn_pars["x1x1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-    obs_cov_mat[2,2] = modelfn_var(P = sn_pars["cc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-
-    obs_cov_mat[0,1] = modelfn_var(P = sn_pars["mBx1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-    obs_cov_mat[1,0] = modelfn_var(P = sn_pars["mBx1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-
-    obs_cov_mat[0,2] = modelfn_var(P = sn_pars["mBc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-    obs_cov_mat[2,0] = modelfn_var(P = sn_pars["mBc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-
-    obs_cov_mat[1,2] = modelfn_var(P = sn_pars["x1c"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-    obs_cov_mat[2,1] = modelfn_var(P = sn_pars["x1c"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
-
-    cov_mat_unexpl_disp = fit_params["model_mBx1c_cov"][samp_ind][sn_ind] - stan_data["obs_mBx1c_cov"][sn_ind]
-    
-    obs_mBx1c = np.array([true_mB, true_x1, true_cB + true_cR]) + np.random.multivariate_normal([0., 0., 0.], cov_mat_unexpl_disp + obs_cov_mat)
-    obs_mBx1c -= np.dot(stan_data["d_mBx1c_d_calib"][sn_ind], fit_params["calibs"][samp_ind]) # d_mBx1c_d_calib[i] * calibs
-    obs_mag = obs_mBx1c[0] + stan_data["mobs_cut0"][sn_ind] + stan_data["mobs_cut1"][sn_ind]*obs_mBx1c[2]
+        true_cB = np.random.normal()*fit_params["R_c_by_SN"][samp_ind][sn_ind] + fit_params["c_star_by_SN"][samp_ind][sn_ind]
+        true_cR = randomexp()*fit_params["tau_c_by_SN"][samp_ind][sn_ind]
+        true_x1 = np.random.normal()*fit_params["R_x1_by_SN"][samp_ind][sn_ind] + randomexp()*fit_params["tau_x1_by_SN"][samp_ind][sn_ind] + fit_params["x1_star_by_SN"][samp_ind][sn_ind]
+        true_mB = fit_params["MB"][samp_ind][0] + fit_params["model_mu"][samp_ind][sn_ind] - fit_params["alpha"][samp_ind]*true_x1 + fit_params["beta_B"][samp_ind]*true_cB + beta_R*true_cR - fit_params["delta_0"][samp_ind]*p_high_mass_eff
 
 
+        obs_cov_mat = np.zeros([3,3], dtype=np.float64)
+        obs_cov_mat[0,0] = modelfn_var(P = sn_pars["mBmB"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+        obs_cov_mat[1,1] = modelfn_var(P = sn_pars["x1x1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+        obs_cov_mat[2,2] = modelfn_var(P = sn_pars["cc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+
+        obs_cov_mat[0,1] = modelfn_var(P = sn_pars["mBx1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+        obs_cov_mat[1,0] = modelfn_var(P = sn_pars["mBx1"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+
+        obs_cov_mat[0,2] = modelfn_var(P = sn_pars["mBc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+        obs_cov_mat[2,0] = modelfn_var(P = sn_pars["mBc"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+
+        obs_cov_mat[1,2] = modelfn_var(P = sn_pars["x1c"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+        obs_cov_mat[2,1] = modelfn_var(P = sn_pars["x1c"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
+
+        cov_mat_unexpl_disp = fit_params["model_mBx1c_cov"][samp_ind][sn_ind] - stan_data["obs_mBx1c_cov"][sn_ind]
+
+        obs_mBx1c = np.array([true_mB, true_x1, true_cB + true_cR]) + np.random.multivariate_normal([0., 0., 0.], cov_mat_unexpl_disp + obs_cov_mat)
+        obs_mBx1c -= np.dot(stan_data["d_mBx1c_d_calib"][sn_ind], fit_params["calibs"][samp_ind]) # d_mBx1c_d_calib[i] * calibs
+        obs_mag = obs_mBx1c[0] + stan_data["mobs_cut0"][sn_ind] + stan_data["mobs_cut1"][sn_ind]*obs_mBx1c[2]
+
+        bad_fit = 0
+        if np.abs(obs_mBx1c[1]) + np.sqrt(obs_cov_mat[1,1]) > 5:
+            bad_fit = 1
+
+        if np.abs(obs_mBx1c[2]) > 0.3:
+            bad_fit = 1
+
+        if bad_fit:
+            print("Fit failed cuts!", np.abs(obs_mBx1c[1]) + np.sqrt(obs_cov_mat[1,1]), np.abs(obs_mBx1c[2]))
+            
     obs_ddepth = np.random.normal()*fit_params["mobs_cut_sigmas"][samp_ind][stan_data["sample_list"][sn_ind] - 1]
     mag_limit = fit_params["mobs_cuts"][samp_ind][stan_data["sample_list"][sn_ind] - 1]
     

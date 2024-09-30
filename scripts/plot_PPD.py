@@ -90,6 +90,69 @@ for observed in np.arange(95, 106, 1):
     print("observed", observed, "expected", expected, poisson_zscore(observed = observed, expected = expected))
 
 
+    
+def bin_by_color(all_processed_data, bin_par, n_bins, standard_alpha, standard_beta):
+    plt.figure(figsize = (12, 4))
+
+    bins = scoreatpercentile(all_processed_data[bin_par]["tmp_c_PPD_found"], np.linspace(0, 100, n_bins + 1))
+    bins[0] -= 0.0001
+    bins[-1] += 0.0001
+
+    xlim = [0,0]
+    
+    for highz in [0, 1]:
+        for i in range(n_bins):
+            if 1 - highz:
+                z_mask = all_processed_data[bin_par]["per_z"] <= 0.1
+            else:
+                z_mask = all_processed_data[bin_par]["per_z"] > 0.1
+            z_mask2d = np.outer(z_mask, np.ones(1000, dtype=np.float64))
+            plt.subplot(1,2,1+highz)
+
+            print('all_processed_data[bin_par]["tmp_c_PPD_found"]', all_processed_data[bin_par]["tmp_c_PPD_found"].shape)
+
+            inds = np.where((all_processed_data[bin_par]["tmp_c_PPD_found"] >= bins[i])*
+                            (all_processed_data[bin_par]["tmp_c_PPD_found"] < bins[i+1])*z_mask2d)
+
+            mean_c = np.mean(all_processed_data[bin_par]["tmp_c_PPD_found"][inds])
+            mean_dmu = np.mean(all_processed_data["mBstandard"]["tmp_c_PPD_found"][inds])
+            
+            plt.plot(mean_c, mean_dmu, '.', color = 'b', label = "PPD"*(i == 0))
+            
+            
+            inds = np.where((all_processed_data[bin_par]["tmp_c_obs"] >= bins[i])*
+                            (all_processed_data[bin_par]["tmp_c_obs"] < bins[i+1])*z_mask)
+            
+            mean_c = np.mean(all_processed_data[bin_par]["tmp_c_obs"][inds])
+            mean_dmu = np.mean(all_processed_data["mBstandard"]["tmp_c_obs"][inds])
+            rms_c = np.std(all_processed_data[bin_par]["tmp_c_obs"][inds], ddof=1)
+            rms_dmu = np.std(all_processed_data["mBstandard"]["tmp_c_obs"][inds], ddof=1)
+            
+            plt.errorbar(mean_c, mean_dmu, xerr = rms_c/np.sqrt(float(len(inds[0]))), yerr = rms_dmu/np.sqrt(float(len(inds[0]))), fmt = 'o', color = 'r', label = "Data"*(i == 0))
+            plt.title("$z \leq 0.1$"*(1 - highz) + "$z > 0.1$"*highz)
+            xlim[0] = min(xlim[0], plt.xlim()[0])
+            xlim[1] = max(xlim[1], plt.xlim()[1])
+
+            
+    for highz in [0, 1]:
+        plt.subplot(1,2,1+highz)
+        plt.xlim(xlim)
+        plt.xlabel(dict(x1 = "Light-Curve Shape ($x_1$)", c = "Color ($c$)")[bin_par])
+
+    
+        
+    plt.subplot(1,2,1)
+    plt.ylabel("$m_B + %.2f\;x_1 - %.2f\;c - \mu(z)$" % (standard_alpha, standard_beta))
+    ylim = plt.ylim()
+
+    #plt.errorbar(10, 10, xerr = 1, yerr = 1, fmt = 'o')
+    plt.legend(loc = 'best')
+    
+    plt.savefig("HR_bin_by_" + bin_par + "_bins=%02i.pdf" % n_bins, bbox_inches = 'tight')
+    plt.close()
+    
+    
+
 def bin_into_panels(all_processed_data):
     plt.figure(figsize = (9, 15))
     
@@ -117,7 +180,7 @@ def bin_into_panels(all_processed_data):
 
             plt.subplot(len(z_dataset), 3, tmp_ind*3 + mBx1c_ind - 2)
             PPD1D = (all_processed_data[x1cname]["tmp_c_PPD_found"][inds]).flatten()
-            PPD1D_found_or_not = (all_processed_data[x1cname]["tmp_c_PPD_found_or_not"][inds]).flatten()
+            #PPD1D_found_or_not = (all_processed_data[x1cname]["tmp_c_PPD_found_or_not"][inds]).flatten()
             tmp_c_obs = all_processed_data[x1cname]["tmp_c_obs"]*1.
 
             
@@ -383,6 +446,11 @@ plt.figure(4, figsize = (10, 6))
 
 all_processed_data = {}
 
+
+random_choice_inds_found = []
+random_choice_inds_found_or_not = []
+
+
 for mBx1c_ind in [0, 1, 2]:
     label = ["Magnitude", "Light-Curve Shape", "Color"][mBx1c_ind]
     second_label = ["\n$\leftarrow$ Fainter          Brighter $\\rightarrow$", "\n$\leftarrow$ Lower $x_1$          Higher $x_1$ $\\rightarrow$", "\n$\leftarrow$ Bluer          Redder $\\rightarrow$"][mBx1c_ind]
@@ -418,8 +486,15 @@ for mBx1c_ind in [0, 1, 2]:
             all_processed_data[x1cname]["median_dc"].append(np.median(PPD[x1cname + "_unc"][SN]))
                             
             all_processed_data[x1cname]["tmp_c_obs"].append(c_obs)
-            all_processed_data[x1cname]["tmp_c_PPD_found"].append(np.random.choice(c_found, size = 100, replace = True))
-            all_processed_data[x1cname]["tmp_c_PPD_found_or_not"].append(np.random.choice(c_found_or_not, size = 100, replace = True))
+
+            if mBx1c_ind == 0:
+                random_choice_inds_found.append(np.random.randint(len(c_found), size = 1000))
+                random_choice_inds_found_or_not.append(np.random.randint(len(c_found_or_not), size = 1000))
+                assert len(random_choice_inds_found) == SN + 1
+                assert len(random_choice_inds_found_or_not) == SN + 1
+                    
+            all_processed_data[x1cname]["tmp_c_PPD_found"].append(c_found[random_choice_inds_found[SN]])
+            all_processed_data[x1cname]["tmp_c_PPD_found_or_not"].append(c_found_or_not[random_choice_inds_found_or_not[SN]])
             all_processed_data[x1cname]["tmp_c_PPD_RMS"].append(np.std(c_found, ddof=1))
             
             per = percentileofscore(c_found, c_obs)
@@ -427,6 +502,10 @@ for mBx1c_ind in [0, 1, 2]:
             all_processed_data[x1cname]["per_per"].append(per)
             all_processed_data[x1cname]["per_sel"].append(np.mean(PPD["found"][SN]))
             all_processed_data[x1cname]["per_dataset_ind"].append(stan_data["sample_list"][SN])
+        else:
+            random_choice_inds_found.append(None)
+            random_choice_inds_found_or_not.append(None)
+            
 
     for key in all_processed_data[x1cname]:
         all_processed_data[x1cname][key] = np.array(all_processed_data[x1cname][key])
@@ -550,9 +629,12 @@ for mBx1c_ind in [0, 1, 2]:
         #plt.savefig("median"*(mean_not_median == 0) + "mean"*mean_not_median + "_" + x1cname + "_vs_z.pdf", bbox_inches = 'tight')
         #plt.close()
 
+standard_alpha = 0.12
+standard_beta = 2.2
+        
 all_processed_data["mBstandard"] = {}
 for key in all_processed_data["mB"]:
-    all_processed_data["mBstandard"][key] = all_processed_data["mB"][key] + 0.15*all_processed_data["x1"][key] - 3.1*all_processed_data["c"][key]
+    all_processed_data["mBstandard"][key] = all_processed_data["mB"][key] + standard_alpha*all_processed_data["x1"][key] - standard_beta*all_processed_data["c"][key]
 
     
 plt.figure(4)
@@ -571,6 +653,10 @@ plt.savefig("prob_sel.pdf", bbox_inches = 'tight')
 plt.close()
 
 bin_into_panels(all_processed_data)
+
+for n_bins in [10, 20, 30]:
+    for bin_par in ["c", "x1"]:
+        bin_by_color(all_processed_data, bin_par, n_bins, standard_alpha = standard_alpha, standard_beta = standard_beta)
 
 for plot_best_measured in [0]:
     for indiv_chi2 in [0]:
