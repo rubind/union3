@@ -198,6 +198,10 @@ def make_dataset(wd, cal_offsets):
         zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=8000., ratefunc = SN_rate_function))
         min_date = dates[0] + params["cadence"]*2
         max_date = dates[-1] - params["cadence"]*2
+
+        calibrator_count = sum(zlist < 0.01)
+        zlist = np.concatenate((zlist, 0.008*np.random.random(size = 42 - calibrator_count)))
+        
     elif z_range_key == "H":
         zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"], ratefunc = SN_rate_function))
         min_date = dates[0] + params["cadence"]*2
@@ -248,7 +252,14 @@ def make_dataset(wd, cal_offsets):
 
             p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
 
-            p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + (0.00217/z)**2.),
+            if z >= 0.01:
+                pec_vel_variance = (0.00217/z)**2.
+            else:
+                pec_vel_variance = 0.
+                # Calibrator
+
+                
+            p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + pec_vel_variance),
                                                                params["sigma_unexplained_3d"][1],
                                                                params["sigma_unexplained_3d"][2]])
             p["MB"] = p["latentMB"] + p["delta_mBx1c"][0]
@@ -322,6 +333,10 @@ def make_dataset(wd, cal_offsets):
     p_wd = wd.replace("dataset_", "UNITY_") + "/SN_params/"
     subprocess.getoutput("mkdir -p " + p_wd)
 
+
+    f_ladder = open(opts.prefixname + "/distance_ladder.txt", 'a')
+    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
+
     
     for i in range(nsne):
 
@@ -339,7 +354,8 @@ def make_dataset(wd, cal_offsets):
         #phases = (dates - params[i]["t0"])/(1. + params[i]["z"])
 
         if observed_SNe[i]:
-            this_wd = wd + "/SN%04i" % i
+            SN_name = "SN%s%04i" % (z_range_key, i)
+            this_wd = wd + "/" + SN_name
             subprocess.getoutput("mkdir -p " + this_wd)
 
 
@@ -352,6 +368,10 @@ def make_dataset(wd, cal_offsets):
             f.write("Mass  %f  -0.05  0.05\n" % all_SNe[i]["mass"])
             f.close()
             
+            if all_SNe[i]["z"] < 0.01:
+                # If calibrator
+                f_ladder.write(SN_name + "  " + str(cosmo.distmod(all_SNe[i]["z"]).value) + '\n')
+
 
             model = get_SNCosmo_model(all_SNe[i], source)
 
@@ -404,6 +424,7 @@ def make_dataset(wd, cal_offsets):
                         f.write("  ".join(towrite) + '\n')
                     f.close()
             
+    f_ladder.close()
 
 def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low, cosmomodel):
     dataset_list = ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
