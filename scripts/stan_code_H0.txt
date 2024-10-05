@@ -90,6 +90,7 @@ transformed data {
 
 parameters {
     vector [n_samples*MB_by_sample + 1*(1 - MB_by_sample)] MB;
+    real <lower = 50, upper = 100> H0;
     real <lower = -0.2, upper = 0.3> alpha_angle;
     real <lower = -1.4, upper = 1.4> beta_angle_blue;
     real <lower = -1.4, upper = 1.4> beta_angle_red_low;
