@@ -15,6 +15,8 @@ from astropy.cosmology import FlatLambdaCDM
 import argparse
 from scipy.special import erf
 
+true_H0 = 71.
+
 def band_to_instr(band):
     if band[:4] == "sdss":
         return "SDSS"
@@ -42,7 +44,7 @@ def get_SNCosmo_model(these_params, source):
     sncosmo_model.set(**tmp_params)
 
     
-    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
+    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
     ten_pc_z = 2.33494867e-9
     assert abs(cosmo.distmod(z=ten_pc_z).value) < 1.e-3, "Distance modulus zeropoint wrong!"
 
@@ -334,8 +336,8 @@ def make_dataset(wd, cal_offsets):
     subprocess.getoutput("mkdir -p " + p_wd)
 
 
-    f_ladder = open(opts.prefixname + "/distance_ladder.txt", 'a')
-    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
+    f_ladder = open(p_wd + "/distance_ladder.txt", 'a')
+    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
 
     
     for i in range(nsne):

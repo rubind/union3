@@ -56,7 +56,7 @@ def get_params(paramfl):
     lines = f.read().split('\n')
     f.close()
 
-    keys = ["filenamelist", "weird_sn_list", "mag_cut", "calibration_uncertainties",
+    keys = ["filenamelist", "weird_sn_list", "distance_ladder", "mag_cut", "calibration_uncertainties",
             "iter", "chains", "n_jobs",
             "max_firstphase", "min_lastphase", "max_color_uncertainty", "max_color", "min_color", "max_MWEBV",
             "min_redshift", "max_redshift", "redshift_coeff_type",
