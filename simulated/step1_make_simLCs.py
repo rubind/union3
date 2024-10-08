@@ -161,7 +161,7 @@ def get_observed_SNe_volume_limited(nsne, dates, all_SNe, model):
     return observed_SNe
 
 
-def make_dataset(wd, cal_offsets):
+def make_dataset(wd, cal_offsets, dataset_ind):
     z_range_key = "ABC"
 
     for letter_to_look_for in "SLHV":
@@ -351,9 +351,7 @@ def make_dataset(wd, cal_offsets):
     subprocess.getoutput("mkdir -p " + p_wd)
 
 
-    loc_for_ladder = p_wd.replace("UNITY_S", "UNITY_L")
-    subprocess.getoutput("mkdir -p " + loc_for_ladder)
-    f_ladder = open(loc_for_ladder + "/distance_ladder.txt", 'a')
+    f_ladder = open(opts.prefixname + "/distance_ladder_true_vals_%03i.txt" % dataset_ind, 'a')
     cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
 
 
@@ -446,8 +444,8 @@ def make_dataset(wd, cal_offsets):
             
     f_ladder.close()
 
-def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low, cosmomodel):
-    dataset_list = ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
+def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low, cosmomodel, distance_ladder_fl):
+    dataset_list = ["../dataset_S_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
     dataset_list = str(dataset_list).replace(" ", "")
 
     if noselection:
@@ -482,7 +480,7 @@ mag_cut			%s
 stan_code		%s
 sample_file		"None"
 calibration_uncertainties		%s
-
+distance_ladder         %s
 
 min_redshift		0.01
 max_redshift		3.
@@ -523,10 +521,11 @@ MB_by_sample		0
 include_pec_cov		0
 separate_mass_x1c	1
 """ % (dataset_list,
-           '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
-           '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
-           '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
-           population_model, 1 - oneDint, fix_Om))
+       '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
+       '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
+       '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
+       distance_ladder_fl,
+       population_model, 1 - oneDint, fix_Om))
     f.close()
 
     f = open(wd + "run.sh", 'w')
@@ -595,7 +594,7 @@ params = dict(salt2_version = salt2_version, n_visit = 200, nnearbyperset = opts
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
               tot_sig_unexplained = 0.12, alpha = 0.15,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
-              outlierfrac = 0.02, sigzp = opts.sigzp)
+              outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
 
 subprocess.getoutput("rm -fr " + opts.prefixname)
 subprocess.getoutput("mkdir " + opts.prefixname)
@@ -772,16 +771,18 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     for z_range_key in opts.zrangekeys:
         wd = opts.prefixname + "/dataset_%s_%03i/" % (z_range_key, dataset_ind)
         subprocess.getoutput("mkdir " + wd)
-        make_dataset(wd, cal_offsets = cal_offsets)
+        make_dataset(wd, cal_offsets = cal_offsets, dataset_ind = dataset_ind)
 
 
     
-    [ladder_SN, ladder_mu] = readcol(opts.prefixname + "/distance_ladder_vals.txt", 'af')
+    [ladder_SN, ladder_mu] = readcol(opts.prefixname + "/distance_ladder_true_vals_%03i.txt" % dataset_ind, 'af')
 
     for common_unc in [0.0, 0.02, 0.05]:
-        f_ladder = open(opts.prefixname + "/distance_ladder_vals_common=%.3f.txt" % common_unc, 'w')
+        common_offset = np.random.normal()*common_unc
+        
+        f_ladder = open(opts.prefixname + "/distance_ladder_obs_vals_common=%.3f_%03i.txt" % (common_unc, dataset_ind), 'w')
         for lad_ind in range(len(ladder_SN)):
-            f_ladder.write(ladder_SN[lad_ind] + "  " + str(ladder_mu[lad_ind]))
+            f_ladder.write(ladder_SN[lad_ind] + "  " + str(ladder_mu[lad_ind] + np.random.normal()*0.05 + common_offset))
             for lad_ind2 in range(len(ladder_SN)):
                 f_ladder.write("  " + str((lad_ind == lad_ind2)*0.05))
             f_ladder.write("  " + str(common_unc) + '\n')
@@ -793,24 +794,50 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     f_interleave.write("cd " + opts.prefixname + '\n')
     f_interleave.write("~/.conda/envs/py39/bin/python $PATHMODEL/python_code/cut_fits.py dataset_?_%03i\n" % dataset_ind)
 
-    
-    for include_low in [0, 1]:
-        for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
-            for cosmomodel in [1]*(1 - include_low) + [5]*include_low:
-                wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
-                                                                     "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
-                subprocess.getoutput("mkdir " + wd)
+    if opts.ncalibperset == 0:
+        # Test dark energy
+        for include_low in [0, 1]:
+            for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
+                for cosmomodel in [1]*(1 - include_low) + [5]*include_low:
+                    wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
+                                                                         "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
+                    subprocess.getoutput("mkdir " + wd)
 
-                set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel)
+                    set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel)
 
-                f_UNITY[include_low].write("cd " + pwd + '\n')
-                f_UNITY[include_low].write("cd " + wd + '\n')
-                f_UNITY[include_low].write("sbatch run.sh\n")
+                    f_UNITY[include_low].write("cd " + pwd + '\n')
+                    f_UNITY[include_low].write("cd " + wd + '\n')
+                    f_UNITY[include_low].write("sbatch run.sh\n")
 
-                f_interleave.write("cd " + pwd + '\n')
-                f_interleave.write("cd " + wd + '\n')
-                f_interleave.write("sbatch run.sh\n")
+                    f_interleave.write("cd " + pwd + '\n')
+                    f_interleave.write("cd " + wd + '\n')
+                    f_interleave.write("sbatch run.sh\n")
+    else:
+        # Test Hubble constant
+        include_low = 1
+        oneDint = 0
+        nocal = 0
+        noselection = 0
+        twopop = 0
+        cosmomodel = 1
+        
+        wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
+                                                             "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
+        subprocess.getoutput("mkdir " + wd)
+        
+        set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel,
+                     distance_ladder_fl = "../distance_ladder_obs_vals_common=%.3f_%03i.txt" % (0.02, dataset_ind))
+        
+        f_UNITY[include_low].write("cd " + pwd + '\n')
+        f_UNITY[include_low].write("cd " + wd + '\n')
+        f_UNITY[include_low].write("sbatch run.sh\n")
+        
+        f_interleave.write("cd " + pwd + '\n')
+        f_interleave.write("cd " + wd + '\n')
+        f_interleave.write("sbatch run.sh\n")
 
+        
+        
 f_UNITY[0].close()
 f_UNITY[1].close()
 f_interleave.close()
