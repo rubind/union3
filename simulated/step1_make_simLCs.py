@@ -20,6 +20,8 @@ true_H0 = 71.
 def band_to_instr(band):
     if band[:4] == "sdss":
         return "SDSS"
+    elif band[:4] == "uvot":
+        return "UVOT"
     elif band[:2] == "f1":
         return "WFC3"
     else:
@@ -28,6 +30,8 @@ def band_to_instr(band):
 def band_to_name(band):
     if band[:4] == "sdss":
         return "SDSS_" + band[-1]
+    elif band[:4] == "uvot":
+        return "UVOT" + band[-1].lower()
     elif band[:2] == "f1":
         return "WFC3_" + band.lower()
     else:
@@ -45,7 +49,7 @@ def get_SNCosmo_model(these_params, source):
 
     
     cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
-    ten_pc_z = 2.33494867e-9
+    ten_pc_z = 2.33494867e-9 * (true_H0/70.)
     assert abs(cosmo.distmod(z=ten_pc_z).value) < 1.e-3, "Distance modulus zeropoint wrong!"
 
     ampl = 1.
@@ -72,7 +76,7 @@ def approxmB(model, date):
                          )
 
 def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key):
-    observed_SNe = np.zeros(nsne, dtype=np.int16)
+    observed_SNe = np.array([all_SNe[i]["z"] < 0.01 for i in range(nsne)], dtype=np.int32) #np.zeros(nsne, dtype=np.int16)
     
     for night in dates:
         all_mags = []
@@ -81,7 +85,7 @@ def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key):
             if observed_SNe[i] == 0 and np.abs(night - all_SNe[i]["t0"]) < 50:
                 model = get_SNCosmo_model(all_SNe[i], source)
                 if params["obs_mag_selection"]:
-                    if z_range_key == "L":
+                    if z_range_key == "L" or z_range_key == "S":
                         all_mags.append(model.bandmag("sdssr", "ab", night))
                     elif z_range_key == "H":
                         all_mags.append(model.bandmag("sdssi", "ab", night))
@@ -160,7 +164,7 @@ def get_observed_SNe_volume_limited(nsne, dates, all_SNe, model):
 def make_dataset(wd, cal_offsets):
     z_range_key = "ABC"
 
-    for letter_to_look_for in "LHV":
+    for letter_to_look_for in "SLHV":
         if wd.count("_" + letter_to_look_for + "_"):
             assert z_range_key == "ABC"
             z_range_key = letter_to_look_for
@@ -180,6 +184,9 @@ def make_dataset(wd, cal_offsets):
         
         obs_err = 200. # ZP = 27.5, so depth of 20.0 at 5 sigma
         bands_to_use = ['sdssg', 'sdssr', 'sdssi', 'sdssz']
+    elif z_range_key == "S":
+        obs_err = 200. # ZP = 27.5, so depth of 20.0 at 5 sigma
+        bands_to_use = ['uvot::u', 'uvot::b', 'uvot::v']
     elif z_range_key == "H":
         obs_err = 5. # Depth of 24.0 at 5 sigma
         bands_to_use = ['sdssg', 'sdssr', 'sdssi', 'sdssz']
@@ -192,19 +199,22 @@ def make_dataset(wd, cal_offsets):
     else:
         raise Exception("Unknown z_range_key " + z_range_key)
 
-    dates = np.arange(params["n_visit"], dtype=np.float64)*params["cadence"]
 
     model = sncosmo.Model(source=source)
 
-    if z_range_key == "L":
+    if z_range_key == "L" or z_range_key == "S":
+        dates = np.arange(int(np.around(opts.nnearbyperset/3.)), dtype=np.float64)*params["cadence"]
+
         zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=8000., ratefunc = SN_rate_function))
         min_date = dates[0] + params["cadence"]*2
         max_date = dates[-1] - params["cadence"]*2
 
-        calibrator_count = sum(zlist < 0.01)
-        zlist = np.concatenate((zlist, 0.008*np.random.random(size = 42 - calibrator_count)))
+        
+        calibrator_count = sum(np.array(zlist) < 0.01)
+        zlist = np.concatenate((zlist, 0.008*np.random.random(size = opts.ncalibperset - calibrator_count)))
         
     elif z_range_key == "H":
+        dates = np.arange(params["n_visit"], dtype=np.float64)*params["cadence"]
         zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"], ratefunc = SN_rate_function))
         min_date = dates[0] + params["cadence"]*2
         max_date = dates[-1] - params["cadence"]*2
@@ -245,8 +255,16 @@ def make_dataset(wd, cal_offsets):
                      outlier = 0,
                      t0 = np.random.uniform(min_date, max_date),
                      latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
-                     latentc = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"],
-                     mass = 10. + np.random.normal())
+                     latentc = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"])
+
+            if z >= 0.01:
+                pec_vel_variance = (0.00217/z)**2.
+                p["mass"] = 10. + np.random.normal()
+            else:
+                # Calibrator
+                pec_vel_variance = 0.
+                p["mass"] = 10.4 + np.random.normal()
+
             
             relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
             relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
@@ -254,11 +272,6 @@ def make_dataset(wd, cal_offsets):
 
             p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
 
-            if z >= 0.01:
-                pec_vel_variance = (0.00217/z)**2.
-            else:
-                pec_vel_variance = 0.
-                # Calibrator
 
                 
             p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + pec_vel_variance),
@@ -302,7 +315,7 @@ def make_dataset(wd, cal_offsets):
     for i in range(nsne):
         model = get_SNCosmo_model(all_SNe[i], source)
         if params["obs_mag_selection"]:
-            if z_range_key == "L":
+            if z_range_key == "L" or z_range_key == "S":
                 peak_mags.append(model.bandmag("sdssr", "ab", all_SNe[i]["t0"]))
             elif z_range_key == "H":
                 peak_mags.append(model.bandmag("sdssi", "ab", all_SNe[i]["t0"]))
@@ -336,7 +349,9 @@ def make_dataset(wd, cal_offsets):
     subprocess.getoutput("mkdir -p " + p_wd)
 
 
-    f_ladder = open(p_wd + "/distance_ladder.txt", 'a')
+    loc_for_ladder = p_wd.replace("UNITY_S", "UNITY_L")
+    subprocess.getoutput("mkdir -p " + loc_for_ladder)
+    f_ladder = open(loc_for_ladder + "/distance_ladder.txt", 'a')
     cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
 
     
@@ -543,7 +558,10 @@ parser.add_argument('--prefixname', help='Prefix Name for Directory', type = str
 parser.add_argument('--skewdist', help='x1 and c distributions have skew', type = int)
 parser.add_argument('--volumelimited', help='volume-limited, not magnitude-limited datasets', type=int)
 parser.add_argument('--obsmagselection', help="If magnitude-limited, select based on observer-frame magntiudes, not rest-frame x0", type=int)
-parser.add_argument('--zrangekeys', help="LHV for low-z, high-z, very high-z", type=str)
+parser.add_argument('--zrangekeys', help="SLHV for low-z Swift, low-z SDSS, high-z SDSS, very high-z HST", type=str)
+parser.add_argument('--nnearbyperset', help = "Number of nearby SNe for S and L not counting calibrators", type=int)
+parser.add_argument('--ncalibperset', help = "Number of calibrator SNe for sets S and L", type=int)
+parser.add_argument('--sigzp', help="Zeropoint Uncertainty Size", type=float)
 
 
 opts = parser.parse_args()
@@ -559,19 +577,22 @@ for filt in "griz":
     dict_of_obsframe_filt["sdss" + filt] = sncosmo.get_bandpass("sdss" + filt)
 for filt in ["f775w", "f850lp", "f105w", "f125w", "f160w"]:
     dict_of_obsframe_filt[filt] = sncosmo.get_bandpass(filt)
+for filt in "ubv":
+    dict_of_obsframe_filt["uvot::" + filt] = sncosmo.get_bandpass("uvot::" + filt)
 
 
 [tmpx, tmpy] = readcol(os.environ["UNITY"] + "/simulated/SN_rates.txt", 'ff')
 SN_rate_function = interp1d(tmpx, tmpy*1e-4, kind = 'linear')
 
 
-params = dict(salt2_version = salt2_version, n_visit = 200, ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
+params = dict(salt2_version = salt2_version, n_visit = 200, nnearbyperset = opts.nnearbyperset, ncalibperset = opts.ncalibperset,
+              ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
               obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
               Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
               tot_sig_unexplained = 0.12, alpha = 0.15,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
-              outlierfrac = 0.02)
+              outlierfrac = 0.02, sigzp = opts.sigzp)
 
 subprocess.getoutput("rm -fr " + opts.prefixname)
 subprocess.getoutput("mkdir " + opts.prefixname)
@@ -605,22 +626,29 @@ f.write("""
 "SALT_U_CAL":                                                                                           0.0001
 "SALT_I_CAL":                                                                                           0.0001
 
-('Zeropoint', 'SDSS|SDSS_u'): 0.005
-('Zeropoint', 'SDSS|SDSS_g'): 0.005
-('Zeropoint', 'SDSS|SDSS_r'): 0.005
-('Zeropoint', 'SDSS|SDSS_i'): 0.005
-('Zeropoint', 'SDSS|SDSS_z'): 0.005
+('Zeropoint', 'UVOT|UVOT_u'): """ + str(opts.sigzp) + """
+('Zeropoint', 'UVOT|UVOT_b'): """ + str(opts.sigzp) + """
+('Zeropoint', 'UVOT|UVOT_v'): """ + str(opts.sigzp) + """
+('Lambda', 'UVOT|UVOT_u'):    0.01
+('Lambda', 'UVOT|UVOT_b'):    0.01
+('Lambda', 'UVOT|UVOT_v'):    0.01
+
+('Zeropoint', 'SDSS|SDSS_u'): """ + str(opts.sigzp) + """
+('Zeropoint', 'SDSS|SDSS_g'): """ + str(opts.sigzp) + """
+('Zeropoint', 'SDSS|SDSS_r'): """ + str(opts.sigzp) + """
+('Zeropoint', 'SDSS|SDSS_i'): """ + str(opts.sigzp) + """
+('Zeropoint', 'SDSS|SDSS_z'): """ + str(opts.sigzp) + """
 ('Lambda', 'SDSS|SDSS_u'):    0.01
 ('Lambda', 'SDSS|SDSS_g'):    0.01
 ('Lambda', 'SDSS|SDSS_r'):    0.01
 ('Lambda', 'SDSS|SDSS_i'):    0.01
 ('Lambda', 'SDSS|SDSS_z'):    0.01
 
-('Zeropoint', 'ACSWF|F775W'): 0.005
-('Zeropoint', 'ACSWF|F850LP'): 0.005
-('Zeropoint', 'WFC3|WFC3_f105w'): 0.005
-('Zeropoint', 'WFC3|WFC3_f125w'): 0.005
-('Zeropoint', 'WFC3|WFC3_f160w'): 0.005
+('Zeropoint', 'ACSWF|F775W'): """ + str(opts.sigzp) + """
+('Zeropoint', 'ACSWF|F850LP'): """ + str(opts.sigzp) + """
+('Zeropoint', 'WFC3|WFC3_f105w'): """ + str(opts.sigzp) + """
+('Zeropoint', 'WFC3|WFC3_f125w'): """ + str(opts.sigzp) + """
+('Zeropoint', 'WFC3|WFC3_f160w'): """ + str(opts.sigzp) + """
 ('Lambda', 'ACSWF|F775W'): 0.01
 ('Lambda', 'ACSWF|F850LP'): 0.01
 ('Lambda', 'WFC3|WFC3_f105w'): 0.01
@@ -715,7 +743,7 @@ source ~/.bash_profile
 for dataset_ind in tqdm.trange(opts.ndataset):
     cal_offsets = {}
     for band in dict_of_obsframe_filt:
-        cal_offsets[band] = np.random.normal()*0.005*opts.addcalibration
+        cal_offsets[band] = np.random.normal()*opts.sigzp*opts.addcalibration
 
     frac_var_mBx1c = np.random.exponential(scale=1.0, size=3)
     frac_var_mBx1c /= sum(frac_var_mBx1c)

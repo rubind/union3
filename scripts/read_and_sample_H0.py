@@ -917,7 +917,11 @@ print("nzadd ", stan_data['nzadd'])
 
 if stan_data["do_blind"]:
     print("Blinding!")
-    # There are two phases of blinding:
+    # Blind H0
+
+    stan_data["distmod"] += np.random.normal()*0.3
+    
+    # There are two phases of Hubble-flow blinding:
     # -Making the best-fit Om = 0.3
     # -Bringing all samples into alignment with -19.1 given Om = 0.3
 
