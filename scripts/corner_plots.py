@@ -10,7 +10,8 @@ from kde_corner import kde_corner
 
 def get_label(key):
     try:
-        return {"MB:0": "$\mathcal{M}_B$",
+        return {"H0": "$H_0$",
+                "MB:0": "$\mathcal{M}_B$",
                 "alpha": "$\\alpha$",
                 "beta_B": "$\\beta_B$",
                 "beta_R": "$\\beta_R$",
@@ -95,9 +96,16 @@ for pfl in pfls:
 
     fit_params_list.append(fit_params)
 
+    has_H0 = 0
+    if "H0" in fit_params:
+        if np.std(fit_params["H0"]) < 6:
+            has_H0 = 1
+        
 
+    
 if plt_choice == 0:
-    make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB:0", "delta_0", "delta_h"], "standardization_coeffs.pdf")
+    
+    make_plot(["H0"]*has_H0 + ["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB:0", "delta_0", "delta_h"], "standardization_coeffs.pdf")
 elif plt_choice == 1:
     try:
         fit_params["outl_mBx1c_uncertainties_mB"]
@@ -105,6 +113,6 @@ elif plt_choice == 1:
     except:
         indiv_labels = 0
 
-    make_plot(["Om", "mean_sigma_int", "mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac"] + (indiv_labels == 0)*["outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"] + indiv_labels*["outl_mBx1c_uncertainties_mB", "outl_mBx1c_uncertainties_x1", "outl_mBx1c_uncertainties_cB", "outl_mBx1c_uncertainties_cR_unit"], "uncertainty_parameters.pdf")
+    make_plot([["H0"]*has_H0 + "Om", "mean_sigma_int"] + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac"] + (indiv_labels == 0)*["outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"] + indiv_labels*["outl_mBx1c_uncertainties_mB", "outl_mBx1c_uncertainties_x1", "outl_mBx1c_uncertainties_cB", "outl_mBx1c_uncertainties_cR_unit"], "uncertainty_parameters.pdf")
 elif plt_choice == 2:
-    make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int", "mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")
+    make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int" + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")

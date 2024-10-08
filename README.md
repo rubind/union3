@@ -87,4 +87,5 @@ This merges the chains into one file, and unpacks the duplicated samples:
 
 # For doing simulated-data testing:
 
-```simulated/step1_make_simLCs.py 1 1```
+```python $UNITY/simulated/step1_make_simLCs.py --ndataset 1 --addnoise 1 --addcalibration 1 --modeluncertainty 1 --prefixname sim_H0 --skewdist 1 --volumelimited 0 --obsmagselection 1 --zrangekeys LHV```
+```python $UNITY/simulated/step1_make_simLCs.py --ndataset 1 --addnoise 1 --addcalibration 1 --modeluncertainty 1 --prefixname sim_H0 --skewdist 1 --volumelimited 0 --obsmagselection 1 --zrangekeys SLHV --nnearbyperset 300 --ncalibperset 21 --sigzp 0.01```

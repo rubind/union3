@@ -108,6 +108,7 @@ parameters {
     vector [n_zbins] mu_zbins;
 
     real <lower=0.01, upper = 0.3> sigma_int[n_samples];
+    real <lower=0.01, upper = 0.3> sigma_int_calibrator;
     simplex [3] mBx1c_int_variance;
 
     vector [n_sne] true_x1;
@@ -318,6 +319,10 @@ transformed parameters {
         for (j in 1:3) {
             model_mBx1c_cov[i][j,j] <- model_mBx1c_cov[i][j,j] + sig_int_vector[sample_list[i]][j]^2;
         }
+
+	if (has_distmod[i] == 1) {
+ 	    model_mBx1c_cov[i][1,1] = model_mBx1c_cov[i][1,1] + sigma_int_calibrator^2
+	}
 	model_mBx1c_cov_outl[i][1,1] <- model_mBx1c_cov_outl[i][1,1] + outl_mBx1c_uncertainties_mB^2;
 
 
@@ -450,7 +455,7 @@ model {
 	 Omw0wa_vect ~ multi_normal(BAOCMB_Om_w0_wa_mean, BAOCMB_Om_w0_wa_covmatrix);
     }
 
-    MB ~ normal(-19, 0.3);
+    MB ~ normal(-19, 0.5);
     delta_0 ~ normal(0.0, 0.2);
     mobs_cuts ~ normal(est_mobs_cuts, 0.5);
     mobs_cut_sigmas ~ normal(est_mobs_sigmas, 0.25);

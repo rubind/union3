@@ -36,6 +36,8 @@ def read_data(params):
                 "mBx1c_cov_list": zeros([0,3,3], dtype=float64),
                 "z_CMB_list": array([], dtype=float64),
                 "z_helio_list": array([], dtype=float64),
+                "has_distmod": array([], dtype=int32), # 0 for no, 1 for yes
+                "distmod": array([], dtype=float64),
                 "sample_list": array([], dtype=int32), # SN sample, from 0 to N_samples - 1
                 "sample_names": [], # For storing sample names
                 "mag_cut_list": array([], dtype=float64),
@@ -79,6 +81,22 @@ def read_data(params):
     fbulk = fits.open(os.environ["UNITY"] + "/paramfiles/dominant_evecs.fits")
     bulk_eig = fbulk[0].data
     fbulk.close()
+
+    if str(params["distance_ladder"]) != "None":
+        f_dl = open(params["distance_ladder"].replace("$UNITY", os.environ["UNITY"]), 'r')
+        lines = f_dl.read().split('\n')
+        f_dl.close()
+
+        dist_mod_dict = {}
+        
+        for line in lines:
+            parsed = line.split(None)
+            if len(parsed) > 0:
+                dist_mod_dict[parsed[0]] = [float(item) for item in parsed[1:]]
+
+    else:
+        dist_mod_dict = {}
+    print("dist_mod_dict", dist_mod_dict)
 
 
     [lensing_z, lensing_mag] = readcol(os.environ["UNITY"] + "/paramfiles/lensing_bias.txt", 'ff')
@@ -188,8 +206,16 @@ def read_data(params):
                 print("Using MW_true_EBV")
             print("this_MWEBV", this_MWEBV)
 
+
+            greater_than_min_redshift = (this_redshift_cmb >= params["min_redshift"][current_sample])
+            is_calibrator = 0
             
-            okay_to_add = [this_redshift_cmb >= params["min_redshift"][current_sample],
+            if snpath.split("/")[-1] in dist_mod_dict:
+                greater_than_min_redshift = 1
+                is_calibrator = 1
+                
+            
+            okay_to_add = [greater_than_min_redshift,
                            this_redshift_cmb <= params["max_redshift"][current_sample],
                            this_firstphase <= params["max_firstphase"],
                            this_lastphase >= params["min_lastphase"],
@@ -257,6 +283,21 @@ def read_data(params):
                 the_data["x1_list"] = append(the_data["x1_list"],
                                              helper_functions.read_param(snpath + "/result_salt2.dat", "X1"))
 
+                if is_calibrator:
+                    this_SN_name = snpath.split("/")[-1]
+                    the_data["has_distmod"] = np.append(the_data["has_distmod"], 1)
+                    the_data["distmod"] = np.append(the_data["distmod"], dist_mod_dict[this_SN_name][0])
+
+                    for dl_ind in range(1, len(dist_mod_dict[this_SN_name])):
+                        key = "DISTMOD%03i" % dl_ind
+                        if not the_data["calib_names"].count(key):
+                            the_data["calib_names"].append(key)
+                        calib_ind = the_data["calib_names"].index(key)
+                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = dist_mod_dict[this_SN_name][dl_ind]
+                        assert dl_ind > 0 # 0 is the distance modulus
+                else:
+                    the_data["has_distmod"] = np.append(the_data["has_distmod"], 0)
+                    the_data["distmod"] = np.append(the_data["distmod"], 0.)
 
                 the_data["sample_list"] = append(the_data["sample_list"], current_sample)
 
@@ -319,10 +360,14 @@ def read_data(params):
                 
 
                 # This formula is in Davis+ 2010, but they reference K09
-                total_pec_vel_on_diag = (   params["pec_vel_disp"]*(5./log(10.))*(the_data["z_CMB_list"][-1] + 1.)/(the_data["z_CMB_list"][-1]*(1 + the_data["z_CMB_list"][-1]/2.))   )**2.
+                if not is_calibrator:
+                    total_pec_vel_on_diag = (   params["pec_vel_disp"]*(5./log(10.))*(the_data["z_CMB_list"][-1] + 1.)/(the_data["z_CMB_list"][-1]*(1 + the_data["z_CMB_list"][-1]/2.))   )**2.
+                else:
+                    total_pec_vel_on_diag = 0.
+                    
                 total_bulk_quad = 0.
                 
-                if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1):
+                if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1) and (is_calibrator == 0):
 
                     dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_Dec)**2. + 1e6*(bulk_z - this_redshift_cmb)**2.
                     
@@ -348,13 +393,20 @@ def read_data(params):
 
                     
 
-                print("total_pec_vel_on_diag ", total_pec_vel_on_diag, the_data["z_CMB_list"][-1])
+                print("total_pec_vel_on_diag ", total_pec_vel_on_diag, "z", the_data["z_CMB_list"][-1])
                 total_pec_vel_on_diag -= total_bulk_quad
                 total_pec_vel_on_diag = clip(total_pec_vel_on_diag, 0, 100)
-                print("total_remaining to add ", total_pec_vel_on_diag, the_data["z_CMB_list"][-1])
+                print("total_remaining to add ", total_pec_vel_on_diag, "z", the_data["z_CMB_list"][-1])
 
-                mBmB += total_pec_vel_on_diag
+                if is_calibrator:
+                    assert total_pec_vel_on_diag == 0
+                    assert total_bulk_quad == 0
+
                 
+                mBmB += total_pec_vel_on_diag
+                        
+
+                    
                 ########################################## Done with Ingredients for Covariance Matrix ##########################################
 
                 
@@ -712,6 +764,7 @@ def init_fn():
             
     return {"MB": random.random(size = [(n_samples - 1)*stan_data["MB_by_sample"] + 1])*0.2 - 19.1,
             "Om": 0.3,
+            "H0": np.random.random()*5 + 70.,
             "wDE": -1.01,
             "mu_zbins": mu_init,
             "alpha_angle": arctan(random.random()*0.2),
@@ -814,6 +867,8 @@ else:
                  "do_host_mass": params["do_host_mass"], "fix_Om": params["fix_Om"], "MB_by_sample": params["MB_by_sample"], 
                  # The +1 here is for Stan's indexing, which is from 1 not 0
                  "sample_list": the_data["sample_list"] + 1,
+                 "has_distmod": the_data["has_distmod"],
+                 "distmod": the_data["distmod"],
                  "zhelio": the_data["z_helio_list"],
                  "redshifts": the_data["z_CMB_list"],
                  "redshifts_sort_fill": redshifts_sort_fill, "unsort_inds": unsort_inds,
@@ -862,7 +917,11 @@ print("nzadd ", stan_data['nzadd'])
 
 if stan_data["do_blind"]:
     print("Blinding!")
-    # There are two phases of blinding:
+    # Blind H0
+
+    stan_data["distmod"] += np.random.normal()*0.3
+    
+    # There are two phases of Hubble-flow blinding:
     # -Making the best-fit Om = 0.3
     # -Bringing all samples into alignment with -19.1 given Om = 0.3
 
