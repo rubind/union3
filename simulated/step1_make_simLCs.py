@@ -31,7 +31,7 @@ def band_to_name(band):
     if band[:4] == "sdss":
         return "SDSS_" + band[-1]
     elif band[:4] == "uvot":
-        return "UVOT" + band[-1].lower()
+        return "UVOT_" + band[-1].lower()
     elif band[:2] == "f1":
         return "WFC3_" + band.lower()
     else:
