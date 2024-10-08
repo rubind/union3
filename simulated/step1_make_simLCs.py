@@ -71,6 +71,11 @@ def approxmB(model, date):
 
 def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key):
     observed_SNe = np.zeros(nsne, dtype=np.int16)
+
+    for i in range(nsne):
+        if all_SNe[i]["z"] < 0.01:
+            observed_SNe[i] = 1
+            
     
     for night in dates:
         all_mags = []
@@ -199,7 +204,8 @@ def make_dataset(wd, cal_offsets):
         min_date = dates[0] + params["cadence"]*2
         max_date = dates[-1] - params["cadence"]*2
 
-        calibrator_count = sum(zlist < 0.01)
+        calibrator_count = sum([(item < 0.01) for item in zlist])
+        print("calibrator_count from just volume", calibrator_count)
         zlist = np.concatenate((zlist, 0.008*np.random.random(size = 42 - calibrator_count)))
         
     elif z_range_key == "H":
@@ -334,7 +340,7 @@ def make_dataset(wd, cal_offsets):
     subprocess.getoutput("mkdir -p " + p_wd)
 
 
-    f_ladder = open(opts.prefixname + "/distance_ladder.txt", 'a')
+    f_ladder = open(opts.prefixname + "/distance_ladder_vals.txt", 'a')
     cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = 70.)
 
     
@@ -370,7 +376,7 @@ def make_dataset(wd, cal_offsets):
             
             if all_SNe[i]["z"] < 0.01:
                 # If calibrator
-                f_ladder.write(SN_name + "  " + str(cosmo.distmod(all_SNe[i]["z"]).value) + '\n')
+                f_ladder.write(SN_name + "  " + str(cosmo.distmod(all_SNe[i]["z"]).value + np.random.normal()*0.05) + '\n')
 
 
             model = get_SNCosmo_model(all_SNe[i], source)
@@ -740,6 +746,21 @@ for dataset_ind in tqdm.trange(opts.ndataset):
         wd = opts.prefixname + "/dataset_%s_%03i/" % (z_range_key, dataset_ind)
         subprocess.getoutput("mkdir " + wd)
         make_dataset(wd, cal_offsets = cal_offsets)
+
+
+    
+    [ladder_SN, ladder_mu] = readcol(opts.prefixname + "/distance_ladder_vals.txt", 'af')
+
+    for common_unc in [0.0, 0.02, 0.05]:
+        f_ladder = open(opts.prefixname + "/distance_ladder_vals_common=%.3f.txt" % common_unc, 'w')
+        for lad_ind in range(len(ladder_SN)):
+            f_ladder.write(ladder_SN[lad_ind] + "  " + str(ladder_mu[lad_ind]))
+            for lad_ind2 in range(len(ladder_SN)):
+                f_ladder.write("  " + str((lad_ind == lad_ind2)*0.05))
+            f_ladder.write("  " + str(common_unc) + '\n')
+        f_ladder.close()
+    
+
 
     f_interleave.write("cd " + pwd + '\n')
     f_interleave.write("cd " + opts.prefixname + '\n')

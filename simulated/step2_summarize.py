@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import multiprocessing
 multiprocessing.set_start_method("fork")
 import pystan 
-import matplotlib,pyplot as plt
+import matplotlib.pyplot as plt
 
 
 
@@ -51,7 +51,53 @@ def verify_filenamelist(sampfl):
         total_SNe += total[ind]
         total_outliers += outliers[ind]
     return total_outliers/total_SNe
+
+def plot_cosmetics(make_symm, true_val):
+    plt.ylim(0, 1)
+    plt.yticks([])
+    plt.tick_params(axis='x', direction='in')
+    for label in plt.gca().get_xticklabels():
+        label.set_verticalalignment('bottom')
+        label.set_horizontalalignment('center')
+        label.set_y(0.1)
+
+    if make_symm:
+        xlim = plt.xlim()
+        dx = max(xlim[1] - true_val, true_val - xlim[0])
+        plt.xlim(true_val - dx, true_val + dx)
+
+
+def check_if_blank(ax):
+    is_blank = True
+
+    # Checking for line plots
+    for line in ax.lines:
+        if line.get_xdata().size > 0:
+            return False
+            
+
+    # Checking for patch objects (e.g., bars in a bar chart)
+    for patch in ax.patches:
+        return False
+    return True
+
         
+def bbox_subplot(i, j, pars, fig, add_label = 0):
+    pad_y = 0.02
+    pad_x = 0.05
+
+    y = (1. - pad_y*3)/len(pars)
+    x = (1. - pad_x*5)/4.
+
+    ax = plt.axes([pad_x + j*(pad_x + x),
+                   pad_y + ((len(pars) - 1) - i)*y + pad_y*(pars[:i+1].count("alpha") == 0),
+                   x, y])
+
+    if add_label:
+        fig.text(0.5, 1.0 + pad_y/5., "Cosmology Parameters", ha = 'center', va = 'center', fontsize = 12)
+        fig.text(0.5, 1 - (pars.index("alpha"))*y - pad_y*1.5, "Other Parameters", ha = 'center', va = 'center', fontsize = 12)
+    
+    return ax
 
 try:
     suffix = sys.argv[1]
@@ -139,13 +185,26 @@ all_txt_grid = []
 all_fmB_true = []
 all_fmB_posterior = []
 
-plt.figure(figsize = (8, 12))
+fig = plt.figure(figsize = (12, 0.8*len(pars)))
+
+all_ax = []
+for i in range(len(pars)):
+    all_ax.append([])
+    for j in range(4):
+        all_ax[i].append(
+            bbox_subplot(i = i, j = j, pars = pars, fig = fig, add_label = (i == 0)*(j == 0))
+        )
+
+
+
+
+tmp_ind = 0
 
 for matchstr, description in [
         ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "Nominal UNITY1.5 Model"),
-        ("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "UNITY1.6 Model"),
+        ("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "Improved Outlier Limits"),
         ("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???", "No Selection Effects"),
-        ("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Selection Effects")]:
+        ("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Sel. Eff., $z$-Dep. Pop.")]:
         #("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
         #("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 
@@ -154,12 +213,16 @@ for matchstr, description in [
 
     all_pars = {}
     all_uncs = {}
+    all_uncs_up = {}
+    all_uncs_down = {}
     all_trues = {}
     all_posterior_stacks = {}
 
     for par in pars:
         all_pars[par] = []
         all_uncs[par] = []
+        all_uncs_up[par] = []
+        all_uncs_down[par] = []
         all_trues[par] = []
         all_posterior_stacks[par] = []
 
@@ -191,10 +254,14 @@ for matchstr, description in [
                 
                 all_pars[par].append(np.median(fit_params[parnoind][:, ind - 1]))
                 all_uncs[par].append(0.5*(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - scoreatpercentile(fit_params[parnoind][:, ind - 1], 15.8655)))
+                all_uncs_up[par].append(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - np.median(fit_params[parnoind][:, ind - 1]))
+                all_uncs_down[par].append(np.median(fit_params[parnoind][:, ind - 1]) - scoreatpercentile(fit_params[parnoind][:,ind - 1], 15.8655))
                 all_posterior_stacks[par].extend(fit_params[parnoind][:, ind - 1])
             else:
                 all_pars[par].append(np.median(fit_params[par]))
                 all_uncs[par].append(0.5*(scoreatpercentile(fit_params[par], 84.1345) - scoreatpercentile(fit_params[par], 15.8655)))
+                all_uncs_up[par].append(scoreatpercentile(fit_params[par], 84.1345) - np.median(fit_params[par]))
+                all_uncs_down[par].append(np.median(fit_params[par]) - scoreatpercentile(fit_params[par], 15.8655))
                 all_posterior_stacks[par].extend(fit_params[par])
 
 
@@ -222,6 +289,10 @@ for matchstr, description in [
                 if read_param(sampfl.split("/")[0] + "/paramfile.txt", "stan_code").count("no_sel"):
                     all_pars[par][-1] = np.sqrt(-1)
                     all_uncs[par][-1] = np.sqrt(-1)
+
+                    all_uncs_up[par][-1] = np.sqrt(-1)
+                    all_uncs_down[par][-1] = np.sqrt(-1)
+
                 #all_trues[par][-1] = np.sqrt(-1)
 
             if par == "delta_h":
@@ -232,8 +303,38 @@ for matchstr, description in [
     print("all_pars", all_pars, len(all_pars["beta_B"]))
     towrite = [description]
     for i, par in enumerate(pars):
-        plt.subplot(len(pars), 2, 2*i + 1)
-        plt.hist(all_posterior_stacks[par], alpha = 0.5, label = description)
+        #plt.subplot(len(pars), 4, 4*i + 1)
+        plt.sca(all_ax[i][0])
+        if i == 0:
+            plt.title("Stacked Posterior")
+        
+        lower_to_plot = scoreatpercentile(all_posterior_stacks[par], 15.8655)
+        upper_to_plot = scoreatpercentile(all_posterior_stacks[par], 84.1345)
+        med_to_plot = np.median(all_posterior_stacks[par])
+
+        the_color = ['k', 'b', 'r', 'g'][tmp_ind]
+        the_linewidth = [2,2,1,1][tmp_ind]
+        ffff
+
+
+        yval = 0.9 - tmp_ind*0.2 #0.125 + tmp_ind*0.25
+        plt.plot(med_to_plot, yval, '.', color = the_color)
+        plt.plot([lower_to_plot, upper_to_plot], [yval]*2, label = description, color = the_color)
+
+
+        if np.isclose(np.std(all_trues[par]), 0):
+            if tmp_ind == 0:
+                plt.axvline(all_trues[par][0], color = 'k')
+
+        if labels[par].count(" ") < 2:
+            plt.ylabel(labels[par].replace(" ", '\n'), rotation = 0, horizontalalignment='right', verticalalignment = 'center', fontsize = 12)
+        else:
+            plt.ylabel(labels[par], rotation = 0, horizontalalignment='right', verticalalignment = 'center', fontsize = 12)
+            
+        plot_cosmetics(make_symm = np.isclose(np.std(all_trues[par]), 0)*(tmp_ind == 3),
+                       true_val = all_trues[par][0])
+        
+        #plt.hist(all_posterior_stacks[par], alpha = 0.5, label = description)
         
         the_mean = np.mean(all_pars[par])
         the_std = np.std(all_pars[par], ddof=1)
@@ -242,11 +343,80 @@ for matchstr, description in [
         mean_unc = np.mean(all_uncs[par])
 
         print(par, all_trues[par])
-        chi2_DoF = (np.array(all_pars[par]) - np.array(all_trues[par]))/np.array(all_uncs[par])
-        chi2_DoF = np.sqrt(sum(chi2_DoF**2. / len(all_pars[par])))
+        pulls = (np.array(all_pars[par]) - np.array(all_trues[par]))/np.array(all_uncs[par])
+        chi2_DoF = np.sqrt(sum(pulls**2. / len(all_pars[par])))
         #chi2_DoF = sum(chi2_DoF**2.)/len(all_pars[par])
         
         towrite.append(fmt(the_mean, the_std/sqrtn, mean_unc = mean_unc, chi2_DoF = chi2_DoF))
+
+        plt.sca(all_ax[i][1])
+        #plt.subplot(len(pars), 4, 4*i + 2)
+
+        if i == 0:
+            plt.title("Stacked Pulls")
+
+        pulls = []
+        for j in range(len(all_pars[par])):
+            if all_trues[par][j] > all_pars[par][j]:
+                pulls.append(   (all_pars[par][j] - all_trues[par][j])/all_uncs_up[par][j]   )
+            else:
+                pulls.append(   (all_pars[par][j] - all_trues[par][j])/all_uncs_down[par][j]   )
+
+        
+        lower_to_plot = scoreatpercentile(pulls, 15.8655)
+        upper_to_plot = scoreatpercentile(pulls, 84.1345)
+        med_to_plot = np.median(pulls)
+
+        plt.plot(med_to_plot, yval, '.', color = the_color)
+        plt.plot([lower_to_plot, upper_to_plot], [yval]*2, label = description, color = the_color)
+
+        span_color = (0.7, 0.7, 0.7)
+        
+        if tmp_ind == 0 and np.all(1 - np.isnan(pulls)):
+            plt.axvspan(-np.sqrt(np.pi/(2.*len(pulls))),
+                        np.sqrt(np.pi/(2.*len(pulls))), color=span_color, zorder = -1)
+
+            plt.axvspan(-1 - 0.1316218*np.sqrt(100./len(pulls)),
+                        -1 + 0.1646250*np.sqrt(100./len(pulls)),
+                        color=span_color, zorder = -1)
+
+            plt.axvspan(1 - 0.1646250*np.sqrt(100./len(pulls)),
+                        1 + 0.1316218*np.sqrt(100./len(pulls)),
+                        color=span_color, zorder = -1)
+                         
+        plot_cosmetics(make_symm = (tmp_ind == 3), true_val = 0)
+        
+
+        #plt.subplot(len(pars), 4, 4*i + 3)
+        
+        plt.sca(all_ax[i][2])
+        if i ==	0:
+            plt.title("Mean(Pulls)")
+
+        
+        plt.plot(np.mean(pulls), yval, '.', color = the_color)
+        plot_cosmetics(make_symm = (tmp_ind == 3), true_val = 0)
+
+        if tmp_ind == 0 and np.all(1 - np.isnan(pulls)):
+            plt.axvspan(- 1./np.sqrt(1.*len(pulls)),
+                        1./np.sqrt(1.*len(pulls)), color=span_color, zorder = -1)
+
+        
+        #plt.subplot(len(pars), 4, 4*i + 4)
+
+        plt.sca(all_ax[i][3])
+        if i == 0:
+            plt.title("RMS(Pulls)")
+
+        plt.plot(np.std(pulls, ddof=1), yval, '.', color = the_color, label = description*(i == 0))
+
+        if tmp_ind == 0 and np.all(1 - np.isnan(pulls)):
+            plt.axvspan(1 - 1./np.sqrt(2.*len(pulls)),
+                        1 + 1./np.sqrt(2.*len(pulls)), color=span_color, zorder = -1)
+            
+        
+        plot_cosmetics(make_symm = (tmp_ind == 3), true_val = 1)
+
 
         #the_mean = np.mean(all_uncs[par])
         #the_std = np.std(all_uncs[par], ddof=1)
@@ -254,12 +424,21 @@ for matchstr, description in [
         #towrite.append(fmt(the_mean, the_std/sqrtn))
         
     all_txt_grid.append(towrite)
+    tmp_ind += 1
+
+for j in range(1,4):
+    xlim = [100, -100]
+    for i in range(len(pars)):
     
-for i, par in enumerate(pars):
-    plt.subplot(len(pars), 2, 2*i + 1)
-    plt.legend(loc = 'best')
-plt.tight_layout()
-plt.savefig("sim_parameters.pdf", bbox_inches = 'tight')
+    
+#for i, par in enumerate(pars):
+plt.sca(all_ax[0][3])
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+            
+#plt.subplots_adjust(hspace = 0)
+#plt.tight_layout()
+plt.savefig("sim_parameters_" + suffix + ".pdf", bbox_inches = 'tight')
 plt.close()
 
 
