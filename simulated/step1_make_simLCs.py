@@ -522,7 +522,7 @@ include_pec_cov		0
 separate_mass_x1c	1
 """ % (dataset_list,
        '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
-       '"$UNITY/scripts/stan_code_simple.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
+       '"$UNITY/scripts/stan_code_H0.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
        '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
        distance_ladder_fl,
        population_model, 1 - oneDint, fix_Om))
@@ -544,7 +544,7 @@ export UNION=../
     f.write("cd " + pwd + '\n')
     f.write("cd " + wd + '\n')
 
-    f.write("~/.conda/envs/py39/bin/python $UNITY/scripts/read_and_sample.py paramfile.txt %i > log.txt\n" % cosmomodel)
+    f.write("~/.conda/envs/py39/bin/python $UNITY/scripts/read_and_sample_H0.py paramfile.txt %i > log.txt\n" % cosmomodel)
 
     f.close()
 
