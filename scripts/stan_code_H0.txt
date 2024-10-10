@@ -321,7 +321,7 @@ transformed parameters {
         }
 
 	if (has_distmod[i] == 1) {
- 	    model_mBx1c_cov[i][1,1] = model_mBx1c_cov[i][1,1] + sigma_int_calibrator^2
+ 	    model_mBx1c_cov[i][1,1] = model_mBx1c_cov[i][1,1] + sigma_int_calibrator^2;
 	}
 	model_mBx1c_cov_outl[i][1,1] <- model_mBx1c_cov_outl[i][1,1] + outl_mBx1c_uncertainties_mB^2;
 
