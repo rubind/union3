@@ -77,7 +77,7 @@ transformed data {
     // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
     // vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
 
-    print ("Version 1.71");
+    print ("Version 1.8");
 
     // locs [ 0.16913558  0.68695591  1.9434773 ]
     // sigs [ 0.11070724  0.330062    0.96505958]
