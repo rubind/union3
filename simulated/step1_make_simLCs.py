@@ -388,7 +388,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             
             if all_SNe[i]["z"] < 0.01:
                 # If calibrator
-                f_ladder.write(SN_name + "  " + str(cosmo.distmod(all_SNe[i]["z"]).value + np.random.normal()*0.05) + '\n')
+                f_ladder.write(SN_name + "  " + str(cosmo.distmod(all_SNe[i]["z"]).value) + '\n')
 
 
             model = get_SNCosmo_model(all_SNe[i], source)
@@ -602,6 +602,7 @@ subprocess.getoutput("mkdir " + opts.prefixname)
 
 f = open(opts.prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(opts.ndataset):
+    f.write("dataset_S_%03i_v1.txt  $UNITY/paramfiles/SDSS_r_selection.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/SDSS_r_selection.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/SDSS_i_selection.txt    23.0            0.5\n" % dataset_ind)
     f.write("dataset_V_%03i_v1.txt  $UNITY/paramfiles/WFC3_f125w_selection.txt	26.0		0.25\n" % dataset_ind)
@@ -609,6 +610,7 @@ f.close()
 
 f = open(opts.prefixname + "/mag_cuts_x0.txt", 'w')
 for dataset_ind in range(opts.ndataset):
+    f.write("dataset_S_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    18.0            0.5\n" % dataset_ind)
     f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    23.0            0.5\n" % dataset_ind)
     f.write("dataset_V_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    26.0            0.5\n" % dataset_ind)
