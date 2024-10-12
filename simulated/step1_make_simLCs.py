@@ -388,7 +388,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             
             if all_SNe[i]["z"] < 0.01:
                 # If calibrator
-                f_ladder.write(SN_name + "  " + str(cosmo.distmod(all_SNe[i]["z"]).value + np.random.normal()*0.05) + '\n')
+                f_ladder.write(SN_name + "  " + str(cosmo.distmod(all_SNe[i]["z"]).value) + '\n')
 
 
             model = get_SNCosmo_model(all_SNe[i], source)

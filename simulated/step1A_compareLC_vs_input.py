@@ -200,15 +200,20 @@ def read_dat():
 global_alpha = 0.15
 global_beta = 3.1
 
+print("[read or load] all_dat.pickle")
+
 if sys.argv[1] == "read":
     all_dat = read_dat()
 elif sys.argv[1] == "load":
-    all_dat = pickle.load(open("all_dat.pickle", 'rb'))
+    all_dat = pickle.load(open(sys.argv[2], 'rb'))
 else:
     raise "Unknown option " + sys.argv[1]
 
 
 print(len(all_dat["redshift"]))
+
+for key in all_dat:
+    print(key, all_dat[key])
 
 plt.figure(figsize = (36, 32))
 
