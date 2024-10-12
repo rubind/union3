@@ -9,7 +9,7 @@
 #SBATCH --output=step1n2-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
-cd /home/drubin/koa_scratch/sim_data_simplex/
+cd /home/drubin/koa_scratch/sim_data_H0/
 python3.9 /home/drubin/union3//simulated/step1A_compareLC_vs_input.py read | tail
 python3.9 /home/drubin/union3//simulated/step3_plot_sim_data.py read | tail
 

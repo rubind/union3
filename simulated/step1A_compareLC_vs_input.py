@@ -139,7 +139,7 @@ def read_dat():
             redshift = read_param(resfl, "Redshift")
 
             paramsfl = resfl.replace("/SN", "/SN_params/params_").replace("/result_salt2.dat", ".dat").replace("dataset_", "UNITY_")
-
+            
 
             true_x0 = read_param(paramsfl, "x0")
             true_mag = -2.5*np.log10(true_x0)
@@ -161,6 +161,8 @@ def read_dat():
                 LH = "H"
             elif resfl.count("_V_"):
                 LH = "V"
+            elif resfl.count("_S_"):
+                LH = "S"
             else:
                 assert 0, resfl
 
@@ -252,8 +254,8 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
         
     else:
 
-        for LH in "LHV":
-            pltcolor = dict(L = 'b', H = 'g', V = 'r')[LH]
+        for LH in "LSHV":
+            pltcolor = dict(L = 'b', S = 'm', H = 'g', V = 'r')[LH]
 
             if keys[0] != "redshift":
                 inds = np.where((all_dat["LH"] == LH)*(all_dat["outlier"] == 0))#*(all_dat["redshift"] < 0.055))
@@ -364,10 +366,10 @@ for include_outlier in [0, 1]:
     
     for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
 
-        for LH in "LHV":
-            pltcolor = dict(L = 'b', H = 'g', V = 'r')[LH]
-            pltsymb = dict(L = '.', H = '^', V = '*')[LH]
-            pltlabel = dict(L = "Low-$z$", H = "Mid-$z$", V = "High-$z$")[LH]
+        for LH in "LSHV":
+            pltcolor = dict(S = 'm', L = 'b', H = 'g', V = 'r')[LH]
+            pltsymb = dict(S = 'v', L = '.', H = '^', V = '*')[LH]
+            pltlabel = dict(S = "Low-$z$ $UBV$", L = "Low-$z$ $ugriz$", H = "Mid-$z$", V = "High-$z$")[LH]
 
             if include_outlier:
                 outlier_mask = np.ones(len(all_dat["outlier"]))
@@ -432,7 +434,7 @@ for include_outlier in [0, 1]:
     plt.close()
 
 plt.figure(2, figsize = (5, 7))
-for pltind, LH in enumerate(["LHV", "H"]):
+for pltind, LH in enumerate(["LSHV", "H"]):
     LH_mask = np.array([LH.count(item) for item in all_dat["LH"]])
     inds = np.where(LH_mask*(all_dat["redshift"] > 0.01)*(all_dat["outlier"] == 0))
     zs = all_dat["redshift"][inds]
