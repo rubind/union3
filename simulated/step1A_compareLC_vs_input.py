@@ -138,9 +138,12 @@ def read_dat():
 
             redshift = read_param(resfl, "Redshift")
 
-            paramsfl = resfl.replace("/SN", "/SN_params/params_").replace("/result_salt2.dat", ".dat").replace("dataset_", "UNITY_")
+            paramsfl = resfl + ""
+            for red_key in "SLHV":
+                paramsfl = paramsfl.replace("/SN" + red_key, "/SN_params/params_").replace("/result_salt2.dat", ".dat").replace("dataset_", "UNITY_")
             
 
+            print("resfl", resfl, "paramsfl", paramsfl)
             true_x0 = read_param(paramsfl, "x0")
             true_mag = -2.5*np.log10(true_x0)
 
