@@ -220,6 +220,148 @@ print(len(all_dat["redshift"]))
 for key in all_dat:
     print(key, all_dat[key])
 
+
+
+plt.figure(figsize = (36, 32))
+
+plt_ind = 1
+
+for key in all_dat:
+    if all_dat[key].dtype == np.float64:
+        plt.subplot(5,5,plt_ind)
+        inds = np.where((all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
+        counts, bins, NA = plt.hist(all_dat[key][inds], bins = 80, color = 'b')
+
+        inds = np.where((all_dat["dmudg"] > -0.9)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
+        the_med = np.median(all_dat[key][inds])
+        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
+        
+        plt.hist(all_dat[key][inds], bins = bins, color = 'g', label = "Median %.2g +- %.2g" % (the_med, the_unc))
+
+        inds = np.where((all_dat["dmudg"] > -0.85)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
+        the_med = np.median(all_dat[key][inds])
+        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
+
+        plt.hist(all_dat[key][inds], bins = bins, color = 'orange', label = "Median %.2g +- %.2g" % (the_med, the_unc))
+
+        inds = np.where((all_dat["dmudg"] > -0.8)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
+
+        the_med = np.median(all_dat[key][inds])
+        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
+        plt.hist(all_dat[key][inds], bins = bins, color = 'r', label = "Median %.2g +- %.2g" % (the_med, the_unc))
+
+        plt.legend(loc = 'best')
+
+        plt.title(key)
+        plt_ind += 1
+        plt.yscale('log')
+        
+        
+plt.tight_layout()
+plt.savefig("high_dmudg.pdf", bbox_inches = 'tight')
+plt.close()
+
+
+plt.plot(all_dat["redshift"], all_dat["obs_sig_mu"], '.', alpha = 0.1)
+plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
+plt.savefig("sig_mu_vs_z.pdf")
+plt.close()
+
+
+
+all_dat["pulls_mu"] = all_dat["delta_mu"]/all_dat["obs_sig_mu"]
+all_dat["weight_mu_with0.12"] = 1/(0.12**2. + all_dat["obs_sig_mu"]**2.)
+
+
+for include_outlier in [0, 1]:
+    plt.figure(1, figsize = (12, 5))
+    nplt = 4
+    
+    for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
+
+        for LH in "LSHV":
+            pltcolor = dict(S = 'm', L = 'b', H = 'g', V = 'r')[LH]
+            pltsymb = dict(S = 'v', L = '.', H = '^', V = '*')[LH]
+            pltlabel = dict(S = "Low-$z$ $UBV$", L = "Low-$z$ $ugriz$", H = "Mid-$z$", V = "High-$z$")[LH]
+
+            if include_outlier:
+                outlier_mask = np.ones(len(all_dat["outlier"]))
+            else:
+                outlier_mask = all_dat["outlier"] == 0
+                
+            inds = np.where((all_dat["LH"] == LH)*outlier_mask)
+            zs = all_dat["redshift"][inds]
+
+            bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
+            bin_edges[0] -= 0.001
+            bin_edges[-1] += 0.001
+
+            print("bin_edges", bin_edges)
+
+            for i in range(len(bin_edges) - 1):
+                inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1])*outlier_mask)
+
+                rms = np.std(all_dat["pulls_" + key][inds], ddof=1)
+                uncrms = rms/np.sqrt(2.*len(inds[0]))
+
+                mean = np.mean(all_dat["pulls_" + key][inds])
+                uncmean = rms/np.sqrt(len(inds[0]))
+
+                mean_bin = 0.5*(bin_edges[i] + bin_edges[i+1])
+                #plt.plot(mean_bin, rms, '.', color = pltcolor)
+                #plt.plot([mean_bin]*2, [rms - uncrms - 0.9, rms + uncrms - 0.9], color = pltcolor)
+                plt.figure(1)
+                plt.subplot(2, nplt, 1 + pltind)
+                plt.plot(mean_bin, mean, pltsymb, color = pltcolor, label = (i == 0)*pltlabel)
+                plt.subplot(2, nplt, nplt + 1 + pltind)
+                plt.plot(mean_bin, rms, pltsymb, color = pltcolor)
+
+        plt.figure(1)
+        plt.subplot(2, nplt, 1 + pltind)
+        if pltind == 0:
+            plt.legend(loc = 'upper right', bbox_to_anchor = (1.05, 1.05))
+
+        plt.axhline(0, color = 'k', linewidth = 0.8)
+        plt.title(dict(mu = "$m_B + %.2f %s x_1 - %.2f %s c$" % (global_alpha, '\,', global_beta, '\,'),
+                       mag = "$m_B$", x1 = "$x_1$", c = "$c$")[key])
+
+        plt.xscale('log')
+        plt.subplot(2, nplt, nplt + 1 + pltind)
+        plt.axhline(1, color = 'k', linewidth = 0.8)
+        plt.xscale('log')
+        plt.xlabel("Sim LC Redshift Bin")
+        if pltind == 0:
+            plt.subplot(2, nplt, 1 + pltind)
+            plt.ylabel("Sim LC Mean Pull,\nEqual Number per Bin")
+            plt.subplot(2, nplt, nplt + 1 + pltind)
+            plt.ylabel("Sim LC RMS Pull,\nEqual Number per Bin")
+
+
+    fig = plt.figure(1)
+    fig.align_ylabels()
+    
+    plt.tight_layout()
+    plt.figtext(0.98, 1.00, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
+
+    plt.savefig("LC_compare_pulls_incloutl=%i.pdf" % include_outlier, bbox_inches = 'tight')
+    plt.close()
+
+
+
+plt.figure()
+
+inds = np.where(all_dat["outlier"] == 1)
+
+plt.subplot(2,1,1)
+plt.plot(all_dat["redshift"][inds], all_dat["true_c"][inds], '.', color = 'b')
+plt.subplot(2,1,2)
+plt.plot(all_dat["redshift"][inds], all_dat["true_x1"][inds], '.', color = 'b')
+plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
+
+plt.savefig("outlier_populations.pdf", bbox_inches = 'tight')
+plt.close()
+
+
 plt.figure(figsize = (36, 32))
 
 zbins = 400
@@ -300,9 +442,9 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
         plt.legend(loc = 'best')
 
         
-    if keys[0] == "redshift":
+    if (keys[0] == "redshift") or (keys[0] == "obs_sig_mu") or (keys[0] == "obs_sig_c"):
         plt.xscale('log')
-        plt.xlim(0.01, 3)
+        #plt.xlim(0.01, 3)
 
     plt.axhline(0)
     
@@ -316,135 +458,10 @@ plt.savefig("compare_LC_vs_input.pdf", bbox_inches = 'tight')
 plt.close()
 
 
-
-plt.figure(figsize = (36, 32))
-
-plt_ind = 1
-
-for key in all_dat:
-    if all_dat[key].dtype == np.float64:
-        plt.subplot(5,5,plt_ind)
-        inds = np.where((all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
-        counts, bins, NA = plt.hist(all_dat[key][inds], bins = 80, color = 'b')
-
-        inds = np.where((all_dat["dmudg"] > -0.9)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
-        the_med = np.median(all_dat[key][inds])
-        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
-        
-        plt.hist(all_dat[key][inds], bins = bins, color = 'g', label = "Median %.2g +- %.2g" % (the_med, the_unc))
-
-        inds = np.where((all_dat["dmudg"] > -0.85)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
-        the_med = np.median(all_dat[key][inds])
-        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
-
-        plt.hist(all_dat[key][inds], bins = bins, color = 'orange', label = "Median %.2g +- %.2g" % (the_med, the_unc))
-
-        inds = np.where((all_dat["dmudg"] > -0.8)*(all_dat["LH"] == "L")*(all_dat["outlier"] == 0))
-
-        the_med = np.median(all_dat[key][inds])
-        the_unc = np.std(all_dat[key][inds], ddof=1)*np.sqrt(0.5*np.pi/len(all_dat[key][inds]))
-        plt.hist(all_dat[key][inds], bins = bins, color = 'r', label = "Median %.2g +- %.2g" % (the_med, the_unc))
-
-        plt.legend(loc = 'best')
-
-        plt.title(key)
-        plt_ind += 1
-        plt.yscale('log')
-        
-        
-plt.tight_layout()
-plt.savefig("high_dmudg.pdf", bbox_inches = 'tight')
-plt.close()
-
-
-plt.plot(all_dat["redshift"], all_dat["obs_sig_mu"], '.', alpha = 0.1)
-plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
-plt.savefig("sig_mu_vs_z.pdf")
-plt.close()
-
-
-
-all_dat["pulls_mu"] = all_dat["delta_mu"]/all_dat["obs_sig_mu"]
-all_dat["weight_mu_with0.12"] = 1/(0.12**2. + all_dat["obs_sig_mu"]**2.)
-
-
-for include_outlier in [0, 1]:
-    plt.figure(1, figsize = (12, 5))
-    nplt = 4
-    
-    for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
-
-        for LH in "LSHV":
-            pltcolor = dict(S = 'm', L = 'b', H = 'g', V = 'r')[LH]
-            pltsymb = dict(S = 'v', L = '.', H = '^', V = '*')[LH]
-            pltlabel = dict(S = "Low-$z$ $UBV$", L = "Low-$z$ $ugriz$", H = "Mid-$z$", V = "High-$z$")[LH]
-
-            if include_outlier:
-                outlier_mask = np.ones(len(all_dat["outlier"]))
-            else:
-                outlier_mask = all_dat["outlier"] == 0
-                
-            inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] > 0.01)*outlier_mask)
-            zs = all_dat["redshift"][inds]
-
-            bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
-            bin_edges[0] -= 0.001
-            bin_edges[-1] += 0.001
-
-            print("bin_edges", bin_edges)
-
-            for i in range(len(bin_edges) - 1):
-                inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1])*outlier_mask)
-
-                rms = np.std(all_dat["pulls_" + key][inds], ddof=1)
-                uncrms = rms/np.sqrt(2.*len(inds[0]))
-
-                mean = np.mean(all_dat["pulls_" + key][inds])
-                uncmean = rms/np.sqrt(len(inds[0]))
-
-                mean_bin = 0.5*(bin_edges[i] + bin_edges[i+1])
-                #plt.plot(mean_bin, rms, '.', color = pltcolor)
-                #plt.plot([mean_bin]*2, [rms - uncrms - 0.9, rms + uncrms - 0.9], color = pltcolor)
-                plt.figure(1)
-                plt.subplot(2, nplt, 1 + pltind)
-                plt.plot(mean_bin, mean, pltsymb, color = pltcolor, label = (i == 0)*pltlabel)
-                plt.subplot(2, nplt, nplt + 1 + pltind)
-                plt.plot(mean_bin, rms, pltsymb, color = pltcolor)
-
-        plt.figure(1)
-        plt.subplot(2, nplt, 1 + pltind)
-        if pltind == 0:
-            plt.legend(loc = 'upper right', bbox_to_anchor = (1.05, 1.05))
-
-        plt.axhline(0, color = 'k', linewidth = 0.8)
-        plt.title(dict(mu = "$m_B + %.2f %s x_1 - %.2f %s c$" % (global_alpha, '\,', global_beta, '\,'),
-                       mag = "$m_B$", x1 = "$x_1$", c = "$c$")[key])
-
-        plt.xscale('log')
-        plt.subplot(2, nplt, nplt + 1 + pltind)
-        plt.axhline(1, color = 'k', linewidth = 0.8)
-        plt.xscale('log')
-        plt.xlabel("Sim LC Redshift Bin")
-        if pltind == 0:
-            plt.subplot(2, nplt, 1 + pltind)
-            plt.ylabel("Sim LC Mean Pull,\nEqual Number per Bin")
-            plt.subplot(2, nplt, nplt + 1 + pltind)
-            plt.ylabel("Sim LC RMS Pull,\nEqual Number per Bin")
-
-
-    fig = plt.figure(1)
-    fig.align_ylabels()
-    
-    plt.tight_layout()
-    plt.figtext(0.98, 1.00, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
-
-    plt.savefig("LC_compare_pulls_incloutl=%i.pdf" % include_outlier, bbox_inches = 'tight')
-    plt.close()
-
 plt.figure(2, figsize = (5, 7))
-for pltind, LH in enumerate(["LSHV", "H"]):
+for pltind, LH in enumerate(["SLHV", "H"]):
     LH_mask = np.array([LH.count(item) for item in all_dat["LH"]])
-    inds = np.where(LH_mask*(all_dat["redshift"] > 0.01)*(all_dat["outlier"] == 0))
+    inds = np.where(LH_mask*(all_dat["redshift"] > 0.0)*(all_dat["outlier"] == 0))
     zs = all_dat["redshift"][inds]
     delta_mu = all_dat["delta_mu"][inds]
 
@@ -508,18 +525,4 @@ for pltind, LH in enumerate(["LSHV", "H"]):
 plt.figure(2)
 plt.figtext(0.98, 0.92, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
 plt.savefig("sim_mean_resid.pdf", bbox_inches = 'tight')
-plt.close()
-
-
-plt.figure()
-
-inds = np.where(all_dat["outlier"] == 1)
-
-plt.subplot(2,1,1)
-plt.plot(all_dat["redshift"][inds], all_dat["true_c"][inds], '.', color = 'b')
-plt.subplot(2,1,2)
-plt.plot(all_dat["redshift"][inds], all_dat["true_x1"][inds], '.', color = 'b')
-plt.figtext(0.98, 0.991, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
-
-plt.savefig("outlier_populations.pdf", bbox_inches = 'tight')
 plt.close()
