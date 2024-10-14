@@ -15,9 +15,9 @@ for logfl in sys.argv[1:]:
 
     for i, key in enumerate(calib_names):
         if key in all_calibs:
-            all_calibs[key].append(calibs[i].split(None)[1])
+            all_calibs[key].append(float(calibs[i].split(None)[1]))
         else:
-            all_calibs[key] = [calibs[i].split(None)[1]]
+            all_calibs[key] = [float(calibs[i].split(None)[1])]
 
 print("all_calibs", all_calibs)
 
