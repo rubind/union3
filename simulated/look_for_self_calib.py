@@ -1,6 +1,8 @@
 from subprocess import getoutput
 import sys
 import numpy as np
+from FileRead import writecol
+
 
 all_calibs = {}
 
@@ -11,7 +13,7 @@ for logfl in sys.argv[1:]:
     calib_names = eval(calib_names.split('the_data["calib_names"]')[1].strip())
 
     print("calib_names", calib_names)
-    assert len(calib_names) == len(calibs)
+    assert len(calib_names) == len(calibs), "%s %i %i" % (logfl, len(calib_names), len(calibs))
 
     for i, key in enumerate(calib_names):
         if key in all_calibs:
@@ -29,4 +31,8 @@ all_rms.sort()
 
 for item in all_rms:
     print(item)
-    
+
+headings = list(all_calibs.keys())
+
+writecol("all_calibs.txt", [all_calibs[item] for item in headings], headings = headings)
+
