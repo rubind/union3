@@ -21,6 +21,13 @@ for logfl in sys.argv[1:]:
         else:
             all_calibs[key] = [float(calibs[i].split(None)[1])]
 
+    for key in ["Om", "H0"]:
+        Om = getoutput("grep '" + key + " ' " + logfl)
+        if key in all_calibs:
+            all_calibs[key].append(float(Om.split(None)[1]))
+        else:
+            all_calibs[key] = [float(Om.split(None)[1])]
+
 print("all_calibs", all_calibs)
 
 all_rms = []
@@ -34,5 +41,5 @@ for item in all_rms:
 
 headings = list(all_calibs.keys())
 
-writecol("all_calibs.txt", [all_calibs[item] for item in headings], headings = [str(item).replace(" ", "") for item in headings])
+writecol("all_calibs.txt", [all_calibs[item] for item in headings], headings = [str(item).replace(" ", "").replace("(", "").replace(")", "") for item in headings])
 
