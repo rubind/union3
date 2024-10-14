@@ -21,7 +21,7 @@ for logfl in sys.argv[1:]:
         else:
             all_calibs[key] = [float(calibs[i].split(None)[1])]
 
-    for key in ["Om", "H0"]:
+    for key in ["Om", "H0", "mobs_cuts\[1\]", "mobs_cuts\[2\]", "mobs_cuts\[3\]", "mobs_cuts\[4\]"]:
         Om = getoutput("grep '" + key + " ' " + logfl)
         if key in all_calibs:
             all_calibs[key].append(float(Om.split(None)[1]))
