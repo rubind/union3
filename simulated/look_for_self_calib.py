@@ -34,5 +34,5 @@ for item in all_rms:
 
 headings = list(all_calibs.keys())
 
-writecol("all_calibs.txt", [all_calibs[item] for item in headings], headings = headings)
+writecol("all_calibs.txt", [all_calibs[item] for item in headings], headings = [str(item).replace(" ", "") for item in headings])
 
