@@ -217,14 +217,18 @@ def make_dataset(wd, cal_offsets, dataset_ind):
         
     elif z_range_key == "H":
         dates = np.arange(params["n_visit"], dtype=np.float64)*params["cadence"]
-        zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"], ratefunc = SN_rate_function))
+        zlist = [0]
+        while np.min(zlist) < 0.01:
+            zlist = list(sncosmo.zdist(0., zmax = 1.0, time=dates[-1] - dates[0] - 4*params["cadence"], area=params["ndeg2"], ratefunc = SN_rate_function))
         min_date = dates[0] + params["cadence"]*2
         max_date = dates[-1] - params["cadence"]*2
     elif z_range_key == "V":
         dates = np.arange(params["HST_visit"], dtype=np.float64)*params["HST_cadence"]
         min_date = dates[0] + params["HST_cadence"]
         max_date = dates[-1] - params["HST_cadence"]*3
-        zlist = list(sncosmo.zdist(0., zmax = 3.2, time=dates[-1] - dates[0] - 4*params["HST_cadence"], area=4.0, ratefunc = SN_rate_function))
+        zlist = [0]
+        while np.min(zlist) < 0.01:
+            zlist = list(sncosmo.zdist(0., zmax = 3.2, time=dates[-1] - dates[0] - 4*params["HST_cadence"], area=4.0, ratefunc = SN_rate_function))
     else:
         raise Exception("Unknown z_range_key " + z_range_key)
 
@@ -372,7 +376,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
         #phases = (dates - params[i]["t0"])/(1. + params[i]["z"])
 
         if observed_SNe[i]:
-            SN_name = "SN%s%04i" % (z_range_key, i)
+            SN_name = "SN%s%s%04i" % (z_range_key, all_SNe[i]["outlier"]*"O" + (1 - all_SNe[i]["outlier"])*"I", i)
             this_wd = wd + "/" + SN_name
             subprocess.getoutput("mkdir -p " + this_wd)
 
@@ -675,6 +679,13 @@ f.write("""
 "SALT_UV_CAL":                                                                                          0.0001
 "SALT_U_CAL":                                                                                           0.0001
 "SALT_I_CAL":                                                                                           0.0001
+
+('Zeropoint', 'UVOT|UVOT_u'): 0.0001
+('Zeropoint', 'UVOT|UVOT_b'): 0.0001
+('Zeropoint', 'UVOT|UVOT_v'): 0.0001
+('Lambda', 'UVOT|UVOT_u'):    0.01
+('Lambda', 'UVOT|UVOT_b'):    0.01
+('Lambda', 'UVOT|UVOT_v'):    0.01
 
 ('Zeropoint', 'SDSS|SDSS_u'): 0.0001
 ('Zeropoint', 'SDSS|SDSS_g'): 0.0001
