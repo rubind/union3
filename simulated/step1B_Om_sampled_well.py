@@ -15,6 +15,21 @@ def check_param(logfl, param, leave_running_jobs_alone, threshold = 1.05):
         return 1
     else:
         return 0
+
+def check_calibs(logfl, leave_running_jobs_alone, threshold):
+    grepout = getoutput("grep 'calibs\[' " + logfl).split('\n')
+    print(grepout)
+
+    if len(grepout) < 2:
+        return leave_running_jobs_alone # Still running and leave_running_jobs_alone => 1
+
+    for line in grepout:
+        parsed = line.split(None)
+        if float(parsed[-1]) > threshold:
+            return 0
+    return 1
+
+
     
 
 leave_running_jobs_alone = int(sys.argv[1])
@@ -36,6 +51,8 @@ for logfl in logfls:
     other_checks = 1
     for key in ["beta_B", "mBx1c_int_variance\[1\]", "beta_R_low", "beta_R_high"]:
         other_checks *= check_param(logfl, param = key, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
+
+    other_checks *= check_calibs(logfl, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
 
         
     if check_Om and check_wDE and other_checks:

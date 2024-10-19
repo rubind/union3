@@ -10,7 +10,9 @@ all_calibs = {}
 for logfl in sys.argv[1:]:
     calibs = getoutput("grep 'calibs\[' " + logfl).split('\n')
 
-    if len(calibs) > 0:
+    if len(calibs) > 1:
+        print("logfl", logfl)
+        
         calib_names = getoutput("grep calib_names " + logfl)
         calib_names = eval(calib_names.split('the_data["calib_names"]')[1].strip())
 
