@@ -607,10 +607,10 @@ subprocess.getoutput("mkdir " + opts.prefixname)
 f = open(opts.prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(opts.ndataset):
     for outl in ["", "_nooutl"]:
-        f.write("dataset_S_%03i%s_v1.txt  $UNITY/paramfiles/SDSS_r_selection.txt    18.0            0.5\n" % (dataset_ind, outl))
-        f.write("dataset_L_%03i%s_v1.txt  $UNITY/paramfiles/SDSS_r_selection.txt    18.0            0.5\n" % (dataset_ind, outl))
-        f.write("dataset_H_%03i%s_v1.txt  $UNITY/paramfiles/SDSS_i_selection.txt    23.0            0.5\n" % (dataset_ind, outl))
-        f.write("dataset_V_%03i%s_v1.txt  $UNITY/paramfiles/WFC3_f125w_selection.txt	26.0		0.25\n" % (dataset_ind, outl))
+        f.write("dataset_S_%03i%s_v1.txt  $UNITY/paramfiles/sdssr_selection_salt3-f22_ab.txt    18.0            0.5\n" % (dataset_ind, outl))
+        f.write("dataset_L_%03i%s_v1.txt  $UNITY/paramfiles/sdssr_selection_salt3-f22_ab.txt    18.0            0.5\n" % (dataset_ind, outl))
+        f.write("dataset_H_%03i%s_v1.txt  $UNITY/paramfiles/sdssi_selection_salt3-f22_ab.txt    23.0            0.5\n" % (dataset_ind, outl))
+        f.write("dataset_V_%03i%s_v1.txt  $UNITY/paramfiles/f125w_selection_salt3-f22_ab.txt	26.0		0.25\n" % (dataset_ind, outl))
 f.close()
 
 f = open(opts.prefixname + "/mag_cuts_x0.txt", 'w')
