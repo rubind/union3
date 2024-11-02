@@ -45,6 +45,16 @@
 "PS1_z_LAM":												8.5
 
 
+('Zeropoint', 'UVOT|UVOT_u'):											0.02
+('Zeropoint', 'UVOT|UVOT_b'):											0.02
+('Zeropoint', 'UVOT|UVOT_v'):											0.02
+
+('Lambda', 'UVOT|UVOT_u'):											10
+('Lambda', 'UVOT|UVOT_b'):											10
+('Lambda', 'UVOT|UVOT_v'):											10
+
+
+
 ('Zeropoint', 'CNIa02|Bessell12_B'):									0.01
 ('Zeropoint', 'CNIa02|Bessell12_V'):									0.01
 ('Zeropoint', 'CNIa02|SDSS_g'):										0.01
@@ -208,6 +218,20 @@
 ('Lambda', 'SWOPE|SWOPE_r'):										10.
 ('Lambda', 'SWOPE|SWOPE_i'):										10.
 
+('Zeropoint', 'SWOPE|SWOPE_B2'):									0.01L
+('Zeropoint', 'SWOPE|SWOPE_V2'):									0.01L
+('Zeropoint', 'SWOPE|SWOPE_u2'):									0.01S
+('Zeropoint', 'SWOPE|SWOPE_g2'):									0.01S
+('Zeropoint', 'SWOPE|SWOPE_r2'):									0.01S
+('Zeropoint', 'SWOPE|SWOPE_i2'):									0.01S
+('Lambda', 'SWOPE|SWOPE_B2'):										10.
+('Lambda', 'SWOPE|SWOPE_V2'):										10.
+('Lambda', 'SWOPE|SWOPE_u2'):										10.
+('Lambda', 'SWOPE|SWOPE_g2'):										10.
+('Lambda', 'SWOPE|SWOPE_r2'):										10.
+('Lambda', 'SWOPE|SWOPE_i2'):										10.
+
+
 
 ('Zeropoint', 'LOSS|LOSS_K1_B'):									0.01L
 ('Zeropoint', 'LOSS|LOSS_K2_B'):									0.01L
@@ -286,6 +310,40 @@
 ('Lambda', 'Krisciunas|Bessell12_V'):									10L
 ('Lambda', 'Krisciunas|Bessell12_R'):									10L
 ('Lambda', 'Krisciunas|Bessell12_I'):									10L
+
+('Zeropoint', 'ANDICAM|ANDICAM_B'):								0.01L
+('Zeropoint', 'ANDICAM|ANDICAM_V'):								0.01L
+('Zeropoint', 'ANDICAM|ANDICAM_R'):								0.01L
+('Zeropoint', 'ANDICAM|ANDICAM_I'):								0.01L
+('Lambda', 'ANDICAM|ANDICAM_B'):									20L
+('Lambda', 'ANDICAM|ANDICAM_V'):									20L
+('Lambda', 'ANDICAM|ANDICAM_R'):									20L
+('Lambda', 'ANDICAM|ANDICAM_I'):									20L
+
+
+('Zeropoint', 'SNF|USNF'):                                                                		0.01
+('Zeropoint', 'SNF|BSNF'):                                                                		0.01
+('Zeropoint', 'SNF|VSNF'):                                                                		0.01
+('Zeropoint', 'SNF|RSNF'):                                                                		0.01
+('Zeropoint', 'SNF|ISNF'):                                                                		0.01
+('Lambda', 'SNF|USNF'):                                                                			0.5
+('Lambda', 'SNF|BSNF'):                                                                			0.5
+('Lambda', 'SNF|VSNF'):                                                                			0.5
+('Lambda', 'SNF|RSNF'):                                                                			0.5
+('Lambda', 'SNF|ISNF'):                                                                			0.5
+
+
+('Zeropoint', 'OtherNearby|Bessell12_U'):                                                                0.05L
+('Zeropoint', 'OtherNearby|Bessell12_B'):								0.03L
+('Zeropoint', 'OtherNearby|Bessell12_V'):								0.02L
+('Zeropoint', 'OtherNearby|Bessell12_R'):								0.03L
+('Zeropoint', 'OtherNearby|Bessell12_I'):								0.03L
+('Lambda', 'OtherNearby|Bessell12_U'):                                                                   10L
+('Lambda', 'OtherNearby|Bessell12_B'):									10L
+('Lambda', 'OtherNearby|Bessell12_V'):									10L
+('Lambda', 'OtherNearby|Bessell12_R'):									10L
+('Lambda', 'OtherNearby|Bessell12_I'):									10L
+
 
 ('Zeropoint', 'Knop|Bessell12_R'):									0.02L
 ('Zeropoint', 'Knop|Bessell12_I'):									0.02L

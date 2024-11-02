@@ -268,7 +268,7 @@ transformed parameters {
         }
     }
 
-    for (i in 1:n_sne) {
+    for (i in 1:n_sne) { // After numerical integration!
         if (has_distmod[i] == 1) {
             model_mu[i] = distmod[i] + 5*log10(H0/70.);
 	}

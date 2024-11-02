@@ -362,39 +362,40 @@ plt.savefig("outlier_populations.pdf", bbox_inches = 'tight')
 plt.close()
 
 
-plt.figure(figsize = (36, 32))
+plt.figure(figsize = (48, 32))
 
 zbins = 400
 
-for i, keys in enumerate([("redshift", "delta_mag", 0),
-                          ("redshift", "delta_c", 0),
-                          ("true_c", "delta_c", 0),
-                          ("redshift", "delta_x1", 0),
-                          ("redshift", "pulls_c", 0),
-                          ("redshift", "pulls_x1", 0),
-                          ("redshift", "delta_mu", 0),
-                          ("redshift", "delta_mag", zbins),
-                          ("redshift", "delta_c", zbins),
-                          ("redshift", "true_c", zbins),
-                          ("redshift", "obs_sig_mu", zbins),
-                          ("true_c", "delta_mu", 35),
-                          ("true_x1", "delta_mu", 35),
-                          ("true_c", "delta_c", 35),
-                          ("redshift", "delta_x1", zbins),
-                          ("redshift", "delta_mu", zbins),
-                          ("redshift", "dmudg", zbins),
-                          ("redshift", "dmudg", zbins),
-                          ("dmudg", "delta_mag", 35),
-                          ("dmudg", "delta_x1", 35),
-                          ("dmudg", "delta_c", 35),
-                          ("dmudg", "delta_mu", 35),
-                          ("dmudr", "delta_mu", 35),
-                          ("dmudi", "delta_mu", 35),
-                          ("dmudz", "delta_mu", 35),
-                          ("obs_sig_mu", "delta_mu", 35),
-                          ("obs_sig_c", "delta_mu", 35),
-                          ("obs_sig_c", "delta_c", 35),
-                          ("true_x1", "delta_x1", 35)]):
+for i, keys in enumerate([("redshift", "delta_mag", 0, 0),
+                          ("redshift", "delta_c", 0, 0),
+                          ("true_c", "delta_c", 0, 0),
+                          ("redshift", "delta_x1", 0, 0),
+                          ("redshift", "pulls_c", 0, 0),
+                          ("redshift", "pulls_x1", 0, 0),
+                          ("redshift", "delta_mu", 0, 0),
+                          ("redshift", "delta_mag", zbins, 1),
+                          ("redshift", "delta_c", zbins, 1),
+                          ("redshift", "true_c", zbins, 1),
+                          ("redshift", "obs_sig_mu", zbins, 1),
+                          ("redshift", "delta_mu", 35, 1),
+                          ("true_c", "delta_mu", 35, 1),
+                          ("true_x1", "delta_mu", 35, 1),
+                          ("true_c", "delta_c", 35, 1),
+                          ("redshift", "delta_x1", zbins, 1),
+                          ("redshift", "delta_mu", zbins, 1),
+                          ("redshift", "dmudg", zbins, 1),
+                          ("redshift", "dmudg", zbins, 1),
+                          ("dmudg", "delta_mag", 35, 1),
+                          ("dmudg", "delta_x1", 35, 1),
+                          ("dmudg", "delta_c", 35, 1),
+                          ("dmudg", "delta_mu", 35, 1),
+                          ("dmudr", "delta_mu", 35, 1),
+                          ("dmudi", "delta_mu", 35, 1),
+                          ("dmudz", "delta_mu", 35, 1),
+                          ("obs_sig_mu", "delta_mu", 35, 1),
+                          ("obs_sig_c", "delta_mu", 35, 1),
+                          ("obs_sig_c", "delta_c", 35, 1),
+                          ("true_x1", "delta_x1", 35, 1)]):
     
     plt.subplot(6,5,i+1)
     if keys[2] == 0:
@@ -403,12 +404,13 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                                                                                                               np.std(all_dat[keys[1]], ddof=1)), color = 'b', alpha = 0.05)#, gridsize=100)
         
     else:
+        bin_by_sample = keys[3]
+        
+        for LH in "LSHV"*bin_by_sample + "A"*(1 - bin_by_sample):
+            pltcolor = dict(L = 'b', S = 'm', H = 'g', V = 'r', A = 'k')[LH]
 
-        for LH in "LSHV":
-            pltcolor = dict(L = 'b', S = 'm', H = 'g', V = 'r')[LH]
-
-            if keys[0] != "redshift":
-                inds = np.where((all_dat["LH"] == LH)*(all_dat["outlier"] == 0))#*(all_dat["redshift"] < 0.055))
+            if bin_by_sample:
+                inds = np.where((all_dat["redshift"] > -1)*(all_dat["LH"] == LH)*(all_dat["outlier"] == 0))#*(all_dat["redshift"] < 0.055))
             else:
                 inds = np.where((all_dat["redshift"] > -1)*(all_dat["outlier"] == 0))#*(all_dat["redshift"] < 0.055))
                 
@@ -433,10 +435,11 @@ for i, keys in enumerate([("redshift", "delta_mag", 0),
                 pltx = np.linspace(0.01, xlim[1], 200)
                 
                 if keys[0] == "redshift" and keys[1] == "delta_mu":
-                    plty, label = fit_delta_cosmo(zs = binx, delta_mus = biny, pltzs = pltx, mu_uncs = np.ones(len(binx), dtype=np.float64), fit_Om = 1, fit_w0 = 0, fit_wa = 0)
-                    plt.plot(pltx, plty, label = label)
-                    plty, label = fit_delta_cosmo(zs = binx, delta_mus = biny, pltzs = pltx, mu_uncs = np.ones(len(binx), dtype=np.float64), fit_Om = 1, fit_w0 = 1, fit_wa = 0)
-                    plt.plot(pltx, plty, label = label)
+                    #plty, label = fit_delta_cosmo(zs = binx, delta_mus = biny, pltzs = pltx, mu_uncs = np.ones(len(binx), dtype=np.float64), fit_Om = 1, fit_w0 = 0, fit_wa = 0)
+                    #plt.plot(pltx, plty, label = label)
+                    #plty, label = fit_delta_cosmo(zs = binx, delta_mus = biny, pltzs = pltx, mu_uncs = np.ones(len(binx), dtype=np.float64), fit_Om = 1, fit_w0 = 1, fit_wa = 0)
+                    #plt.plot(pltx, plty, label = label)
+                    pass
                 
 
         plt.legend(loc = 'best')
@@ -458,6 +461,7 @@ plt.savefig("compare_LC_vs_input.pdf", bbox_inches = 'tight')
 plt.close()
 
 
+
 plt.figure(2, figsize = (5, 7))
 for pltind, LH in enumerate(["SLHV", "H"]):
     LH_mask = np.array([LH.count(item) for item in all_dat["LH"]])
@@ -469,7 +473,7 @@ for pltind, LH in enumerate(["SLHV", "H"]):
     pltzs = np.linspace(0.01, 3, 300)
 
     pltys, thelabel = fit_delta_cosmo(zs = zs, delta_mus = all_dat["delta_mu"][inds], mu_uncs = 1./np.sqrt(all_dat["weight_mu_with0.12"][inds]), pltzs = pltzs,
-                                      fit_Om = (LH == "H"), fit_w0 = (LH == "LHV"), fit_wa = (LH == "LHV"), verbose = True)
+                                      fit_Om = (LH == "H") | (LH == "SLHV"), fit_w0 = (LH == "LHV"), fit_wa = (LH == "LHV"), verbose = True)
 
     """
     pltys_unweight, thelabel_unweight = fit_delta_cosmo(zs = zs, delta_mus = all_dat["delta_mu"][inds], mu_uncs = np.ones(len(inds[0]), dtype=np.float64), pltzs = pltzs,
@@ -512,6 +516,8 @@ for pltind, LH in enumerate(["SLHV", "H"]):
     plt.axhline(0, color = 'k', linewidth = 0.8)
     plt.xlabel("Sim LC Redshift Bin")
     plt.ylabel("Binned $\Delta (m_B + %.2f %s x_1 - %.2f %s c)$\nfrom Sim LCs,\nEqual Weight per Bin" % (global_alpha, '\,', global_beta, '\,'))
+    if pltind == 0:
+        plt.xscale("log")
 
     xlim = list(plt.xlim())
     xlim[0] = max(xlim[0], 0)
@@ -520,6 +526,7 @@ for pltind, LH in enumerate(["SLHV", "H"]):
     #plt.plot(pltzs, pltys_unweight, label = thelabel_unweight)
     plt.legend(loc = 'best')
     plt.xlim(xlim)
+    
 
 
 plt.figure(2)

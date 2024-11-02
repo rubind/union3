@@ -59,7 +59,7 @@ def make_plot(keys, pltname):
         labels.append(get_label(key))
 
 
-    kde_corner(samples, labels, bw_method = 0.2, colors = [(104/255., 140/255., 184/255.), (37/255., 85/255., 145/255.)], ax_limits = [(item.min(), item.max()) for item in samples], labelfontsize = 14)
+    kde_corner(samples, labels, bw_method = 0.2, colors = [[(104/255., 140/255., 184/255.), (37/255., 85/255., 145/255.)]], ax_limits = [(item.min(), item.max()) for item in samples], labelfontsize = 14)
     plt.savefig(pltname, bbox_inches = 'tight')
     plt.close()
 
@@ -113,6 +113,6 @@ elif plt_choice == 1:
     except:
         indiv_labels = 0
 
-    make_plot([["H0"]*has_H0 + "Om", "mean_sigma_int"] + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac"] + (indiv_labels == 0)*["outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"] + indiv_labels*["outl_mBx1c_uncertainties_mB", "outl_mBx1c_uncertainties_x1", "outl_mBx1c_uncertainties_cB", "outl_mBx1c_uncertainties_cR_unit"], "uncertainty_parameters.pdf")
+    make_plot(["H0"]*has_H0 + ["Om", "mean_sigma_int"] + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac"] + (indiv_labels == 0)*["outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"] + indiv_labels*["outl_mBx1c_uncertainties_mB", "outl_mBx1c_uncertainties_x1", "outl_mBx1c_uncertainties_cB", "outl_mBx1c_uncertainties_cR_unit"], "uncertainty_parameters.pdf")
 elif plt_choice == 2:
-    make_plot(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int" + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")
+    make_plot(["H0"]*has_H0 + ["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int"] + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")

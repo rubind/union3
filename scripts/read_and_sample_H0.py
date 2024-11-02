@@ -97,6 +97,7 @@ def read_data(params):
     else:
         dist_mod_dict = {}
     print("dist_mod_dict", dist_mod_dict)
+    
 
 
     [lensing_z, lensing_mag] = readcol(os.environ["UNITY"] + "/paramfiles/lensing_bias.txt", 'ff')
@@ -213,6 +214,7 @@ def read_data(params):
             if snpath.split("/")[-1] in dist_mod_dict:
                 greater_than_min_redshift = 1
                 is_calibrator = 1
+                print(snpath, "is calibrator!")
                 
             
             okay_to_add = [greater_than_min_redshift,
@@ -287,17 +289,18 @@ def read_data(params):
                     this_SN_name = snpath.split("/")[-1]
                     the_data["has_distmod"] = np.append(the_data["has_distmod"], 1)
                     the_data["distmod"] = np.append(the_data["distmod"], dist_mod_dict[this_SN_name][0])
+                    mBmB_from_dist_ladder = dist_mod_dict[this_SN_name][1]**2.
 
-                    for dl_ind in range(1, len(dist_mod_dict[this_SN_name])):
+                    for dl_ind in range(len(dist_mod_dict[this_SN_name]) - 2):
                         key = "DISTMOD%03i" % dl_ind
                         if not the_data["calib_names"].count(key):
                             the_data["calib_names"].append(key)
                         calib_ind = the_data["calib_names"].index(key)
-                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = dist_mod_dict[this_SN_name][dl_ind]
-                        assert dl_ind > 0 # 0 is the distance modulus
+                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = dist_mod_dict[this_SN_name][dl_ind + 2] # First is distance modulus, then diagonal uncertainty remaining after eigenvectors
                 else:
                     the_data["has_distmod"] = np.append(the_data["has_distmod"], 0)
                     the_data["distmod"] = np.append(the_data["distmod"], 0.)
+                    mBmB_from_dist_ladder = 0.
 
                 the_data["sample_list"] = append(the_data["sample_list"], current_sample)
 
@@ -319,7 +322,7 @@ def read_data(params):
 
 
                 # First term from SALT, second term from 300 km/s, third term lensing (may be overestimated)
-                mBmB = helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B", ind = 2)**2. + (params["lensing_disp"]*the_data["z_CMB_list"][-1])**2.
+                mBmB = helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B", ind = 2)**2. + (params["lensing_disp"]*the_data["z_CMB_list"][-1])**2. + mBmB_from_dist_ladder
                 mBx1 = helper_functions.read_param(snpath + "/result_salt2.dat", "CovRestFrameMag_0_BX1")
                 mBc = helper_functions.read_param(snpath + "/result_salt2.dat", "CovColorRestFrameMag_0_B")
                 x1x1 = helper_functions.read_param(snpath + "/result_salt2.dat", "CovX1X1")
@@ -367,7 +370,7 @@ def read_data(params):
                     
                 total_bulk_quad = 0.
                 
-                if this_redshift_cmb < 0.1 and (params["include_pec_cov"] == 1) and (is_calibrator == 0):
+                if (this_redshift_cmb < 0.1) and (params["include_pec_cov"] == 1) and (is_calibrator == 0):
 
                     dists = (bulk_RA - this_RA)**2. + (bulk_Dec - this_Dec)**2. + 1e6*(bulk_z - this_redshift_cmb)**2.
                     
@@ -935,15 +938,19 @@ if stan_data["do_blind"]:
         dmuobs = sqrt(0.15**2. + stan_data["obs_mBx1c_cov"][:,0,0] + 0.14**2. * stan_data["obs_mBx1c_cov"][:, 1,1] + 3.1**2. * stan_data["obs_mBx1c_cov"][:, 2,2]) # Doesn't have to be exact
 
         for sample_ind in range(stan_data["n_samples"]):
-            inds = where(the_data["sample_list"] == sample_ind)
-            med_HR = median(H_resid[inds])
+            inds = where((the_data["sample_list"] == sample_ind)*(stan_data["redshifts"] >= 0.01))
 
-            for SN_ind in inds[0]:
-                stan_data["obs_mBx1c"][SN_ind, 0] -= med_HR
-                the_data["mB_list"][SN_ind] -= med_HR
+            if len(inds[0]) > 0:
+                med_HR = median(H_resid[inds])
 
-            if iter_count > 0:
-                assert abs(med_HR) < 1e-3
+                inds = where((the_data["sample_list"] == sample_ind))
+
+                for SN_ind in inds[0]:
+                    stan_data["obs_mBx1c"][SN_ind, 0] -= med_HR
+                    the_data["mB_list"][SN_ind] -= med_HR
+
+                if iter_count > 0:
+                    assert abs(med_HR) < 1e-3
             
         
         """

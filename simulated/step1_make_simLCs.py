@@ -185,6 +185,16 @@ def make_dataset(wd, cal_offsets, dataset_ind):
         obs_err = 200. # ZP = 27.5, so depth of 20.0 at 5 sigma
         bands_to_use = ['sdssg', 'sdssr', 'sdssi', 'sdssz']
     elif z_range_key == "S":
+        # Union3/SOUSA/iPTF14bdn/lc2fit_UVOT_u.dat 17.206704149882405
+        #20, 50, 80 [16.65705729 17.46923784 18.15808045]
+        #20, 50, 80 visits [ 6.  11.  16.2]
+        #20, 50, 80 cadences [1.97422  2.305875 3.24079 ]
+
+        #Union3/SOUSA/iPTF14bdn/lc2fit_UVOT_v.dat 17.23308259619051
+        #20, 50, 80 [15.92489697 17.0413714  17.59495857]
+        #20, 50, 80 visits [ 6. 11. 16.]
+        #20, 50, 80 cadences [1.97078  2.315325 3.30132 ]
+        
         obs_err = 200. # ZP = 27.5, so depth of 20.0 at 5 sigma
         bands_to_use = ['uvot::u', 'uvot::b', 'uvot::v']
     elif z_range_key == "H":
@@ -791,16 +801,17 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     
     [ladder_SN, ladder_mu] = readcol(opts.prefixname + "/distance_ladder_true_vals_%03i.txt" % dataset_ind, 'af')
 
-    for common_unc in [0.0, 0.02, 0.05]:
-        common_offset = np.random.normal()*common_unc
-        
-        f_ladder = open(opts.prefixname + "/distance_ladder_obs_vals_common=%.3f_%03i.txt" % (common_unc, dataset_ind), 'w')
-        for lad_ind in range(len(ladder_SN)):
-            f_ladder.write(ladder_SN[lad_ind] + "  " + str(ladder_mu[lad_ind] + np.random.normal()*0.05 + common_offset))
-            for lad_ind2 in range(len(ladder_SN)):
-                f_ladder.write("  " + str((lad_ind == lad_ind2)*0.05))
-            f_ladder.write("  " + str(common_unc) + '\n')
-        f_ladder.close()
+    for common_unc in [0.0, 0.02]:
+        for sigma_ladder_unexpl in [0.0, 0.05]:
+            common_offset = np.random.normal()*common_unc
+
+            f_ladder = open(opts.prefixname + "/distance_ladder_obs_vals_common=%.3f_unexp=%.3f_%03i.txt" % (common_unc, sigma_ladder_unexpl, dataset_ind), 'w')
+            for lad_ind in range(len(ladder_SN)):
+                f_ladder.write(ladder_SN[lad_ind] + "  " + str(ladder_mu[lad_ind] + np.random.normal()*sigma_ladder_unexpl + np.random.normal()*0.05 + common_offset))
+                for lad_ind2 in range(len(ladder_SN)):
+                    f_ladder.write("  " + str((lad_ind == lad_ind2)*0.05))
+                f_ladder.write("  " + str(common_unc) + '\n')
+            f_ladder.close()
     
 
 
@@ -840,8 +851,8 @@ for dataset_ind in tqdm.trange(opts.ndataset):
         subprocess.getoutput("mkdir " + wd)
         
         set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel,
-                     distance_ladder_fl = "../distance_ladder_obs_vals_common=%.3f_%03i.txt" % (0.02, dataset_ind))
-        
+                     distance_ladder_fl = "../distance_ladder_obs_vals_common=%.3f_unexp=%.3f_%03i.txt" % (0.02, dataset_ind))
+
         f_UNITY[include_low].write("cd " + pwd + '\n')
         f_UNITY[include_low].write("cd " + wd + '\n')
         f_UNITY[include_low].write("sbatch run.sh\n")
