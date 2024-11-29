@@ -59,7 +59,7 @@ For magnitude systems and instruments: edit the original_* files in $PATHMODEL. 
 
 From BulkFlow/Public/Run_Example2:
 
-```python step1_make_Union3.py```
+```python step1_make_Union3.py path/to/union3/```
 
 ```./pairV table.input table.input2```
 
