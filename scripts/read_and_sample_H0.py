@@ -138,7 +138,7 @@ def read_data(params):
     for key in calibration_uncertainties:
         print("calibration_uncertainties", key, calibration_uncertainties[key])
                                       
-    assert len(bulk_eig[0]) == len(bulk_RA)
+    assert len(bulk_eig[0]) == len(bulk_RA), "%i %i don't match!" % (len(bulk_eig[0]), len(bulk_RA))
 
     for current_sample, directory in enumerate(filenamelist):
         the_data["sample_names"].append(directory)
@@ -922,15 +922,23 @@ if stan_data["do_blind"]:
     print("Blinding!")
     # Blind H0
 
-    stan_data["distmod"] += np.random.normal()*0.3
+    [zblind, mublind, dmublinddOm] = readcol(os.environ["UNITY"] + "/paramfiles/z_mu_dmudOm.txt", 'fff')
+    mublindfn = interp1d(zblind, mublind, kind = 'linear')
+    dmublinddOmfn = interp1d(zblind, dmublinddOm, kind = 'linear')
+                
+
+
+    target_distmod = mublindfn(stan_data["redshifts"])
+    inds = np.where(stan_data["distmod"] > 0)
+    med_offset = np.median(target_distmod[inds] - stan_data["distmod"][inds])
+    stan_data["distmod"] += med_offset
+
     
     # There are two phases of Hubble-flow blinding:
     # -Making the best-fit Om = 0.3
     # -Bringing all samples into alignment with -19.1 given Om = 0.3
 
-    [zblind, mublind, dmublinddOm] = readcol(os.environ["UNITY"] + "/paramfiles/z_mu_dmudOm.txt", 'fff')
-    mublindfn = interp1d(zblind, mublind, kind = 'linear')
-    dmublinddOmfn = interp1d(zblind, dmublinddOm, kind = 'linear')
+
 
     for iter_count in range(2):
         muobs = stan_data["obs_mBx1c"][:,0] + 0.14*stan_data["obs_mBx1c"][:,1] - 3.1*stan_data["obs_mBx1c"][:,2] - -  19.1

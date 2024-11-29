@@ -45,9 +45,9 @@
 "PS1_z_LAM":												8.5
 
 
-('Zeropoint', 'UVOT|UVOT_u'):											0.02
-('Zeropoint', 'UVOT|UVOT_b'):											0.02
-('Zeropoint', 'UVOT|UVOT_v'):											0.02
+('Zeropoint', 'UVOT|UVOT_u'):											0.09
+('Zeropoint', 'UVOT|UVOT_b'):											0.03
+('Zeropoint', 'UVOT|UVOT_v'):											0.03
 
 ('Lambda', 'UVOT|UVOT_u'):											10
 ('Lambda', 'UVOT|UVOT_b'):											10

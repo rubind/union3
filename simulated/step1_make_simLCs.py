@@ -866,3 +866,5 @@ for dataset_ind in tqdm.trange(opts.ndataset):
 f_UNITY[0].close()
 f_UNITY[1].close()
 f_interleave.close()
+
+print("Don't forget to set -wr = 0 when doing LC fitting!")
