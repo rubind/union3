@@ -19,6 +19,7 @@ CfA3_KC_v1.txt			CfA3 KC (Hicken+ 2009)					(0., 0.5, 0.5)
 CfA4_v1.txt			CfA4 (Hicken+ 2012)						(0., 0.5, 0.5)
 
 ZTF_v1.txt			ZTF								(0.5, 0., 1.)
+OtherNearby_v1.txt		Other Nearby							(0.5, 0., 1.)
 
 
 tonry03_v1.txt			HZT (Tonry+ 2003)						(0., 1., 1.)

@@ -318,6 +318,8 @@ def unc_labeling(labels_indiv):
     for label_indiv in labels_indiv:
         if label_indiv.startswith("calibs_('Fundamental"):
             new_labels.append("White-Dwarf-SED Model")
+        elif label_indiv.startswith("calibs_DISTMOD"):
+            new_labels.append("Lower-Rung Correlations")
             
         elif label_indiv.startswith("calibs_MWEBV_"):
             new_labels.append("Milky Way Extinction")
@@ -327,6 +329,9 @@ def unc_labeling(labels_indiv):
             
         elif label_indiv.startswith("MB"):
             new_labels.append("Absolute Magnitude (for $h = 0.7$) $\scriptM$")
+
+        elif label_indiv == "Om":
+            new_labels.append("$\Omega_m$")
             
         elif label_indiv == "calibs_IG_extinction":
             new_labels.append("Intergalactic Dust")
@@ -354,7 +359,9 @@ def unc_labeling(labels_indiv):
 
         elif label_indiv.startswith("tau_x1_") or label_indiv.startswith("R_x1_") or label_indiv.startswith("x1_star_"):
             new_labels.append("$x_1$ Population")
-
+        elif label_indiv == "sigma_int_calibrator":
+            new_labels.append("Unexplained Scatter of Calibrators")
+            
         elif label_indiv.startswith("mBx1c_int_variance") or label_indiv.startswith("sigma_int"):
             new_labels.append("Unexplained Scatter")
 
@@ -701,14 +708,15 @@ else:
 
 
 has_wa = int("waDE" in fit_params)
+has_H0 = int("H0" in fit_params)
 
 if has_wa:
     fit_params["DETF"] = (fit_params["waDE"] - np.mean(fit_params["waDE"]))*(fit_params["wDE"] - np.mean(fit_params["wDE"]))
 
-for cosmo_key in ["Om"] + ["wDE", "waDE", "DETF"]*has_wa:
+for cosmo_key in ["Om"] + ["H0"]*has_H0 + ["wDE", "waDE", "DETF"]*has_wa:
     print("Running ", cosmo_key)
-    unc_analysis(cosmo_key, ["MB", "alpha", "beta_B", "beta_R", "delta_beta_R", "delta_0", "delta_h",
-                             "mobs_cuts", "mobs_cut_sigmas", "sigma_int",
+    unc_analysis(cosmo_key, ["MB"] + ["Om"]*(cosmo_key == "H0") + ["alpha", "beta_B", "beta_R", "delta_beta_R", "delta_0", "delta_h",
+                             "mobs_cuts", "mobs_cut_sigmas", "sigma_int", "sigma_int_calibrator",
                              "c_star", "R_c", "tau_c", "x1_star", "R_x1", "tau_x1",
                              "calibs",  "mBx1c_int_variance", "outl_frac", "outl_mBx1c_uncertainties"]
                  )
