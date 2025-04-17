@@ -27,6 +27,7 @@ data {
     int n_zbins;
     vector [n_zbins] zbins;
     vector [n_sne] mu_const;
+    vector [n_sne] dmu_const_dz;
     matrix [n_sne, n_zbins] dmu_dbin;
     matrix [n_sne, n_zbins] dmudz_dbin;
     
@@ -58,10 +59,11 @@ data {
 
     vector [3] d_mBx1c_dz_list [n_photoz];
     vector [n_photoz] photo_z0;
-    vector [n_photoz] photo_dz;
-    vector [n_photoz] spike_redshift_prob; // E.g., 0.8
+    vector [n_photoz] photo_sigz;
+    vector <lower = 0, upper = 1> [n_photoz] spike_redshift_prob; // E.g., 0.8
     vector [n_photoz] photo_spikez;
     int <lower = 0, upper = n_sne> photoz_inds [n_sne]; // index of photo-z parameter (indexed from one) if photo-z, else 0
+
     matrix [3,3] BAOCMB_Om_w0_wa_covmatrix;
     vector [3] BAOCMB_Om_w0_wa_mean;
 }
@@ -135,8 +137,7 @@ parameters {
     real <lower = 14, upper = 30> mobs_cuts[n_samples];
     real <lower = 0.1, upper = 3> mobs_cut_sigmas[n_samples];
 
-    vector [n_photoz] dz;
-
+    vector <lower = -0.6, upper = 0.6> [n_photoz] dz; // dc/dz is about 1, so +- 0.3 range in color covers z errors up to about 0.6 but not larger.
     
     real <lower = 0.2, upper = 2> outl_mBx1c_uncertainties_mB;
     real <lower = 1, upper = 10> outl_mBx1c_uncertainties_x1;
@@ -188,6 +189,8 @@ transformed parameters {
     vector [3] dz_deriv_term;
     real dz_term;
     real dz_Hinv_term;
+    vector [n_photoz] dz_from_spike;
+    vector [n_photoz] dz_from_photoz;
 
     vector [n_gauss] tmploglike_x1;
     vector [n_gauss] tmploglike_c;
@@ -234,8 +237,8 @@ transformed parameters {
                     dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3) + (1. - Om)*pow(1. + redshifts[i], 3.*(1 + wDE)) );
                 }
                 if (cosmo_model == 5) {
-                    dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts_sort_fill[i], 3)
-		                                           + (1. - Om)*pow(1. + redshifts_sort_fill[i], 3.*(1 + wDE + waDE))*exp(-3.*waDE*redshifts_sort_fill[i]/(1. + redshifts_sort_fill[i])) );
+                    dz_Hinv_term <- dz[photoz_inds[i]]/sqrt( Om*pow(1. + redshifts[i], 3)
+		                                           + (1. - Om)*pow(1. + redshifts[i], 3.*(1 + wDE + waDE))*exp(-3.*waDE*redshifts[i]/(1. + redshifts[i])) );
                 }
             }
             model_mu[i] <- 5.*log10((1. + zhelio[i] + dz_term)*(r_com_sort[unsort_inds[i] + 1] + dz_Hinv_term)) + 43.1586133146;
@@ -245,12 +248,13 @@ transformed parameters {
         model_mu <- dmu_dbin * mu_zbins + mu_const;
         for (i in 1:n_sne) {
             if (photoz_inds[i] > 0) {
-                // model_mu[i] <- model_mu[i] + dz[photoz_inds[i]] * dmudz_dbin[i] * mu_zbins + mu_const;
+                model_mu[i] += dz[photoz_inds[i]] * (dmudz_dbin[i] * mu_zbins + dmu_const_dz[i]);
             }
         }
     }
 
     if (cosmo_model == 6) { // binned comoving distance
+	// No photo-z's!!!!!
         for (i in 1:n_zbins) {
             r_comove_bins[i] = 10^(0.2*(mu_zbins[i] - 43.1586133146))  /  (1. + zbins[i]);
         }
@@ -262,6 +266,7 @@ transformed parameters {
     }
 
     if (cosmo_model == 4) {
+	// No photo-z's!!!!!
         for (i in 1:n_sne) {
             model_mu[i] <- 5.*log10((1. + zhelio[i])*redshifts[i]/(1. + redshifts[i]) * (1. + (1./2.)*(1 - q0)*redshifts[i] - (1./6.)*(1. - q0 - 3.*q0*q0 + j0) * redshifts[i]*redshifts[i])
 	                           ) + 43.1586133146; // Equation 19 of Visser
@@ -277,6 +282,13 @@ transformed parameters {
 
     // -------------End numerical integration---------------
 
+    for (i in 1:n_sne) {
+        if (photoz_inds[i] > 0) {
+            dz_from_spike[photoz_inds[i]] = (dz[photoz_inds[i]] + redshifts[i]) - photo_spikez[photoz_inds[i]];
+            dz_from_photoz[photoz_inds[i]] = (dz[photoz_inds[i]] + redshifts[i]) - photo_z0[photoz_inds[i]];
+	}
+    }
+    
 
     model_mBx1c_cov <- obs_mBx1c_cov;
     model_mBx1c_cov_outl <- obs_mBx1c_cov;
@@ -430,8 +442,8 @@ model {
     }
 
     for (i in 1:n_photoz) {
-        target += log_sum_exp(log(spike_redshift_prob[i]) + normal_log(dz[i], 0., 0.01),
-                              log(1. - spike_redshift_prob[i]) + normal_log(dz[i], photo_z0[i] - photo_spikez[i], photo_dz[i]));
+        target += log_sum_exp(log(spike_redshift_prob[i]) + normal_log(dz_from_spike[i], 0.0, 0.01),
+                              log(1. - spike_redshift_prob[i]) + normal_log(dz_from_photoz[i], 0.0, photo_sigz[i]));
     }
 
     calibs ~ normal(0, 1.);

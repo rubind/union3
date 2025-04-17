@@ -135,11 +135,13 @@ def binned_constraints(z_list, mu_list, mu_invcov, zbins, include_BAO):
     merged_mat = f[0].data
     f.close()
     
-    ministart = [0.0, 0.022, 0.7, 0.3, 0.0] + [0.5]*len(zbins)
+    ministart = [0.0, 0.022, 0.7, 0.3, 0.0] + [0.5]*len(zbins) # The value less than zbins[0] is set by the cosmic sum rule
     miniscale = [0.01, 0.001, 0.01, 0.01, 0.0] + [1.]*len(zbins)
 
+    #         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], zbins = run_settings["zbins"], rhobins = P[5:])
 
-    run_settings = dict(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = "binnedrho", merged_mat = merged_mat, zbins = zbins, include_SNe = 1, include_CMB = 1, include_BAO = include_BAO, include_O_mh2 = 0)
+    run_settings = dict(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov,
+                        model = "binnedrho", merged_mat = merged_mat, zbins = zbins, include_SNe = 1, include_CMB = 1, include_BAO = include_BAO, include_O_mh2 = 0)
     
     P, F, Cmat = miniNM_new(ministart = ministart, miniscale = miniscale, chi2fn = chi2fn, passdata = run_settings)
 
@@ -501,16 +503,16 @@ print("use_parallel", use_parallel)
 
 BAO_data = load_BAO()
 
-"""
-for include_BAO in [0, 1]:
-    for zbins in [[0.2, 0.5, 1.0, 2.0],
-                  [0.2, 0.5, 2.0, 4.0],
-                  [0.5, 1.0, 2.0],
-                  [0.5, 1.0, 2.2],
-                  [0.5, 2.0, 4.0],
-                  [0.2, 0.5, 1.0, 2.0, 4.0]]:
-        binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = zbins, include_BAO = include_BAO)
-"""
+if models_to_run.count("binnedrho"):
+    for include_BAO in [0, 1]:
+        for zbins in [[0.2, 0.5, 1.0, 2.0],
+                      [0.2, 0.5, 2.0, 4.0],
+                      [0.5, 1.0, 2.0],
+                      [0.5, 1.0, 2.2],
+                      [0.5, 2.0, 4.0],
+                      [0.2, 0.5, 1.0, 2.0, 4.0]]:
+            binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = zbins, include_BAO = include_BAO)
+    del models_to_run[models_to_run.index("binnedrho")]
 
 for model_to_run in models_to_run:
     make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = model_to_run)#"flatwCDM")#"LCDM")

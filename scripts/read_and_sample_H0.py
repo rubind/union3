@@ -58,12 +58,14 @@ def read_data(params):
                 
                 "d_mBx1c_dcalib_list": zeros([3000,3,1000], dtype=float64), # This is an inefficient way to do this, but this is initialized to fixed size, then trimmed later.
 
+                # Photo-z's:
                 "photoz_inds": [],
                 "d_mBx1c_dz_list": [],
                 "photo_z0": [],
-                "photo_dz": [],
+                "photo_sigz": [],
+                "photo_pspike": [],
+                "photo_spikez": [],
                 "n_photoz": 0, # Number of SNe with photo-z's
-                "photo_spikez": []
             }
 
 
@@ -250,18 +252,20 @@ def read_data(params):
                     deriv_file_to_use = snpath + "/model_deriv.dat"
 
 
-                if helper_functions.read_param(snpath + "/lightfile", "Photoz") != None:
+                if helper_functions.read_param(snpath + "/lightfile", "Photoz_mean") != None:
                     print("Photoz found!", snpath)
                     the_data["n_photoz"] += 1
                     
-                    the_data["photoz_inds"].append(the_data["n_photoz"]) # That's right, after incrementing the counter
+                    the_data["photoz_inds"].append(the_data["n_photoz"]) # the inds start from 1, 0 is for no photoz, below
+                    
                     the_data["d_mBx1c_dz_list"].append([helper_functions.read_param(deriv_file_to_use, "Redshift", ind = 5),
                                                         helper_functions.read_param(deriv_file_to_use, "Redshift", ind = 6),
                                                         helper_functions.read_param(deriv_file_to_use, "Redshift", ind = 7)])
 
-                    the_data["photo_z0"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz", ind = 1))
-                    the_data["photo_dz"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz", ind = 2))
-                    the_data["photo_spikez"].append(this_redshift_helio)
+                    the_data["photo_z0"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz_mean", ind = 1))
+                    the_data["photo_sigz"].append(helper_functions.read_param(snpath + "/lightfile", "Photoz_unc", ind = 1))
+                    the_data["photo_spikez"].append(helper_functions.read_param(snpath + "/lightfile", "Spikez", ind = 1))
+                    the_data["photo_pspike"].append(helper_functions.read_param(snpath + "/lightfile", "P_Spike", ind = 1))
                     
                 else:
                     the_data["photoz_inds"].append(0)
@@ -631,6 +635,7 @@ def add_zbins(stan_data, cosmo_model):
         stan_data["dmu_dbin"] = ones([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
         stan_data["dmudz_dbin"] = zeros([stan_data["n_sne"], stan_data["n_zbins"]], dtype=float64)
         stan_data["mu_const"] = np.zeros(stan_data["n_sne"], dtype=np.float64)
+        stan_data["dmu_const_dz"] = np.zeros(stan_data["n_sne"], dtype=np.float64)
         
         return stan_data
 
@@ -734,6 +739,9 @@ def add_zbins(stan_data, cosmo_model):
         stan_data["mu_const"] = get_mu(z_list = stan_data["redshifts"],
                                        cosmo = dict(model = "flatLCDM", O_m = 0.3, O_k = 0.0, h = 0.7),
                                        z_helio_list = stan_data["zhelio"])
+        stan_data["dmu_const_dz"] = 1000*(get_mu(z_list = stan_data["redshifts"] + 0.001,
+                                                 cosmo = dict(model = "flatLCDM", O_m = 0.3, O_k = 0.0, h = 0.7),
+                                                 z_helio_list = stan_data["zhelio"]) - stan_data["mu_const"])
 
 
     plt.figure()
@@ -883,13 +891,14 @@ else:
                  "outl_frac_prior_lnmean": log(params["outl_frac"]),
                  "outl_frac_prior_lnwidth": 0.5,
 
+                 
                  "n_photoz": the_data["n_photoz"],
                  "d_mBx1c_dz_list": the_data["d_mBx1c_dz_list"],
                  "photo_z0": the_data["photo_z0"],
-                 "photo_dz": the_data["photo_dz"],
-                 "spike_redshift_prob": [0.8]*the_data["n_photoz"],
-                 "photoz_inds": the_data["photoz_inds"],
+                 "photo_sigz": the_data["photo_sigz"],
                  "photo_spikez": the_data["photo_spikez"],
+                 "spike_redshift_prob": the_data["photo_pspike"],
+                 "photoz_inds": the_data["photoz_inds"],
 
 
                  "est_mobs_cuts": the_data["est_mobs_cuts"],

@@ -613,22 +613,26 @@ params = dict(salt2_version = salt2_version, n_visit = 200, nnearbyperset = opts
 subprocess.getoutput("rm -fr " + opts.prefixname)
 subprocess.getoutput("mkdir " + opts.prefixname)
 
+if params["volume_limited"]:
+    nominal_mag_limits = dict(S = 19.0, L = 19.0, H = 24.0, V = 26.0)
+else:
+    nominal_mag_limits = dict(S = 18.0, L = 18.0, H = 23.0, V = 26.0)
 
 f = open(opts.prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(opts.ndataset):
     for outl in ["", "_nooutl"]:
-        f.write("dataset_S_%03i%s_v1.txt  $UNITY/paramfiles/sdssr_selection_salt3-f22_ab.txt    18.0            0.5\n" % (dataset_ind, outl))
-        f.write("dataset_L_%03i%s_v1.txt  $UNITY/paramfiles/sdssr_selection_salt3-f22_ab.txt    18.0            0.5\n" % (dataset_ind, outl))
-        f.write("dataset_H_%03i%s_v1.txt  $UNITY/paramfiles/sdssi_selection_salt3-f22_ab.txt    23.0            0.5\n" % (dataset_ind, outl))
-        f.write("dataset_V_%03i%s_v1.txt  $UNITY/paramfiles/f125w_selection_salt3-f22_ab.txt	26.0		0.25\n" % (dataset_ind, outl))
+        f.write("dataset_S_%03i%s_v1.txt  $UNITY/paramfiles/sdssr_selection_salt3-f22_ab.txt    %.2f            0.5\n" % (dataset_ind, outl, nominal_mag_limits["S"]))
+        f.write("dataset_L_%03i%s_v1.txt  $UNITY/paramfiles/sdssr_selection_salt3-f22_ab.txt    %.2f            0.5\n" % (dataset_ind, outl, nominal_mag_limits["L"]))
+        f.write("dataset_H_%03i%s_v1.txt  $UNITY/paramfiles/sdssi_selection_salt3-f22_ab.txt    %.2f            0.5\n" % (dataset_ind, outl, nominal_mag_limits["H"]))
+        f.write("dataset_V_%03i%s_v1.txt  $UNITY/paramfiles/f125w_selection_salt3-f22_ab.txt	%.2f		0.25\n" % (dataset_ind, outl, nominal_mag_limits["V"]))
 f.close()
 
 f = open(opts.prefixname + "/mag_cuts_x0.txt", 'w')
 for dataset_ind in range(opts.ndataset):
-    f.write("dataset_S_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    18.0            0.5\n" % dataset_ind)
-    f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    18.0            0.5\n" % dataset_ind)
-    f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    23.0            0.5\n" % dataset_ind)
-    f.write("dataset_V_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    26.0            0.5\n" % dataset_ind)
+    f.write("dataset_S_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    %.2f            0.5\n" % (dataset_ind, nominal_mag_limits["S"]))
+    f.write("dataset_L_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    %.2f            0.5\n" % (dataset_ind, nominal_mag_limits["L"]))
+    f.write("dataset_H_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    %.2f            0.5\n" % (dataset_ind, nominal_mag_limits["H"]))
+    f.write("dataset_V_%03i_v1.txt  $UNITY/paramfiles/No_k_correct.txt    %.2f            0.5\n" % (dataset_ind, nominal_mag_limits["V"]))
 f.close()
 
 

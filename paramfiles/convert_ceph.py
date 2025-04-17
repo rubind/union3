@@ -89,17 +89,27 @@ save_img(all_evs, "only_cephs/all_evs.fits")
 
 assert np.all(np.diag(remaining_mu_cov) > 0)
 
-f = open("dist_ladder_R22.txt", 'w')
+for full_matrix in [0, 1]:
+    f = open("dist_ladder_R22" + "_full_matrix"*full_matrix + ".txt", 'w')
+    
+    assert len(all_drs) == len(remaining_mu_cov)
+    assert len(all_drs) == len(all_evs[0])
+    assert len(all_drs) == len(host_inds)
+    
+    for SN_ind in range(len(all_drs)):
+        f.write(all_drs[SN_ind].split("/")[-1] + "  " + str(mu_vals[host_inds[SN_ind]]) + "  " + str(np.sqrt(remaining_mu_cov[SN_ind, SN_ind])*(1. - full_matrix)) + "  ")
 
-assert len(all_drs) == len(remaining_mu_cov)
-assert len(all_drs) == len(all_evs[0])
-assert len(all_drs) == len(host_inds)
+        for ev in all_evs:
+            f.write(str(ev[SN_ind]) + "  ")
 
-for SN_ind in range(len(all_drs)):
-    f.write(all_drs[SN_ind].split("/")[-1] + "  " + str(mu_vals[host_inds[SN_ind]]) + "  " + str(np.sqrt(remaining_mu_cov[SN_ind, SN_ind])) + "  ")
-    for ev in all_evs:
-        f.write(str(ev[SN_ind]) + "  ")
-    f.write('\n')
+        if full_matrix:
+            for SN_ind2 in range(len(all_drs)):
+                if SN_ind2 == SN_ind:
+                    f.write(str(np.sqrt(remaining_mu_cov[SN_ind, SN_ind])) + "  ")
+                else:
+                    f.write("0.0  ")
+                    
+        f.write('\n')
         
 
-f.close()
+    f.close()
