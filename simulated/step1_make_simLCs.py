@@ -313,7 +313,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
         else:
             observed_SNe = get_observed_SNe_followup_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, z_range_key = z_range_key)
     else:
-        observed_SNe = get_observed_SNe_volume_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, z_range_key = z_range_key)
+        observed_SNe = get_observed_SNe_volume_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model)
 
 
     NA, bins, NA = plt.hist([all_SNe[i]["z"] for i in range(nsne)], bins = 30)
