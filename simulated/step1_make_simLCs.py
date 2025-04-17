@@ -832,7 +832,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
                                                                          "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
                     subprocess.getoutput("mkdir " + wd)
 
-                    set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel)
+                    set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel, distance_ladder_fl = "None")
 
                     f_UNITY[include_low].write("cd " + pwd + '\n')
                     f_UNITY[include_low].write("cd " + wd + '\n')
