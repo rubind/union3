@@ -578,6 +578,8 @@ parser.add_argument('--zrangekeys', help="SLHV for low-z Swift, low-z SDSS, high
 parser.add_argument('--nnearbyperset', help = "Number of nearby SNe for S and L not counting calibrators", type=int)
 parser.add_argument('--ncalibperset', help = "Number of calibrator SNe for sets S and L", type=int)
 parser.add_argument('--sigzp', help="Zeropoint Uncertainty Size", type=float)
+parser.add_argument('--nvisit', help="Number of visits", type=int, default = 200)
+
 
 
 opts = parser.parse_args()
@@ -601,7 +603,7 @@ for filt in "ubv":
 SN_rate_function = interp1d(tmpx, tmpy*1e-4, kind = 'linear')
 
 
-params = dict(salt2_version = salt2_version, n_visit = 200, nnearbyperset = opts.nnearbyperset, ncalibperset = opts.ncalibperset,
+params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperset = opts.nnearbyperset, ncalibperset = opts.ncalibperset,
               ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
               obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
               Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
