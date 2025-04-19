@@ -549,7 +549,7 @@ separate_mass_x1c	1
 #SBATCH --time=0-""" + str(12 + 6*include_low) + """:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=""" + str(12 + 4*include_low) +  """G # Memory per node my job requires
+#SBATCH --mem=""" + str(int((6 + 6*include_low)*opts.nvisit/200)) +  """G # Memory per node my job requires
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
@@ -739,7 +739,9 @@ f.close()
 
 f_UNITY = []
 
-for include_low in [0, 1]:
+ever_include_low = opts.zrangekeys.count("L") or opts.zrangekeys.count("S")
+
+for include_low in [0] + [1]*ever_include_low:
     f_UNITY.append(open(opts.prefixname + "/run_UNITY" + "_low"*include_low + ".sh", 'w'))
 
     f_UNITY[include_low].write("""#!/bin/bash
@@ -827,7 +829,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
 
     if opts.ncalibperset == 0:
         # Test dark energy
-        for include_low in [0, 1]:
+        for include_low in [0] + [1]*ever_include_low:
             for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
                 for cosmomodel in [1]*(1 - include_low) + [5]*include_low:
                     wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
