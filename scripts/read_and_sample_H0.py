@@ -799,7 +799,7 @@ def init_fn():
             "R_x1": random.random(size = stan_data["n_x1c_star"])*0.5 + 0.25,
 
             "c_star": -random.random(size = stan_data["n_x1c_star"])*0.05,
-            "tau_c": random.random(size = stan_data["n_x1c_star"])*0.05,
+            "tau_c": random.random(size = stan_data["n_x1c_star"])*0.05 + 0.02,
             "R_c": random.random(size = stan_data["n_x1c_star"])*0.05 + 0.02,
             
             "outl_frac": random.random()*0.02 + 0.01,

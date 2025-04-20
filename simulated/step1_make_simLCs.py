@@ -260,6 +260,9 @@ def make_dataset(wd, cal_offsets, dataset_ind):
                      latentMB = np.sqrt(-1.),
                      latentx1 = np.sqrt(-1.),
                      latentc = np.sqrt(-1.),
+                     latentcB = np.sqrt(-1.),
+                     latentcR = np.sqrt(-1.),
+                     beta_R = np.sqrt(-1.),
                      delta_mBx1c = np.sqrt(-1*np.ones(3)),
                      delta_mB = np.sqrt(-1.),
                      delta_x1 = np.sqrt(-1.),
@@ -271,8 +274,11 @@ def make_dataset(wd, cal_offsets, dataset_ind):
                      outlier = 0,
                      t0 = np.random.uniform(min_date, max_date),
                      latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
-                     latentc = np.random.normal()*params["Rc"] + (np.random.exponential() - 1.)*params["tau_c"])
-
+                     latentcB = np.random.normal()*params["Rc"],
+                     beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
+                     latentcR = (np.random.exponential() - 1.)*params["tau_c"])
+            p[latentc] = latentc["latentcB"] + p["latentcR"]
+            
             if z >= 0.01:
                 pec_vel_variance = (0.00217/z)**2.
                 p["mass"] = 10. + np.random.normal()
@@ -286,13 +292,12 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
             mass_term = -params["delta"]*relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*0.05)   ))
 
-            p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + 3.1*p["latentc"] + mass_term
-
+            p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
 
                 
             p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + pec_vel_variance),
-                                                               params["sigma_unexplained_3d"][1],
-                                                               params["sigma_unexplained_3d"][2]])
+                                                                    params["sigma_unexplained_3d"][1],
+                                                                    params["sigma_unexplained_3d"][2]])
             p["MB"] = p["latentMB"] + p["delta_mBx1c"][0]
             p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
             p["c"] = p["latentc"] + p["delta_mBx1c"][2]
@@ -579,6 +584,8 @@ parser.add_argument('--nnearbyperset', help = "Number of nearby SNe for S and L 
 parser.add_argument('--ncalibperset', help = "Number of calibrator SNe for sets S and L", type=int)
 parser.add_argument('--sigzp', help="Zeropoint Uncertainty Size", type=float)
 parser.add_argument('--nvisit', help="Number of visits", type=int, default = 200)
+parser.add_argument('--sigmabetaR', help="Scatter in beta_R", type=float)
+
 
 
 
@@ -608,7 +615,7 @@ params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperse
               obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
               Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
-              tot_sig_unexplained = 0.12, alpha = 0.15,
+              tot_sig_unexplained = 0.12, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
               outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
 
