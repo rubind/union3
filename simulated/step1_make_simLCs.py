@@ -294,7 +294,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             
             mass_term = -params["delta"]*P_high_eff
 
-            p["beta_R"] += relative_step_z*(P_high_eff - 0.5)*params["delta_beta_R"]
+            p["beta_R"] += relative_step_z*(0.5 - P_high_eff)*params["delta_beta_R"]
 
             p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
 
