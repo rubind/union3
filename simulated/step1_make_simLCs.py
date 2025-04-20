@@ -277,7 +277,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
                      latentcB = np.random.normal()*params["Rc"],
                      beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
                      latentcR = (np.random.exponential() - 1.)*params["tau_c"])
-            p[latentc] = latentc["latentcB"] + p["latentcR"]
+            p["latentc"] = latentc["latentcB"] + p["latentcR"]
             
             if z >= 0.01:
                 pec_vel_variance = (0.00217/z)**2.
