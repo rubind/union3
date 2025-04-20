@@ -290,7 +290,11 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             
             relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
             relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
-            mass_term = -params["delta"]*relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*0.05)   ))
+            P_high_eff = relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*0.05)   ))
+            
+            mass_term = -params["delta"]*P_high_eff
+
+            p["beta_R"] += relative_step_z*(P_high_eff - 0.5)*params["delta_beta_R"]
 
             p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
 
@@ -595,7 +599,7 @@ opts = parser.parse_args()
 salt2_version = "salt3-f22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
 
-nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "delta_mB", "delta_x1", "delta_c", "delta_mu", "outlier"]
+nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "latentcB", "latentcR", "beta_R", "delta_mB", "delta_x1", "delta_c", "delta_mu", "outlier"]
 
 dict_of_obsframe_filt = {}
 for filt in "griz":
