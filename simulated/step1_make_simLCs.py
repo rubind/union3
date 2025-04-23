@@ -14,6 +14,8 @@ import sys
 from astropy.cosmology import FlatLambdaCDM
 import argparse
 from scipy.special import erf
+import Spectra
+
 
 true_H0 = 71.
 
@@ -22,6 +24,8 @@ def band_to_instr(band):
         return "SDSS"
     elif band[:4] == "uvot":
         return "UVOT"
+    elif band[:4] == "Bess":
+        return "OtherNearby"
     elif band[:2] == "f1":
         return "WFC3"
     else:
@@ -34,6 +38,8 @@ def band_to_name(band):
         return "UVOT_" + band[-1].lower()
     elif band[:2] == "f1":
         return "WFC3_" + band.lower()
+    elif band.count("Bessell") == 1:
+        return band
     else:
         return band.upper()
     
@@ -109,7 +115,7 @@ def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key):
 def get_observed_SNe_mag_limited(nsne, dates, all_SNe, model, z_range_key, mag_limit, sigma_mag_limit):
     observed_SNe = np.zeros(nsne, dtype=np.int16)
     
-    for night in dates:
+    for night in tqdm.tqdm(dates):
         all_mags = []
         
         for i in range(nsne):
@@ -194,9 +200,25 @@ def make_dataset(wd, cal_offsets, dataset_ind):
         #20, 50, 80 [15.92489697 17.0413714  17.59495857]
         #20, 50, 80 visits [ 6. 11. 16.]
         #20, 50, 80 cadences [1.97078  2.315325 3.30132 ]
+
+        # lc2fit_LOSS_N2_B.dat 
+        # 20, 50, 80 [18.73994798 19.51205921 20.27676355]
+        # 20, 50, 80 visits [ 5. 12. 23.]
+        # 20, 50, 80 cadences [1.97 2.98 6.96]
+
+        # lc2fit_LOSS_N2_V.dat 
+        # 20, 50, 80 [18.52533344 19.36517593 19.97763132]
+        # 20, 50, 80 visits [ 5. 14. 24.]
+        # 20, 50, 80 cadences [1.98  2.99  6.006]
         
-        obs_err = 200. # ZP = 27.5, so depth of 20.0 at 5 sigma
-        bands_to_use = ['uvot::u', 'uvot::b', 'uvot::v']
+        # lc2fit_LOSS_N2_I.dat 
+        # 20, 50, 80 [17.6603694  18.64230244 19.21850216]
+        # 20, 50, 80 visits [ 5.  13.  23.8]
+        # 20, 50, 80 cadences [1.99  2.99  5.972]
+
+        
+        obs_err = 500. # ZP = 27.5, so 5 sigma depth of 19
+        bands_to_use = ["Bessell12_B", "Bessell12_V", "Bessell12_R", "Bessell12_I"] #['uvot::u', 'uvot::b', 'uvot::v']
     elif z_range_key == "H":
         obs_err = 5. # Depth of 24.0 at 5 sigma
         bands_to_use = ['sdssg', 'sdssr', 'sdssi', 'sdssz']
@@ -213,9 +235,16 @@ def make_dataset(wd, cal_offsets, dataset_ind):
     model = sncosmo.Model(source=source)
 
     if z_range_key == "L" or z_range_key == "S":
+        if z_range_key == "L":
+            zmax = 0.1
+        else:
+            zmax = 0.05
+            
         dates = np.arange(int(np.around(opts.nnearbyperset/3.)), dtype=np.float64)*params["cadence"]
 
-        zlist = list(sncosmo.zdist(0., zmax = 0.1, time=dates[-1] - dates[0] - 4*params["cadence"], area=8000., ratefunc = SN_rate_function))
+        zlist = []
+        while len(zlist) < opts.nnearbyperset*8: # Go 1.5 mag deeper than the selection limit
+            zlist += list(sncosmo.zdist(0.01, zmax = zmax, time=dates[-1] - dates[0] - 4*params["cadence"], area=1000., ratefunc = SN_rate_function))
         min_date = dates[0] + params["cadence"]*2
         max_date = dates[-1] - params["cadence"]*2
 
@@ -583,7 +612,7 @@ parser.add_argument('--prefixname', help='Prefix Name for Directory', type = str
 parser.add_argument('--skewdist', help='x1 and c distributions have skew', type = int)
 parser.add_argument('--volumelimited', help='volume-limited, not magnitude-limited datasets', type=int)
 parser.add_argument('--obsmagselection', help="If magnitude-limited, select based on observer-frame magntiudes, not rest-frame x0", type=int)
-parser.add_argument('--zrangekeys', help="SLHV for low-z Swift, low-z SDSS, high-z SDSS, very high-z HST", type=str)
+parser.add_argument('--zrangekeys', help="SLHV for very low-z, low-z SDSS, high-z SDSS, very high-z HST", type=str)
 parser.add_argument('--nnearbyperset', help = "Number of nearby SNe for S and L not counting calibrators", type=int)
 parser.add_argument('--ncalibperset', help = "Number of calibrator SNe for sets S and L", type=int)
 parser.add_argument('--sigzp', help="Zeropoint Uncertainty Size", type=float)
@@ -608,8 +637,17 @@ for filt in ["f775w", "f850lp", "f105w", "f125w", "f160w"]:
     dict_of_obsframe_filt[filt] = sncosmo.get_bandpass(filt)
 for filt in "ubv":
     dict_of_obsframe_filt["uvot::" + filt] = sncosmo.get_bandpass("uvot::" + filt)
+if opts.zrangekeys.count("S"):
+    for filt in "UBVRI":
+        lambs = np.arange(2900., 11000.)
+        tmp_trans = Spectra.Spectra(instrument = "OtherNearby", band = "Bessell12_" + filt).transmission_fn(lambs)
+        inds = np.where(tmp_trans > tmp_trans.max()/1e4)[0]
+        
+        dict_of_obsframe_filt["Bessell12_" + filt] = sncosmo.Bandpass(lambs[inds[0]: inds[-1]],
+                                                                      tmp_trans[inds[0]: inds[-1]])
 
-
+        sncosmo.register(dict_of_obsframe_filt["Bessell12_" + filt], "Bessell12_" + filt)
+        
 [tmpx, tmpy] = readcol(os.environ["UNITY"] + "/simulated/SN_rates.txt", 'ff')
 SN_rate_function = interp1d(tmpx, tmpy*1e-4, kind = 'linear')
 
@@ -629,7 +667,7 @@ subprocess.getoutput("mkdir " + opts.prefixname)
 if params["volume_limited"]:
     nominal_mag_limits = dict(S = 19.0, L = 19.0, H = 24.0, V = 26.0)
 else:
-    nominal_mag_limits = dict(S = 18.0, L = 18.0, H = 23.0, V = 26.0)
+    nominal_mag_limits = dict(S = 16.0, L = 18.0, H = 23.0, V = 26.0)
 
 f = open(opts.prefixname + "/mag_cuts.txt", 'w')
 for dataset_ind in range(opts.ndataset):
@@ -668,6 +706,19 @@ f.write("""
 ('Lambda', 'UVOT|UVOT_u'):    0.01
 ('Lambda', 'UVOT|UVOT_b'):    0.01
 ('Lambda', 'UVOT|UVOT_v'):    0.01
+
+('Zeropoint', 'Bessell12|Bessell12_U'): """ + str(opts.sigzp) + """
+('Zeropoint', 'Bessell12|Bessell12_B'): """ + str(opts.sigzp) + """
+('Zeropoint', 'Bessell12|Bessell12_V'): """ + str(opts.sigzp) + """
+('Zeropoint', 'Bessell12|Bessell12_R'): """ + str(opts.sigzp) + """
+('Zeropoint', 'Bessell12|Bessell12_I'): """ + str(opts.sigzp) + """
+
+('Lambda', 'Bessell12|Bessell12_U'):     0.01
+('Lambda', 'Bessell12|Bessell12_B'):     0.01
+('Lambda', 'Bessell12|Bessell12_V'):     0.01
+('Lambda', 'Bessell12|Bessell12_R'):     0.01
+('Lambda', 'Bessell12|Bessell12_I'):     0.01
+
 
 ('Zeropoint', 'SDSS|SDSS_u'): """ + str(opts.sigzp) + """
 ('Zeropoint', 'SDSS|SDSS_g'): """ + str(opts.sigzp) + """
@@ -870,7 +921,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
         subprocess.getoutput("mkdir " + wd)
         
         set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel,
-                     distance_ladder_fl = "../distance_ladder_obs_vals_common=%.3f_unexp=%.3f_%03i.txt" % (0.02, dataset_ind))
+                     distance_ladder_fl = "../distance_ladder_obs_vals_common=%.3f_unexp=%.3f_%03i.txt" % (0.02, 0.0, dataset_ind))
 
         f_UNITY[include_low].write("cd " + pwd + '\n')
         f_UNITY[include_low].write("cd " + wd + '\n')
