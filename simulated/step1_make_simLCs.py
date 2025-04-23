@@ -874,13 +874,12 @@ for dataset_ind in tqdm.trange(opts.ndataset):
     for common_unc in [0.0, 0.02]:
         for sigma_ladder_unexpl in [0.0, 0.05]:
             common_offset = np.random.normal()*common_unc
-
+            sigma_ladder_total = np.sqrt(sigma_ladder_unexpl**2. + 0.05**2.)
+            
             f_ladder = open(opts.prefixname + "/distance_ladder_obs_vals_common=%.3f_unexp=%.3f_%03i.txt" % (common_unc, sigma_ladder_unexpl, dataset_ind), 'w')
+            
             for lad_ind in range(len(ladder_SN)):
-                f_ladder.write(ladder_SN[lad_ind] + "  " + str(ladder_mu[lad_ind] + np.random.normal()*sigma_ladder_unexpl + np.random.normal()*0.05 + common_offset))
-                for lad_ind2 in range(len(ladder_SN)):
-                    f_ladder.write("  " + str((lad_ind == lad_ind2)*0.05))
-                f_ladder.write("  " + str(common_unc) + '\n')
+                f_ladder.write(ladder_SN[lad_ind] + "  " + str(ladder_mu[lad_ind] + np.random.normal()*sigma_ladder_total + common_offset) + "  0.05  " + str(common_unc) + '\n') # Always write 0.05, unexplained is separate
             f_ladder.close()
     
 

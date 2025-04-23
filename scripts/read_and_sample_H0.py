@@ -293,9 +293,17 @@ def read_data(params):
                     this_SN_name = snpath.split("/")[-1]
                     the_data["has_distmod"] = np.append(the_data["has_distmod"], 1)
                     the_data["distmod"] = np.append(the_data["distmod"], dist_mod_dict[this_SN_name][0])
-                    mBmB_from_dist_ladder = dist_mod_dict[this_SN_name][1]**2.
+                    
+                     
+                    key = "DISTMOD_%s" % this_SN_name
+                    if not the_data["calib_names"].count(key):
+                        the_data["calib_names"].append(key)
+                    else:
+                        assert 0, key + " for this SN already found!"
+                    calib_ind = the_data["calib_names"].index(key)
+                    the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = dist_mod_dict[this_SN_name][1] # 
 
-                    for dl_ind in range(len(dist_mod_dict[this_SN_name]) - 2):
+                    for dl_ind in range(len(dist_mod_dict[this_SN_name]) - 2): # First is distmod, second is diagonal uncertainty
                         key = "DISTMOD%03i" % dl_ind
                         if not the_data["calib_names"].count(key):
                             the_data["calib_names"].append(key)
@@ -304,7 +312,6 @@ def read_data(params):
                 else:
                     the_data["has_distmod"] = np.append(the_data["has_distmod"], 0)
                     the_data["distmod"] = np.append(the_data["distmod"], 0.)
-                    mBmB_from_dist_ladder = 0.
 
                 the_data["sample_list"] = append(the_data["sample_list"], current_sample)
 
@@ -326,7 +333,7 @@ def read_data(params):
 
 
                 # First term from SALT, second term from 300 km/s, third term lensing (may be overestimated)
-                mBmB = helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B", ind = 2)**2. + (params["lensing_disp"]*the_data["z_CMB_list"][-1])**2. + mBmB_from_dist_ladder
+                mBmB = helper_functions.read_param(snpath + "/result_salt2.dat", "RestFrameMag_0_B", ind = 2)**2. + (params["lensing_disp"]*the_data["z_CMB_list"][-1])**2.
                 mBx1 = helper_functions.read_param(snpath + "/result_salt2.dat", "CovRestFrameMag_0_BX1")
                 mBc = helper_functions.read_param(snpath + "/result_salt2.dat", "CovColorRestFrameMag_0_B")
                 x1x1 = helper_functions.read_param(snpath + "/result_salt2.dat", "CovX1X1")
