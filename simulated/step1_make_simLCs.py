@@ -555,7 +555,7 @@ separate_mass_x1c	1
     f.write("""#!/bin/bash
 #SBATCH --job-name=example
 #SBATCH --partition=shared
-#SBATCH --time=0-""" + str(12 + 6*include_low) + """:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=0-""" + str(int(5 + 6*opts.nvisit/200 + 6*include_low*opts.nvisit/200)) + """:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=""" + str(int((6 + 6*include_low)*opts.nvisit/200)) +  """G # Memory per node my job requires
@@ -589,7 +589,7 @@ parser.add_argument('--ncalibperset', help = "Number of calibrator SNe for sets 
 parser.add_argument('--sigzp', help="Zeropoint Uncertainty Size", type=float)
 parser.add_argument('--nvisit', help="Number of visits", type=int, default = 200)
 parser.add_argument('--sigmabetaR', help="Scatter in beta_R", type=float)
-
+parser.add_argument("--sigunexplained", help="Unexplained dispersion", type=float, default=0.12)
 
 
 
@@ -619,7 +619,7 @@ params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperse
               obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
               Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
-              tot_sig_unexplained = 0.12, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
+              tot_sig_unexplained = opts.sigunexplained, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
               outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
 
