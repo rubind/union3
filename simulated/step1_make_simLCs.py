@@ -497,7 +497,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
     f_ladder.close()
 
 def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low, cosmomodel, distance_ladder_fl):
-    dataset_list = ["../dataset_S_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
+    dataset_list = ["../dataset_S_%03i_v1.txt" % dataset_ind]*include_low*(opts.zrangekeys.count("S") > 0) + ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low*(opts.zrangekeys.count("L") > 0) + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
     dataset_list = str(dataset_list).replace(" ", "")
 
     if noselection:
@@ -587,7 +587,7 @@ separate_mass_x1c	1
 #SBATCH --time=0-""" + str(int(5 + 6*opts.nvisit/200 + 6*include_low*opts.nvisit/200)) + """:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=""" + str(int((6 + 6*include_low)*opts.nvisit/200)) +  """G # Memory per node my job requires
+#SBATCH --mem=""" + str(int((10 + 10*include_low)*opts.nvisit/200)) +  """G # Memory per node my job requires
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
@@ -707,17 +707,17 @@ f.write("""
 ('Lambda', 'UVOT|UVOT_b'):    0.01
 ('Lambda', 'UVOT|UVOT_v'):    0.01
 
-('Zeropoint', 'Bessell12|Bessell12_U'): """ + str(opts.sigzp) + """
-('Zeropoint', 'Bessell12|Bessell12_B'): """ + str(opts.sigzp) + """
-('Zeropoint', 'Bessell12|Bessell12_V'): """ + str(opts.sigzp) + """
-('Zeropoint', 'Bessell12|Bessell12_R'): """ + str(opts.sigzp) + """
-('Zeropoint', 'Bessell12|Bessell12_I'): """ + str(opts.sigzp) + """
+('Zeropoint', 'OtherNearby|Bessell12_U'): """ + str(opts.sigzp) + """
+('Zeropoint', 'OtherNearby|Bessell12_B'): """ + str(opts.sigzp) + """
+('Zeropoint', 'OtherNearby|Bessell12_V'): """ + str(opts.sigzp) + """
+('Zeropoint', 'OtherNearby|Bessell12_R'): """ + str(opts.sigzp) + """
+('Zeropoint', 'OtherNearby|Bessell12_I'): """ + str(opts.sigzp) + """
 
-('Lambda', 'Bessell12|Bessell12_U'):     0.01
-('Lambda', 'Bessell12|Bessell12_B'):     0.01
-('Lambda', 'Bessell12|Bessell12_V'):     0.01
-('Lambda', 'Bessell12|Bessell12_R'):     0.01
-('Lambda', 'Bessell12|Bessell12_I'):     0.01
+('Lambda', 'OtherNearby|Bessell12_U'):     0.01
+('Lambda', 'OtherNearby|Bessell12_B'):     0.01
+('Lambda', 'OtherNearby|Bessell12_V'):     0.01
+('Lambda', 'OtherNearby|Bessell12_R'):     0.01
+('Lambda', 'OtherNearby|Bessell12_I'):     0.01
 
 
 ('Zeropoint', 'SDSS|SDSS_u'): """ + str(opts.sigzp) + """
