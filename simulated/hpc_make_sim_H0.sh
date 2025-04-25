@@ -14,3 +14,7 @@ python step1_make_simLCs.py --ndataset 20 --addnoise 1 --addcalibration 1 --mode
 
 cd /home/drubin/koa_scratch/sim_data_simplex_H0
 python /home/drubin/salt2_union//python_code/slurmfit.py 10 dontsort
+python /home/drubin/SimpleBayesJLA/wait_for_one_job.py
+
+grep -v 1D run_interleave.sh | grep -v nosel > run_interleave2.sh
+sbatch run_interleave2.sh
