@@ -40,7 +40,7 @@ data {
     matrix[3, n_calib] d_mBx1c_d_calib [n_sne];
     vector [n_sne] mass;
     vector [n_sne] mass_err;
-    vector [n_sne] p_high_mass;
+
 
     int nzadd;
     real redshifts_sort_fill [2*(n_sne + nzadd) - 1];
@@ -97,7 +97,8 @@ parameters {
     real <lower = -1.4, upper = 1.4> beta_angle_blue;
     real <lower = 0, upper = 1.4> beta_angle_red_low;
     real <lower = 0, upper = 1.4> beta_angle_red_high;
-    // real <lower = 9, upper = 11> mass_0;
+    real <lower = 9.5, upper = 10.5> step_mass;
+    real <lower = 0.02, upper = 0.5> step_width;
     real delta_0;
     real <lower = 0, upper = 1> delta_h;
 
@@ -159,6 +160,7 @@ transformed parameters {
 
     real alpha_eff;
     real beta_eff;
+    real p_high_mass;
     real p_high_mass_eff;
 
     vector [n_sne] true_cR;
@@ -321,6 +323,7 @@ transformed parameters {
     }
 
     for (i in 1:n_sne) {
+        p_high_mass = normal_cdf(mass[i], step_mass, sqrt(step_width^2 + mass_err[i]^2));
 
         if (do_host_mass == 1) {
 	    p_high_mass_eff = (1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i])) + delta_h)*p_high_mass[i];

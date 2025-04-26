@@ -32,16 +32,18 @@ def fmt(val, unc, mean_unc, chi2_DoF):
 def verify_filenamelist(sampfl):
     filenamelist = read_param(sampfl.split("/")[0] + "/paramfile.txt", "filenamelist")
     if suffix == "LH":
-        assert filenamelist[0].count("_L_")
-        assert filenamelist[1].count("_H_")
-        assert filenamelist[2].count("_V_")
+        assert filenamelist[0].count("_S_")
+        assert filenamelist[1].count("_L_")
+        assert filenamelist[2].count("_H_")
+        assert filenamelist[3].count("_V_")
     elif suffix == "H":
         assert filenamelist[0].count("_H_")
     else:
         raise "Uknown suffix " + suffix
 
-    [v1s, total, outliers] = readcol("outliers_by_dataset.txt", 'aff')
-
+    #[v1s, total, outliers] = readcol("outliers_by_dataset.txt", 'aff')
+    
+    """
     total_SNe = 0.
     total_outliers = 0.
     
@@ -50,6 +52,32 @@ def verify_filenamelist(sampfl):
         
         total_SNe += total[ind]
         total_outliers += outliers[ind]
+    """
+
+    """
+    #SN	RA	DEC	ZHEL	ZCMB	PASS
+    dataset_S_010/SNSI0001	0.0	0.0	0.014905	0.014905	True
+    dataset_S_010/SNSI0009	0.0	0.0	0.011504	0.011504	True
+    """
+
+    [SNname, NA, NA, NA, NA, SNpass] = readcol(sampfl.split("/")[0] + "/sn_input.txt", 'affffa')
+
+    total_outliers = 0.
+    total_SNe = 0.
+
+    for i in range(len(SNname)):
+        if SNpass[i] == "True":
+            total_SNe += 1
+            SNparsed = SNname[i].split("/")[-1]
+            assert SNparsed[:2] == "SN"
+            assert SNname[i].split("_")[1] == SNparsed[2]
+            if SNparsed[3] == "I":
+                pass
+            elif SNparsed[3] == "O":
+                total_outliers += 1
+            else:
+                assert 0, SNparsed
+    
     return total_outliers/total_SNe
 
 def plot_cosmetics(make_symm, true_val):
@@ -101,18 +129,15 @@ def bbox_subplot(i, j, pars, fig, add_label = 0):
 
 try:
     suffix = sys.argv[1]
+    cosmomodel = sys.argv[2]
 except:
     print("Needs suffix like LH or H")
     assert 0
     
-if suffix == "H":
-    cosmomodel = "1"
-else:
-    cosmomodel = "5"
 
 datasetkeys = []
     
-for tmpind in range(1 + (suffix == "LH")*2):
+for tmpind in range(1 + (suffix == "LH")*3):
     datasetkeys.append("mobs_cuts[%i]" % (tmpind + 1))
     datasetkeys.append("mobs_cut_sigmas[%i]" % (tmpind + 1))
     datasetkeys.append("sigma_int[%i]" % (tmpind + 1))
@@ -138,7 +163,7 @@ labels = {"H0": "$H_0$",
           "mBx1c_int_variance[3]": "$f^{c}$",
           "outl_frac": "$f^{\mathrm{outl}}$"}
 
-true_vals = {"H0": 0.7, "Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
+true_vals = {"H0": 71, "Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
              "alpha": 0.15, "beta_B": 3.1, "beta_R_low": 3.1, "beta_R_high": 3.1,
              "delta_0": 0.08,
              "delta_h": "$\mathcal{U}(0,\ 1)$",
@@ -152,7 +177,7 @@ true_vals = {"H0": 0.7, "Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot
 
 
 if suffix == "LH":
-    for tmpind, tmpkey in enumerate(["Low", "Mid", "High"]):
+    for tmpind, tmpkey in enumerate(["Very Low", "Low", "Mid", "High"]):
         labels["mobs_cuts[%i]" % (tmpind + 1)] = "$m_{50}$ %s-$z$" % tmpkey
         labels["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "$\sigma_m$ %s-$z$" % tmpkey
         labels["sigma_int[%i]" % (tmpind + 1)] = "$\sigma^{\mathrm{unexpl}}$ %s-$z$" % tmpkey
@@ -202,10 +227,10 @@ for i in range(len(pars)):
 tmp_ind = 0
 
 for matchstr, description in [
-        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "Nominal UNITY1.5 Model"),
-        ("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "Improved Outlier Limits"),
-        ("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???", "No Selection Effects"),
-        ("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Sel. Eff., $z$-Dep. Pop.")]:
+        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "Nominal UNITY1.6 Model")]:
+        #("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "Improved Outlier Limits"),
+        #("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???", "No Selection Effects"),
+        #("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Sel. Eff., $z$-Dep. Pop.")]:
         #("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
         #("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 
@@ -315,7 +340,7 @@ for matchstr, description in [
 
         the_color = ['k', 'b', 'r', 'g'][tmp_ind]
         the_linewidth = [2,2,1,1][tmp_ind]
-        ffff
+        
 
 
         yval = 0.9 - tmp_ind*0.2 #0.125 + tmp_ind*0.25
@@ -427,10 +452,11 @@ for matchstr, description in [
     all_txt_grid.append(towrite)
     tmp_ind += 1
 
+"""
 for j in range(1,4):
     xlim = [100, -100]
     for i in range(len(pars)):
-    
+""" 
     
 #for i, par in enumerate(pars):
 plt.sca(all_ax[0][3])
