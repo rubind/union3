@@ -118,10 +118,11 @@ for tmpind in range(1 + (suffix == "LH")*2):
     datasetkeys.append("sigma_int[%i]" % (tmpind + 1))
 
     
-pars = ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
+pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
 
 
-labels = {"Om": "$\Omega_m$", "wDE": "$w_0$",
+labels = {"H0": "$H_0$",
+          "Om": "$\Omega_m$", "wDE": "$w_0$",
           "wpivot12": "$w_0 + 0.12\;w_a$", "wpivot15": "$w_0 + 0.15\;w_a$", "wpivot18": "$w_0 + 0.18\;w_a$",
           "waDE": "$w_a$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
           "beta_B": "$\\beta_B$",
@@ -137,7 +138,7 @@ labels = {"Om": "$\Omega_m$", "wDE": "$w_0$",
           "mBx1c_int_variance[3]": "$f^{c}$",
           "outl_frac": "$f^{\mathrm{outl}}$"}
 
-true_vals = {"Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
+true_vals = {"H0": 0.7, "Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
              "alpha": 0.15, "beta_B": 3.1, "beta_R_low": 3.1, "beta_R_high": 3.1,
              "delta_0": 0.08,
              "delta_h": "$\mathcal{U}(0,\ 1)$",
