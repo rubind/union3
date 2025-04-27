@@ -887,7 +887,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
 
     f_interleave.write("cd " + pwd + '\n')
     f_interleave.write("cd " + opts.prefixname + '\n')
-    f_interleave.write("~/.conda/envs/py39/bin/python $PATHMODEL/python_code/cut_fits.py dataset_?_%03i\n" % dataset_ind)
+    f_interleave.write("~/.conda/envs/py39/bin/python $PATHMODEL/python_code/cut_fits.py dataset_?_%03i | tail \n" % dataset_ind)
 
     if opts.ncalibperset == 0:
         # Test dark energy
