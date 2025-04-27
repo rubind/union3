@@ -794,6 +794,8 @@ def init_fn():
             #"mass_0": 10,
             "delta_0": random.random()*0.05,
             "delta_h": 0.5,
+            "step_mass": 10.,
+            "step_width": 0.1,
             "calibs": random.normal(size = len(the_data["calib_names"]))*0.01,
             #"blind_values": [0.]*n_samples,
             
