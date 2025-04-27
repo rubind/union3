@@ -326,7 +326,7 @@ transformed parameters {
         p_high_mass = normal_cdf(mass[i], step_mass, sqrt(step_width^2 + mass_err[i]^2));
 
         if (do_host_mass == 1) {
-	    p_high_mass_eff = (1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i])) + delta_h)*p_high_mass[i];
+	    p_high_mass_eff = (1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i])) + delta_h)*p_high_mass;
         } else {
             p_high_mass_eff = 0;
         }

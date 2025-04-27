@@ -319,7 +319,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             
             relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
             relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
-            P_high_eff = relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*0.05)   ))
+            P_high_eff = relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*np.sqrt(0.05**2. + params["step_width"]**2.))   ))
             
             mass_term = -params["delta"]*P_high_eff
 
@@ -659,6 +659,7 @@ params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperse
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
               tot_sig_unexplained = opts.sigunexplained, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
+              step_width = 0.15,
               outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
 
 subprocess.getoutput("rm -fr " + opts.prefixname)
