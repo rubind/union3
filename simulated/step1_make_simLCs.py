@@ -659,7 +659,7 @@ params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperse
               Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
               tot_sig_unexplained = opts.sigunexplained, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
               beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
-              step_width = 0.15,
+              step_width = 0., #0.15,
               outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
 
 subprocess.getoutput("rm -fr " + opts.prefixname)

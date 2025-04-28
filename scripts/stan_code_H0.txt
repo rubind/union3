@@ -98,7 +98,7 @@ parameters {
     real <lower = 0, upper = 1.4> beta_angle_red_low;
     real <lower = 0, upper = 1.4> beta_angle_red_high;
     real <lower = 9.5, upper = 10.5> step_mass;
-    real <lower = 0.02, upper = 0.5> step_width;
+    // real <lower = 0.02, upper = 0.5> step_width;
     real delta_0;
     real <lower = 0, upper = 1> delta_h;
 
@@ -323,7 +323,7 @@ transformed parameters {
     }
 
     for (i in 1:n_sne) {
-        p_high_mass = normal_cdf(mass[i], step_mass, sqrt(step_width^2 + mass_err[i]^2));
+        p_high_mass = normal_cdf(mass[i], step_mass, mass_err[i]);
 
         if (do_host_mass == 1) {
 	    p_high_mass_eff = (1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i])) + delta_h)*p_high_mass;
