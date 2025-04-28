@@ -140,7 +140,8 @@ def read_dat():
 
             paramsfl = resfl + ""
             for red_key in "SLHV":
-                paramsfl = paramsfl.replace("/SN" + red_key, "/SN_params/params_").replace("/result_salt2.dat", ".dat").replace("dataset_", "UNITY_")
+                for red_key2 in "OI":
+                    paramsfl = paramsfl.replace("/SN" + red_key + red_key2, "/SN_params/params_").replace("/result_salt2.dat", ".dat").replace("dataset_", "UNITY_")
             
 
             print("resfl", resfl, "paramsfl", paramsfl)
