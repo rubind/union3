@@ -354,7 +354,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
         observed_SNe = get_observed_SNe_volume_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model)
 
 
-    NA, bins, NA = plt.hist([all_SNe[i]["z"] for i in range(nsne)], bins = 30)
+    NA, bins, NA = plt.hist([all_SNe[i]["z"] for i in range(nsne)], bins = 60)
     plt.close()
     
     plt.hist([all_SNe[i]["z"] for i in range(nsne) if observed_SNe[i] == 1], alpha = 0.5, label = str(sum(observed_SNe)), bins = bins)
