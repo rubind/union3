@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=step1n2
 #SBATCH --partition=shared
-#SBATCH --time=0-22:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=01-06:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=8G # Memory per node my job requires
