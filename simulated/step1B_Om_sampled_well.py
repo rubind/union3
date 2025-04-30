@@ -30,7 +30,12 @@ def check_calibs(logfl, leave_running_jobs_alone, threshold):
     return 1
 
 
-    
+def check_sampling(logfl):
+    grepout = getoutput("grep " + '"' + "'distutils.errors.DistutilsExecError: command '/usr/bin/gcc' failed with exit code 1" + '" ' + logfl)
+    if grepout.strip() != "":
+        return 0
+    return 1
+
 
 leave_running_jobs_alone = int(sys.argv[1])
 
@@ -53,7 +58,8 @@ for logfl in logfls:
         other_checks *= check_param(logfl, param = key, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
 
     other_checks *= check_calibs(logfl, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
-
+    other_checks *= check_sampling(logfl)
+    
         
     if check_Om and check_wDE and other_checks:
         print("Good!")
