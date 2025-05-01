@@ -31,9 +31,16 @@ def check_calibs(logfl, leave_running_jobs_alone, threshold):
 
 
 def check_sampling(logfl):
-    grepout = getoutput("grep " + '"' + "'distutils.errors.DistutilsExecError: command '/usr/bin/gcc' failed with exit code 1" + '" ' + logfl)
-    if grepout.strip() != "":
-        return 0
+    # distutils.errors.DistutilsExecError: command '/usr/bin/gcc' failed with exit code 1
+    errfls = glob.glob(logfl.replace("log.txt", "*.err"))
+
+    
+    for errfl in errfls:
+        print("Checking", errfl)
+        grepout = getoutput("grep " + '"' + "distutils.errors.DistutilsExecError: command '/usr/bin/gcc' failed with exit code 1" + '" ' + errfl)
+        if grepout.count("DistutilsExecError") == 1:
+            return 0
+
     return 1
 
 
