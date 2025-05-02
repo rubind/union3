@@ -73,12 +73,13 @@ def get_SNCosmo_model(these_params, source):
     return sncosmo_model
 
 
-def approxmB(model, date):
+def approxmB(model, date, redshift):
     """Only used for rest-frame mag selection, rather than observer-frame"""
     x0 = model.get("x0")
     t0 = model.get("t0")
+    width_around_t0 = 10*(1. + redshift)
 
-    return -2.5*np.log10(x0 * np.exp(  -0.5*((date - t0)/10.)**2.  )
+    return -2.5*np.log10(x0 * np.exp(  -0.5*(   (date - t0)/width_around_t0   )**2.  )
                          )
 
 def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key):
@@ -98,7 +99,7 @@ def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key):
                     else:
                         raise Exception("Unknown z_range_key " + z_range_key)
                 else:
-                    all_mags.append(approxmB(model, night))
+                    all_mags.append(approxmB(model, night, all_SNe[i]["z"]))
             else:
                 all_mags.append(1e20)
                 
@@ -130,7 +131,7 @@ def get_observed_SNe_mag_limited(nsne, dates, all_SNe, model, z_range_key, mag_l
                     else:
                         raise Exception("Unknown z_range_key " + z_range_key)
                 else:
-                    all_mags.append(approxmB(model, night))
+                    all_mags.append(approxmB(model, night, all_SNe[i]["z"]))
             else:
                 all_mags.append(1e20)
                 
@@ -347,7 +348,10 @@ def make_dataset(wd, cal_offsets, dataset_ind):
 
     if params["volume_limited"] == 0:
         if z_range_key == "V":
-            observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, mag_limit = 26.0, sigma_mag_limit = 0.25, z_range_key = z_range_key)
+            if params["obs_mag_selection"]:
+                observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, mag_limit = 26.0, sigma_mag_limit = 0.25, z_range_key = z_range_key)
+            else:
+                observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, mag_limit = 16.5, sigma_mag_limit = 0.25, z_range_key = z_range_key)
         else:
             observed_SNe = get_observed_SNe_followup_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, z_range_key = z_range_key)
     else:
@@ -381,7 +385,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
                     peak_mags.append(model.bandmag("f850lp", "ab", all_SNe[i]["t0"]))
 
         else:
-            peak_mags.append(approxmB(model, all_SNe[i]["t0"]))
+            peak_mags.append(approxmB(model, all_SNe[i]["t0"], all_SNe[i]["z"]))
         SNe_x0s.append(model.get("x0"))
         
     peak_mags = np.array(peak_mags)
