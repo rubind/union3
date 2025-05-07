@@ -361,7 +361,7 @@ transformed parameters {
 
 	mobs_by_SN_except_c_R[i] <- this_MB + model_mu[i] + mobs_cut0[i] - alpha*x1_star_by_SN[i] + (beta_B + mobs_cut1[i])*c_star_by_SN[i] - delta_0*p_high_mass_eff;
 	mobs_var_by_SN_except_c_R[i] <- mobs_cut_sigmas[sample_list[i]]^2
-                                      + model_mBx1c_cov[i][1,1] + (mobs_cut1[i]*model_mBx1c_cov[i][3,3])^2 + 2.*mobs_cut1[i]*model_mBx1c_cov[i][1,3]
+                                      + model_mBx1c_cov[i][1,1] + model_mBx1c_cov[i][3,3] * mobs_cut1[i]^2 + 2.*mobs_cut1[i]*model_mBx1c_cov[i][1,3]
                                       + (alpha*R_x1_by_SN[i])^2 + ((beta_B + mobs_cut1[i])*R_c_by_SN[i])^2;
 
 
