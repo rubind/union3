@@ -189,6 +189,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w"])
         run_separate_contours = 1
+        run_SN_only_contours = 0 # Included in run_separate_contours
         run_inverse_ladder = 0
         run_SNeCMB_and_BAOCMB = 0
     elif model == "LCDM":
@@ -201,6 +202,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok"])
         run_separate_contours = 1
+        run_SN_only_contours = 0 # Included in run_separate_contours
         run_inverse_ladder = 0
         run_SNeCMB_and_BAOCMB = 0
     elif model == "flatLCDM":
@@ -213,6 +215,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok"])
         run_separate_contours = 1
+        run_SN_only_contours = 0 # Included in run_separate_contours
         run_inverse_ladder = 0
         run_SNeCMB_and_BAOCMB = 0
     elif (model == "flatw0waOmh") or (model == "flatw0waOmhEDE"):
@@ -225,6 +228,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w0", "wa"])
         run_separate_contours = 0
+        run_SN_only_contours = 0
         run_inverse_ladder = 1
         run_SNeCMB_and_BAOCMB = 1
     elif (model == "flatw0wa") or (model == "flatw0waEDE"):
@@ -237,6 +241,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w0", "wa"])
         run_separate_contours = 0
+        run_SN_only_contours = 1
         run_inverse_ladder = 1
         run_SNeCMB_and_BAOCMB = 1
     elif (model == "w0wa") or (model == "w0waEDE"):
@@ -249,6 +254,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                             fit_BAOCMB_inds = [1, 2],
                             param_names = ["MB", "O_bhh", "h", "Om", "Ok", "w0", "wa"])
         run_separate_contours = 0
+        run_SN_only_contours = 0
         run_inverse_ladder = 1
         run_SNeCMB_and_BAOCMB = 1
     else:
@@ -260,7 +266,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     all_grids = {"model": model}
 
 
-    if run_separate_contours:
+    if run_separate_contours or run_SN_only_contours:
         run_settings.update(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 0)
         bestP, bestF, NA = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                          miniscale = get_miniscale(run_settings, global_fit = 1),
@@ -272,7 +278,8 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         all_grids["SNe_minos"] = get_minos(bestP, bestF, run_settings)
         all_grids["SNe_n_data"] = chi2fn(bestP, [run_settings], get_n_data_instead = True)
         all_grids["SNe_n_par"] = get_miniscale(run_settings, global_fit = 1, get_n_par_instead = True)
-
+    
+    if run_separate_contours:    
         run_settings.update(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 0)
         bestP, bestF, NA = miniNM_new(ministart = run_settings["ministart_fn"](np.mean(run_settings["contour_xs"]), np.mean(run_settings["contour_ys"])),
                                       miniscale = get_miniscale(run_settings, global_fit = 1),
@@ -409,9 +416,11 @@ def make_contours(z_list, mu_list, mu_invcov, model):
                              [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 1), "SNeBAOCMBH0C"],
                              [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0TRGB = 1, include_H0Ceph = 0), "SNeBAOCMBH0T"]]
 
+    if run_separate_contours or run_SN_only_contours:
+        all_combs_to_run_grid += [[dict(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 0), "SNe"]]
+
     if run_separate_contours:
-        all_combs_to_run_grid += [[dict(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 0), "SNe"],
-                                  [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 1, include_H0TRGB = 0, include_H0Ceph = 0), "BAO_Omh2"],
+        all_combs_to_run_grid += [[dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 1, include_H0TRGB = 0, include_H0Ceph = 0), "BAO_Omh2"],
                                   [dict(include_SNe = 0, include_CMB = 0, include_BAO = 1, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 0), "BAO"],
                                   [dict(include_SNe = 0, include_CMB = 1, include_BAO = 0, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 0), "CMB"]]
     if run_inverse_ladder:

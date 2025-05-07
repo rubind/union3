@@ -54,8 +54,8 @@ def get_SNCosmo_model(these_params, source):
     sncosmo_model.set(**tmp_params)
 
     
-    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
     ten_pc_z = 2.33494867e-9 * (true_H0/70.)
+    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
     assert abs(cosmo.distmod(z=ten_pc_z).value) < 1.e-3, "Distance modulus zeropoint wrong!"
 
     ampl = 1.
@@ -66,10 +66,9 @@ def get_SNCosmo_model(these_params, source):
         #print "mag, ampl ", mag, ampl
         ampl *= 10.**(0.4*(mag - these_params["MB"]))
         
-    mu = cosmo.distmod(these_params["z"]).value
     #print "mu ", mu
 
-    sncosmo_model.set(z=these_params["z"], t0=these_params["t0"], x0 = ampl*10**(-0.4*mu))
+    sncosmo_model.set(z=these_params["z"], t0=these_params["t0"], x0 = ampl*10**(-0.4*these_params["latentmu"]))
     return sncosmo_model
 
 
@@ -287,6 +286,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
                      c = np.random.normal()*0.2,
                      mass = 10. + np.random.normal(),
 
+                     latentmu = np.sqrt(-1.),
                      latentMB = np.sqrt(-1.),
                      latentx1 = np.sqrt(-1.),
                      latentc = np.sqrt(-1.),
@@ -335,6 +335,9 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             p["MB"] = p["latentMB"] + p["delta_mBx1c"][0]
             p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
             p["c"] = p["latentc"] + p["delta_mBx1c"][2]
+
+            cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
+            p["latentmu"] = cosmo.distmod(p["z"]).value
 
             p["delta_mB"] = p["delta_mBx1c"][0]
             p["delta_x1"] = p["delta_mBx1c"][1]
@@ -632,7 +635,7 @@ opts = parser.parse_args()
 salt2_version = "salt3-f22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
 
-nonSALTkeys = ["MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "latentcB", "latentcR", "beta_R", "delta_mB", "delta_x1", "delta_c", "delta_mu", "outlier"]
+nonSALTkeys = ["latentmu", "MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "latentcB", "latentcR", "beta_R", "delta_mB", "delta_x1", "delta_c", "delta_mu", "outlier"]
 
 dict_of_obsframe_filt = {}
 for filt in "griz":
@@ -860,7 +863,7 @@ f_interleave.write("""#!/bin/bash
 #SBATCH --output=runU-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
-cd """ + opts.prefixname """
+cd """ + opts.prefixname + """
 sbatch check_Om.sh
 """)
 
