@@ -78,7 +78,7 @@ for pfl in pfls:
 
 
     for key in fit_params:
-        fit_params[key] = fit_params[key][inds]
+        fit_params[key] = fit_params[key]
         print("fit_params", key, fit_params[key].shape, np.median(fit_params[key]), np.std(fit_params[key], ddof=1))
 
     

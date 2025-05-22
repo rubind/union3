@@ -412,7 +412,12 @@ transformed parameters {
 
 	                                  + normal_cdf_log(mobs_cuts[sample_list[i]], //  + d_mBx1c_d_calib[i][1] * calibs
 					    obs_mBx1c[i][1] + d_mBx1c_d_calib[i][1] * calibs + mobs_cut0[i] + mobs_cut1[i]*(obs_mBx1c[i][3] + d_mBx1c_d_calib[i][3] * calibs),
-					    mobs_cut_sigmas[sample_list[i]])
+					    mobs_cut_sigmas[sample_list[i]]
+					    // sqrt(mobs_cut_sigmas[sample_list[i]]^2
+					    //+ model_mBx1c_cov[i][1,1] + model_mBx1c_cov[i][3,3] * mobs_cut1[i]^2 + 2.*mobs_cut1[i]*model_mBx1c_cov[i][1,3])
+					    )
+
+
                                           - log(this_norm_LL);  //No calibration in this term, see above comment!
 	// Debugging test:
 	// print("this_norm_LL ", this_norm_LL)

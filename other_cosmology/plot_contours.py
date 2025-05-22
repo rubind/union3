@@ -85,7 +85,7 @@ def optimize_label_positions(label_dict):
             plt.text(label_dict["xs"][i], P[i], label_dict["labels"][i], color = label_dict["colors"][i], fontsize = label_dict["sizes"][i], ha = label_dict["has"][i], va = label_dict["vas"][i], zorder = 10)
 
 
-def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0):
+def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0, sigma_level = None, combined_and_SNe = 0):
     DETF_FoM_txt = ""
     
     if all_grids["model"] == "flatwCDM" or (all_grids["model"] == "flatLCDM"):
@@ -119,7 +119,7 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0):
         if BAO_Omh2:
             return 0
         
-        if show_all_four == 0 and show_H0s == 0:
+        if show_all_four == 0 and show_H0s == 0 and combined_and_SNe == 0:
             plt.contourf(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("teal"))
             plt.contour(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25)
             label_dict = dict(xs = [-1.2], ys = [-0.25], labels = ["$\Lambda$CDM"], colors = ["k"], sizes = [12]*10, has = ["center"]*10, vas = ["center"]*10, minys = 0.14)
@@ -200,6 +200,16 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0):
             optimize_label_positions(label_dict)
             
             plt.text(-1.75, -2.5, [None, "1", "2"][show_H0s] + "$\sigma$ Contours ($\chi^2 - \chi^2_{\mathrm{min}} < %.2f)$" % level_for_four, va = 'center', ha = 'left')
+        elif combined_and_SNe:
+            for gridkey in ["SNe", "SNeBAOCMB"]:
+                plt.contour(all_grids[gridkey][0], all_grids[gridkey][1], all_grids[gridkey][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25, zorder = 5)
+                if gridkey == "SNeBAOCMB":
+                    these_colors = get_colors("teal")
+                else:
+                    these_colors = get_colors(gridkey.replace("SNe", "blue").replace("CMB", "orange").replace("BAO", "green"))
+                    
+                plt.contourf(all_grids[gridkey][0], all_grids[gridkey][1], all_grids[gridkey][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = these_colors)
+
 
     if all_grids["model"] == "flatwCDM":
         plt.xlabel("$\Omega_m$")
@@ -224,9 +234,9 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0):
         plt.ylabel("$w_a$")
 
         if all_grids["model"].replace("EDE", "") == "flatw0wa":
-            plt_name = "w0-wa%s%s%s.pdf" % ("_BAO_Omh2"*BAO_Omh2, "_all4"*show_all_four, "_H0s"*show_H0s)
+            plt_name = "w0-wa%s%s%s%s.pdf" % ("_BAO_Omh2"*BAO_Omh2, "_all4"*show_all_four, "_H0s"*show_H0s, "_SNeComb"*combined_and_SNe)
         else:
-            plt_name = "w0-wa_open%s%s%s.pdf" % ("_BAO_Omh2"*BAO_Omh2, "_all4"*show_all_four, "_H0s"*show_H0s)
+            plt_name = "w0-wa_open%s%s%s%s.pdf" % ("_BAO_Omh2"*BAO_Omh2, "_all4"*show_all_four, "_H0s"*show_H0s, "_SNeComb"*combined_and_SNe)
             
         xlim = plt.xlim()
         ylim = plt.ylim()
@@ -372,5 +382,6 @@ for fl in sys.argv[1:]:
     make_contours(all_grids, show_all_four = 2)
     make_contours(all_grids, show_H0s = 1)
     make_contours(all_grids, show_H0s = 2)
+    make_contours(all_grids, combined_and_SNe = 1)
 
 print(all_latex_lines)
