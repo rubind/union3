@@ -71,7 +71,7 @@ for logfl in logfls:
     if check_Om and check_wDE and other_checks:
         print("Good!")
     else:
-        wd = logfl.split("/")[0]
+        wd = "/".join(logfl.split("/")[:-1])
         getoutput("rm -f " + wd + "/samples*pickle")
         getoutput("rm -f " + wd + "/log.txt")
         getoutput("rm -f " + wd + "/*.err")
