@@ -5,7 +5,7 @@ def do_it(cmd):
     print(cmd)
     print(subprocess.getoutput(cmd))
     
-pwd = subprocess.getoutput(pwd)
+pwd = subprocess.getoutput("pwd")
 
 for dr in sys.argv[1:]:
     print(dr)
@@ -82,14 +82,14 @@ separate_mass_x1c	1
 "SALT_U_CAL":                                                                                           0.0001
 "SALT_I_CAL":                                                                                           0.0001
 
-('Zeropoint', 'DES|DES_g'): 0.0001
-('Zeropoint', 'DES|DES_r'): 0.0001
-('Zeropoint', 'DES|DES_i'): 0.0001
-('Zeropoint', 'DES|DES_z'): 0.0001
-('Lambda', 'DES|DES_g'):    0.0001
-('Lambda', 'DES|DES_r'):    0.0001
-('Lambda', 'DES|DES_i'):    0.0001
-('Lambda', 'DES|DES_z'):    0.0001
+('Zeropoint', 'DECam|DECam_g'): 0.0001
+('Zeropoint', 'DECam|DECam_r'): 0.0001
+('Zeropoint', 'DECam|DECam_i'): 0.0001
+('Zeropoint', 'DECam|DECam_z'): 0.0001
+('Lambda', 'DECam|DECam_g'):    0.0001
+('Lambda', 'DECam|DECam_r'):    0.0001
+('Lambda', 'DECam|DECam_i'):    0.0001
+('Lambda', 'DECam|DECam_z'):    0.0001
 """)
     
     f.close()
@@ -100,7 +100,7 @@ separate_mass_x1c	1
     f.write("""#!/bin/bash
 #SBATCH --job-name=UNITY
 #SBATCH --partition=shared
-#SBATCH --time=0-20:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=1-12:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G # Memory per node my job requires
@@ -111,7 +111,7 @@ export UNION=../
 """)
     f.write("cd " + pwd + '\n')
     f.write("cd " + wd + '\n')
-    f.write("~/.conda/envs/py39/bin/python $UNITY/scripts/read_and_sample_H0.py paramfile.txt 1 > log.txt\n" % cosmomodel)
+    f.write("~/.conda/envs/py39/bin/python $UNITY/scripts/read_and_sample_H0.py paramfile.txt 1 > log.txt\n")
     f.close()
 
     
