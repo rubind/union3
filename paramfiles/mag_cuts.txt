@@ -41,8 +41,8 @@ amanullah10_v1.txt	$UNITY/paramfiles/CalanTololo_I_selection.txt	23.8		0.5
 Amanullah10_v1.txt	$UNITY/paramfiles/CalanTololo_I_selection.txt	23.8		0.5
 DES3_Shallow_v1.txt	$UNITY/paramfiles/MEGACAMJLA_i_selection.txt	23.0		0.5
 DES3_Deep_v1.txt	$UNITY/paramfiles/MEGACAMJLA_i_selection.txt	24.0		0.5
-DES_sim_Shallow_v1.txt	$UNITY/paramfiles/MEGACAMJLA_i_selection.txt	23.0		0.5
-DES_sim_Deep_v1.txt	$UNITY/paramfiles/MEGACAMJLA_i_selection.txt	24.0		0.5
+DES_sim_Shallow_v1.txt	$UNITY/paramfiles/desi_selection_salt3-f22_AB.txt	23.0		0.5
+DES_sim_Deep_v1.txt	$UNITY/paramfiles/desi_selection_salt3-f22_AB.txt	24.0		0.5
 DC2_v1.txt		$UNITY/paramfiles/MEGACAMJLA_i_selection.txt	23.0		0.5
 knop03_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   24.0            0.5
 Knop03_v1.txt		$UNITY/paramfiles/CalanTololo_R_selection.txt   24.0            0.5
