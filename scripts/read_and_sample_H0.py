@@ -945,7 +945,8 @@ if stan_data["do_blind"]:
     print("Blinding!")
     # Blind H0
 
-    [zblind, mublind, NA] = readcol(os.environ["UNITY"] + "/paramfiles/z_mu_dmudOm.txt", 'fff')
+    
+    [zblind, mublind, NA] = readcol(params["blinding_fl"].replace("$UNITY", os.environ["UNITY"]), 'fff')
     mublindfn = interp1d(zblind, mublind, kind = 'linear')
     #dmublinddOmfn = interp1d(zblind, dmublinddOm, kind = 'linear')
                 
