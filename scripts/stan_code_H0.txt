@@ -4,6 +4,7 @@
 // Version 1.7 (Jan-26-2024). Fixed parameter limits on selection-effect model outl_mBx1c_uncertainties.
 // Version 1.71 (Sep-13-2024). Added lower limit to mobs_var_by_SN_except_c_R Thanks Aaron Do!
 // Version 1.8 (Oct-2024). Adding capability for distance ladder.
+// Version 1.81 (May-2025). Adding cluster mass-relation evolution.
 
 
 data {
@@ -17,6 +18,7 @@ data {
     real <lower=0> redshifts[n_sne];
     real <lower=0> zhelio[n_sne];
     matrix [n_sne, n_x1c_star] redshift_coeffs;
+    int <lower = 0, upper = 1> in_cluster [n_sne]; // In a galaxy cluster
 
 
     int cosmo_model; // 1 => Om, 2 => Binned mu, 3 => Om-w, 4 => q0-j0, 5 => Om-w0-wa, 6 => comoving distance interpolation
@@ -79,7 +81,7 @@ transformed data {
     // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
     // vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
 
-    print ("Version 1.8");
+    print ("Version 1.81");
 
     // locs [ 0.16913558  0.68695591  1.9434773 ]
     // sigs [ 0.11070724  0.330062    0.96505958]
@@ -101,6 +103,7 @@ parameters {
     // real <lower = 0.02, upper = 0.5> step_width;
     real delta_0;
     real <lower = 0, upper = 1> delta_h;
+    real <lower = 0, upper = 1> delta_h_cluster;
 
     real <lower = 0, upper = 1> Om;
     real <lower = -2, upper = 0> wDE;
@@ -162,6 +165,7 @@ transformed parameters {
     real beta_eff;
     real p_high_mass;
     real p_high_mass_eff;
+    real this_delta_h;
 
     vector [n_sne] true_cR;
 
@@ -326,7 +330,13 @@ transformed parameters {
         p_high_mass = normal_cdf(mass[i], step_mass, mass_err[i]);
 
         if (do_host_mass == 1) {
-	    p_high_mass_eff = (1.9*(1 - delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i])) + delta_h)*p_high_mass;
+	    if (in_cluster[i] == 1) {
+                this_delta_h = delta_h + (1 - delta_h)*delta_h_cluster;
+            } else {
+	        this_delta_h = delta_h;
+            }
+	    
+	    p_high_mass_eff = (1.9*(1 - this_delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i])) + this_delta_h)*p_high_mass;
         } else {
             p_high_mass_eff = 0;
         }

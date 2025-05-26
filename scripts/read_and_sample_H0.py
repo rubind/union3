@@ -44,6 +44,7 @@ def read_data(params):
                 "mag_cut_disp_list": array([], dtype=float64), # Dispersion on magnitude cut
                 "mass": [], # Host mass
                 "mass_err": [], # Host-mass uncertainty
+                "in_cluster": np.array([], dtype=np.int32), # In galaxy cluster
                 "snpaths": [], # Paths to LC fits. Stored for future reference.
                 "RA": [],
                 "Dec": [],
@@ -273,8 +274,11 @@ def read_data(params):
 
                 the_data["z_CMB_list"] = append(the_data["z_CMB_list"], this_redshift_cmb
                                                 )
+                
                 the_data["z_helio_list"] = append(the_data["z_helio_list"], this_redshift_helio
                                                 )
+
+                the_data["in_cluster"] = append(the_data["in_cluster"], helper_functions.read_param(snpath + "/lightfile", "Cluster"))
 
                 the_data["mobs_cut0"].append(kc_ifn0(this_redshift_helio))
                 the_data["mobs_cut1"].append(kc_ifn1(this_redshift_helio))
@@ -884,6 +888,7 @@ else:
                  "mass": the_data["mass"],
                  "mass_err": the_data["mass_err"],
                  "p_high_mass": p_high_mass,
+                 "in_cluster": the_data["in_cluster"],
                  "do_host_mass": params["do_host_mass"], "fix_Om": params["fix_Om"], "MB_by_sample": params["MB_by_sample"], 
                  # The +1 here is for Stan's indexing, which is from 1 not 0
                  "sample_list": the_data["sample_list"] + 1,
@@ -940,9 +945,9 @@ if stan_data["do_blind"]:
     print("Blinding!")
     # Blind H0
 
-    [zblind, mublind, dmublinddOm] = readcol(os.environ["UNITY"] + "/paramfiles/z_mu_dmudOm.txt", 'fff')
+    [zblind, mublind, NA] = readcol(os.environ["UNITY"] + "/paramfiles/z_mu_dmudOm.txt", 'fff')
     mublindfn = interp1d(zblind, mublind, kind = 'linear')
-    dmublinddOmfn = interp1d(zblind, dmublinddOm, kind = 'linear')
+    #dmublinddOmfn = interp1d(zblind, dmublinddOm, kind = 'linear')
                 
 
 

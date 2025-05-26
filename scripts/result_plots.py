@@ -385,6 +385,8 @@ def unc_labeling(labels_indiv):
             new_labels.append("$\Delta \\beta_R \equiv \\betaRH - \\betaRL$")
         elif label_indiv == "delta_h":
             new_labels.append("$\delta(z = \infty)$")
+        elif label_indiv == "delta_h_cluster":
+            new_labels.append("$\delta(z = \infty)$, Cluster-Hosted")            
         elif label_indiv == "delta_0":
             new_labels.append("$\delta(z = 0)$")
         elif label_indiv == "q0":
@@ -715,7 +717,7 @@ if has_wa:
 
 for cosmo_key in ["Om"] + ["H0"]*has_H0 + ["wDE", "waDE", "DETF"]*has_wa:
     print("Running ", cosmo_key)
-    unc_analysis(cosmo_key, ["MB"] + ["Om"]*(cosmo_key == "H0") + ["alpha", "beta_B", "beta_R", "delta_beta_R", "delta_0", "delta_h",
+    unc_analysis(cosmo_key, ["MB"] + ["Om"]*(cosmo_key == "H0") + ["alpha", "beta_B", "beta_R", "delta_beta_R", "delta_0", "delta_h", "delta_h_cluster",
                              "mobs_cuts", "mobs_cut_sigmas", "sigma_int", "sigma_int_calibrator",
                              "c_star", "R_c", "tau_c", "x1_star", "R_x1", "tau_x1",
                              "calibs",  "mBx1c_int_variance", "outl_frac", "outl_mBx1c_uncertainties"]
@@ -735,7 +737,7 @@ show_x1color_pop(log_scale = 1)
 
 
     
-make_calib_corner(["Om", "MWEBV_multnorm", "MWEBV_addnorm"], "MWEBV_corner.pdf")
+#make_calib_corner(["Om", "MWEBV_multnorm", "MWEBV_addnorm"], "MWEBV_corner.pdf")
 
 
 make_corner(["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB", "delta_0", "delta_h", "outl_frac"], "Om_coeffs.pdf")
