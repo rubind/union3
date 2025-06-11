@@ -48,15 +48,16 @@ def make_plot(keys, pltname):
 
 
     for key in keys:
-
         if key.count(":") == 0:
-            samples.append(fit_params[key])
+            if np.std(fit_params[key]) > 0:
+                samples.append(fit_params[key])
+                labels.append(get_label(key))
         else:
             ind = int(key.split(":")[-1])
-            samples.append(fit_params[key.split(":")[0]][:,ind])
-            print("taking ", ind, key)
-
-        labels.append(get_label(key))
+            if np.std(fit_params[key.split(":")[0]][:,ind]) > 0:
+                samples.append(fit_params[key.split(":")[0]][:,ind])
+                print("taking ", ind, key)
+                labels.append(get_label(key))
 
 
     kde_corner(samples, labels, bw_method = 0.2, colors = [[(104/255., 140/255., 184/255.), (37/255., 85/255., 145/255.)]], ax_limits = [(item.min(), item.max()) for item in samples], labelfontsize = 14)

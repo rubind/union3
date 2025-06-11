@@ -5,47 +5,13 @@ import matplotlib.pyplot as plt
 import sys
 import pickle
 from matplotlib import rcParams
-from cosmo_functions import no_big_bang, get_colors
+from cosmo_functions import no_big_bang, get_colors, get_DETF
 from DavidsNM import miniNM_new
 rcParams['font.family'] = 'serif'
 rcParams['text.usetex'] = True
 
 
 
-def get_DETF(the_grid):
-    dx = the_grid[0][1:] - the_grid[0][:-1]
-    assert np.isclose(dx, dx[0]).all()
-    dy = the_grid[1][1:] - the_grid[1][:-1]
-    assert np.isclose(dy, dy[0]).all()
-
-
-    plt.figure(2)
-
-    if np.any(the_grid[2][0, :] < 7):
-        return 0
-    if np.any(the_grid[2][-1, :] < 7):
-        return 0
-    if np.any(the_grid[2][:, 0] < 7):
-        return 0
-    if np.any(the_grid[2][:, -1] < 7):
-        return 0
-
-    
-    
-    for cut_val in np.linspace(6.15, 6.21, 100):
-        included_points = float((the_grid[2] <= cut_val).sum())
-        included_area = included_points*dx[0]*dy[0]
-
-        plt.plot(cut_val, 1./included_area, '.', color = 'b')
-    plt.axvline(6.18007)
-    plt.savefig("DETF_evaluation.pdf")
-    plt.close()
-        
-    included_points = float((the_grid[2] <= 6.18007).sum())
-    included_area = included_points*dx[0]*dy[0]
-    
-    DETF_FoM = 1./included_area
-    return DETF_FoM
 
 def find_three_sigma(all_grids, key, top_not_bottom, chi2_val = 11.8292):
     no_nan = all_grids[key][2]

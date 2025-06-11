@@ -3,6 +3,7 @@ from scipy.interpolate import interp1d
 from astropy.io import ascii
 from FileRead import readcol
 import os
+import matplotlib.pyplot as plt
 
 # Ports/copies of code written for minimarginalize.py for Union compilations
 
@@ -40,6 +41,42 @@ def get_colors(key):
                 (190/255., 226/255., 210/255.))
     assert 0, key
 
+
+def get_DETF(the_grid):
+    dx = the_grid[0][1:] - the_grid[0][:-1]
+    assert np.isclose(dx, dx[0]).all()
+    dy = the_grid[1][1:] - the_grid[1][:-1]
+    assert np.isclose(dy, dy[0]).all()
+
+
+    plt.figure(2)
+
+    if np.any(the_grid[2][0, :] < 7):
+        return 0
+    if np.any(the_grid[2][-1, :] < 7):
+        return 0
+    if np.any(the_grid[2][:, 0] < 7):
+        return 0
+    if np.any(the_grid[2][:, -1] < 7):
+        return 0
+
+    
+    
+    for cut_val in np.linspace(6.15, 6.21, 100):
+        included_points = float((the_grid[2] <= cut_val).sum())
+        included_area = included_points*dx[0]*dy[0]
+
+        plt.plot(cut_val, 1./included_area, '.', color = 'b')
+    plt.axvline(6.18007)
+    plt.savefig("DETF_evaluation.pdf")
+    plt.close()
+        
+    included_points = float((the_grid[2] <= 6.18007).sum())
+    included_area = included_points*dx[0]*dy[0]
+    
+    DETF_FoM = 1./included_area
+    return DETF_FoM
+    
 
 
 ################################## CMB/ BAO Functions #################################
