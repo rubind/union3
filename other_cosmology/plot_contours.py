@@ -254,7 +254,8 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0, sigm
     all_txt += "SN+CMB: " + str(all_grids["SNeCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["SNeCMB_cmat"]))) + '\n'
     all_txt += "BAO+CMB: " + str(all_grids["BAOCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["BAOCMB_cmat"])))
     all_txt += DETF_FoM_txt
-    
+
+    plt_name = plt_name.replace(".pdf", "_" + fl.split(".")[0] + ".pdf")
     plt.savefig(plt_name, bbox_inches = 'tight', metadata=dict(Keywords = all_txt))
     plt.close()
     

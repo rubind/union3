@@ -529,7 +529,7 @@
 ('Zeropoint', 'WFC3|WFC3_f160w'):									0.01
 ('Zeropoint', 'WFC3|WFC3_f125w'):									0.01
 ('Zeropoint', 'WFC3|WFC3_f105w'):                                                                       0.01
-('Zeropoint', 'WFC3|WFC3_f814w'):                                                                       0.01
+('Zeropoint', 'WFC3|WFC3_f814w'):                                                                       0.022360679775
 ('Zeropoint', 'ACSWF|F814W'):										0.01
 ('Zeropoint', 'ACSWF|F850LP_3pix'):									0.01
 ('Zeropoint', 'WFC3|WFC3_f127m'):									0.01

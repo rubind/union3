@@ -108,7 +108,7 @@ for pfl in pfls:
     
 if plt_choice == 0:
     
-    make_plot(["H0"]*has_H0 + ["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB:0"] + ["mass_0"]*("mass_0" in fit_params) + ["mass_width"]*("mass_width" in fit_params) + ["delta_0", "delta_h"], "standardization_coeffs.pdf")
+    make_plot(["H0"]*has_H0 + ["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB:0"] + ["step_mass"]*("step_mass" in fit_params) + ["mass_width"]*("mass_width" in fit_params) + ["delta_0", "delta_h"], "standardization_coeffs.pdf")
 elif plt_choice == 1:
     try:
         fit_params["outl_mBx1c_uncertainties_mB"]

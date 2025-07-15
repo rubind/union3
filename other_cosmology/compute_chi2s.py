@@ -140,17 +140,84 @@ def binned_constraints(z_list, mu_list, mu_invcov, zbins, include_BAO):
 
     #         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], zbins = run_settings["zbins"], rhobins = P[5:])
 
-    run_settings = dict(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov,
-                        model = "binnedrho", merged_mat = merged_mat, zbins = zbins, include_SNe = 1, include_CMB = 1, include_BAO = include_BAO, include_O_mh2 = 0)
+    run_settings = dict(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, miniscale_all = miniscale,
+                        model = "binnedrho", merged_mat = merged_mat, zbins = zbins, include_SNe = 1,
+                        include_CMB = 1, include_BAO = include_BAO, include_O_mh2 = 0, include_H0Ceph = 0, include_H0TRGB = 0,
+                        param_names = ["MB", "O_bhh", "h", "Om", "Ok"] + ["rhobin_%02i" % (i+1) for i in range(len(zbins))])
     
     P, F, Cmat = miniNM_new(ministart = ministart, miniscale = miniscale, chi2fn = chi2fn, passdata = run_settings)
 
+    try:
+        Cmat[0,0]
+    except:
+        return zbins*100
+
     print("Binned:")
     print(P)
-    print("bins", zbins, "include_BAO", include_BAO, "uncertainties", np.sqrt(np.diag(Cmat)))
+    print("bins", zbins, "include_BAO", include_BAO, "uncertainties", list(np.sqrt(np.diag(Cmat))))
+    return np.sqrt(np.diag(Cmat))[-len(zbins):]  #get_minos(P, F, run_settings)
+    #print(get_minos(P, F, run_settings))
+    #stop_here
+
+def find_best_binned_improvement():
+    f = fits.open("mu_mat_Union3_blinded.fits")
+    dat = f[0].data
+    f.close()
+    
+    mu_list_U3 = dat[1:, 0]
+    
+    if np.max(np.abs(mu_list_U3)) < 10:
+        print("This looks like LCDM residuals! Adding mu(z)")
+        
+        mu_list_U3 += get_mu(z_list = dat[0, 1:],
+                             cosmo = dict(model = "flatLCDM", O_m = 0.3, O_k = 0.0, h = 0.7))
+        
+    
+    z_list_U3 = dat[0, 1:]
+    mu_invcov_U3 = dat[1:, 1:]
+
+
+    f = fits.open("mu_mat_SeeChangeBlind_mu.fits")
+    dat = f[0].data
+    f.close()
+    
+    mu_list_U31 = dat[1:, 0]
+    
+    if np.max(np.abs(mu_list_U31)) < 10:
+        print("This looks like LCDM residuals! Adding mu(z)")
+        
+        mu_list_U31 += get_mu(z_list = dat[0, 1:],
+                              cosmo = dict(model = "flatLCDM", O_m = 0.3, O_k = 0.0, h = 0.7))
+        
+    
+    z_list_U31 = dat[0, 1:]
+    mu_invcov_U31 = dat[1:, 1:]
+
+    
+    for i in tqdm.trange(100):
+
+        nbins = np.random.randint(3, 9)
+        zbins = np.sort(np.random.random(size = nbins)*2.5)
+
+        if min(zbins[1:] - zbins[:-1]) < 0.05:
+            pass
+        else:
+            for include_BAO in [0, 1]:
+                union3uncs = binned_constraints(z_list=z_list_U3, mu_list=mu_list_U3, mu_invcov=mu_invcov_U3, zbins=zbins, include_BAO=include_BAO)
+                union31uncs = binned_constraints(z_list=z_list_U31, mu_list=mu_list_U31, mu_invcov=mu_invcov_U31, zbins=zbins, include_BAO=include_BAO)
+                
+                if np.min(union3uncs/union31uncs) > 1.1:
+                    print("*"*42)
+                print("ZBINS", zbins, "BAO", include_BAO, union3uncs/union31uncs)
+                if np.min(union3uncs/union31uncs) > 1.1:
+                    print("*"*42)
 
 
 
+BAO_data = load_BAO()
+find_best_binned_improvement()
+flskajfldskj
+                
 
 def get_minos(bestP, bestF, run_settings):
     this_minos = {}
@@ -460,9 +527,12 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         plt.close()
 
 
-    pickle.dump(all_grids, open("all_grids_" + model + "_" + SN_matrix.split(".fits")[0].split("/")[-1] + "_max=" + str(max_depth) + ".pickle", 'wb'))
+    pickle.dump(all_grids, open(get_output_pickle(model), 'wb'))
 
-    
+
+def get_output_pickle(model):
+    return "all_grids_" + model + "_" + SN_matrix.split(".fits")[0].split("/")[-1] + "_max=" + str(max_depth) + ".pickle"
+
     
 
 print("python compute_chi2s.py mu_mat.fits 4")
@@ -470,6 +540,7 @@ print("python compute_chi2s.py mu_mat.fits 4")
 
 SN_matrix = sys.argv[1]
 max_depth = int(sys.argv[2])
+
 
 use_parallel = int(sys.argv[3])
 # For big SN_matrices (i.e., unbinned), parallelizing numpy is faster than parallelizing chi^2 calls, so want use_parallel = 0. Maybe also for Arm64.
@@ -513,16 +584,22 @@ print("use_parallel", use_parallel)
 BAO_data = load_BAO()
 
 if models_to_run.count("binnedrho"):
-    for include_BAO in [0, 1]:
-        for zbins in [[0.2, 0.5, 1.0, 2.0],
-                      [0.2, 0.5, 2.0, 4.0],
-                      [0.5, 1.0, 2.0],
-                      [0.5, 1.0, 2.2],
-                      [0.5, 2.0, 4.0],
-                      [0.2, 0.5, 1.0, 2.0, 4.0]]:
-            binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = zbins, include_BAO = include_BAO)
+    all_results = {}
+    for include_BAO in [1]:
+        for zbins in tqdm.tqdm([[0.2, 0.5, 1.0, 2.0],
+                                [0.2, 0.5, 1.0, 1.5, 2.0],
+                                [0.1, 0.2, 0.5, 1.0, 1.5, 2.0],
+                                [0.2, 0.5, 2.0, 4.0],
+                                [0.5, 1.0, 2.0],
+                                [0.5, 1.0, 1.6],
+                                [0.5, 1.0, 2.2],
+                                [0.5, 2.0, 4.0],
+                                [0.2, 0.5, 1.0, 2.0, 4.0]]):
+            all_results[(include_BAO, zbins)] = binned_constraints(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, zbins = zbins, include_BAO = include_BAO)
+    pickle.dump(all_results, open(get_output_pickle("binnedrho"), 'wb'))
+    
     del models_to_run[models_to_run.index("binnedrho")]
-
+    
 for model_to_run in models_to_run:
     make_contours(z_list = z_list, mu_list = mu_list, mu_invcov = mu_invcov, model = model_to_run)#"flatwCDM")#"LCDM")
 

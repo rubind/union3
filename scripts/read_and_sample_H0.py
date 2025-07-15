@@ -278,7 +278,11 @@ def read_data(params):
                 the_data["z_helio_list"] = append(the_data["z_helio_list"], this_redshift_helio
                                                 )
 
-                the_data["in_cluster"] = append(the_data["in_cluster"], helper_functions.read_param(snpath + "/lightfile", "Cluster"))
+                in_cluster = helper_functions.read_param(snpath + "/lightfile", "Cluster")
+                #if in_cluster == None:
+                #    in_cluster = 0
+                    
+                the_data["in_cluster"] = append(the_data["in_cluster"], in_cluster)
 
                 the_data["mobs_cut0"].append(kc_ifn0(this_redshift_helio))
                 the_data["mobs_cut1"].append(kc_ifn1(this_redshift_helio))
