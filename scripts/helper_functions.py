@@ -478,7 +478,7 @@ def write_latent_variables(the_data, fit_params):
             data_to_write.append(np.median(fit_params[key], axis = 0))
             headings.append(key)
         
-    writecol("true_table.txt", data_to_write,
+    writecol("latent_table.txt", data_to_write,
              headings = headings)
 
 
