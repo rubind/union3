@@ -1,10 +1,10 @@
 // Version History. Update in print statement in transformed data!
-// Version 1.5. First official release with new selection-effect and population model!
-// Version 1.6 (Sep-17-2020). Added full k-correction uncertainty propagation to selection-effect model.
-// Version 1.7 (Jan-26-2024). Fixed parameter limits on selection-effect model outl_mBx1c_uncertainties.
-// Version 1.71 (Sep-13-2024). Added lower limit to mobs_var_by_SN_except_c_R Thanks Aaron Do!
-// Version 1.8 (Oct-2024). Adding capability for distance ladder.
-// Version 1.81 (May-2025). Adding cluster mass-relation evolution.
+// Version 1.4. First official release with new selection-effect and population model!
+// Version 1.5 (Sep-17-2020). Added full k-correction uncertainty propagation to selection-effect model.
+// Version 1.6 (Jan-26-2024). Fixed parameter limits on selection-effect model outl_mBx1c_uncertainties.
+// Version 1.61 (Sep-13-2024). Added lower limit to mobs_var_by_SN_except_c_R Thanks Aaron Do!
+// Version 1.7 (Oct-2024). Adding capability for distance ladder.
+// Version 1.71 (May-2025). Adding cluster mass-relation evolution.
 
 
 data {
@@ -81,7 +81,7 @@ transformed data {
     // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
     // vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
 
-    print ("Version 1.81");
+    print ("Version 1.71");
 
     // locs [ 0.16913558  0.68695591  1.9434773 ]
     // sigs [ 0.11070724  0.330062    0.96505958]

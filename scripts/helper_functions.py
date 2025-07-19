@@ -5,6 +5,7 @@ from scipy.interpolate import interp1d, RectBivariateSpline
 import os
 import subprocess
 from astropy.io import fits
+from FileRead import writecol
 
 ################################################# File-Reading Functions ###################################################
 def clean_lines(lines, stringlist = [""]):
@@ -455,6 +456,31 @@ def remap_x1(x1, params):
     
 
 ################################################# Chain Functions ###################################################
+
+def write_latent_variables(the_data, fit_params):
+    assert len(the_data["snpaths"]) == len(fit_params["true_cR"][0])
+    assert len(the_data["snpaths"]) == len(fit_params["true_cB"][0])
+    assert len(the_data["snpaths"]) == len(fit_params["true_x1"][0])
+
+    data_to_write = [[item.split("/")[-1] for item in the_data["snpaths"]],
+                     stan_data["p_high_mass"],
+                     np.median(fit_params["true_x1"], axis = 0),
+                     np.std(fit_params["true_x1"], axis = 0, ddof=1),
+                     np.median(fit_params["true_cB"], axis = 0),
+                     np.std(fit_params["true_cB"], axis = 0, ddof=1),
+                     np.median(fit_params["true_cR"], axis = 0),
+                     np.std(fit_params["true_cR"], axis = 0, ddof=1)]
+
+    headings = ["SN", "Phigh", "true_x1", "dtrue_x1", "true_cB", "dtrue_cB", "true_cR", "dtrue_cR"]
+    
+    for key in fit_params:
+        if key.count("loglike_by_SN"] == 1:
+            data_to_write.append(np.median(fit_params[key], axis = 0))
+            headings.append(key)
+        
+    writecol("true_table.txt", data_to_write,
+             headings = headings)
+
 
 def gelman_rubin_R(samples):
     """samples should be an array (nsamples = n, nchains = m). This is the original formula without the sqrt!"""

@@ -213,11 +213,11 @@ def find_best_binned_improvement():
                     print("*"*42)
 
 
-
+"""
 BAO_data = load_BAO()
 find_best_binned_improvement()
-flskajfldskj
-                
+stop_here
+"""
 
 def get_minos(bestP, bestF, run_settings):
     this_minos = {}
