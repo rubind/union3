@@ -19,6 +19,11 @@ import Spectra
 
 true_H0 = 71.
 
+def do_it(cmd):
+    print(cmd)
+    return subprocess.getoutput(cmd)
+    
+
 def band_to_instr(band):
     if band[:4] == "sdss":
         return "SDSS"
@@ -171,7 +176,7 @@ def get_observed_SNe_volume_limited(nsne, dates, all_SNe, model):
     return observed_SNe
 
 
-def generate_p_for_one_SN_Union3(params, z):
+def generate_p_for_one_SN(params, z, min_date, max_date):
     if np.random.random() < params["outlierfrac"]:
         # Outlier
         p = dict(z = z, t0 = np.random.uniform(min_date, max_date),
@@ -192,7 +197,8 @@ def generate_p_for_one_SN_Union3(params, z):
                  delta_mB = np.sqrt(-1.),
                  delta_x1 = np.sqrt(-1.),
                  delta_c = np.sqrt(-1.),
-                 delta_mu = np.sqrt(-1.))
+                 delta_mu = np.sqrt(-1.),
+                 x1_slow = np.sqrt(-1.))
 
     else:
         p = dict(z = z,
@@ -215,7 +221,7 @@ def generate_p_for_one_SN_Union3(params, z):
 
             
         if opts.simtype == "Union3":
-            p = dict(latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
+            p.update(latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
                      latentcB = np.random.normal()*params["Rc"],
                      beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
                      latentcR = (np.random.exponential() - 1.)*params["tau_c"])
@@ -223,7 +229,7 @@ def generate_p_for_one_SN_Union3(params, z):
             p["x1_slow"] = np.random.random() <= params["frac_x1_slow_" + "high"*(p["mass"] > 10) + "low"*(p["mass"] <= 10)]
             slow_fast = ["fast", "slow"][p["x1_slow"]]
 
-            p = dict(latentx1 = np.random.normal()*params["Rx1_" + slow_fast] + params["x1_star_" + slow_fast],
+            p.update(latentx1 = np.random.normal()*params["Rx1_" + slow_fast] + params["x1_star_" + slow_fast],
                      latentcB = np.random.normal()*params["Rc_" + slow_fast] + params["c_star_" + slow_fast],
                      beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
                      latentcR = (np.random.exponential() - 1.)*params["tau_c"])
@@ -257,6 +263,7 @@ def generate_p_for_one_SN_Union3(params, z):
         p["delta_c"] = p["delta_mBx1c"][2]
 
         p["delta_mu"] = p["delta_mB"] + 0.14*p["delta_x1"] - 3.*p["delta_c"]
+    return p
 
     
 def make_dataset(wd, cal_offsets, dataset_ind):
@@ -369,7 +376,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
     
     all_SNe = []
     for z in zlist:        
-        p = 
+        p = generate_p_for_one_SN(params = params, z = z, min_date = min_date, max_date = max_date)
         all_SNe.append(p)
 
 
@@ -432,7 +439,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
 
 
     p_wd = wd.replace("dataset_", "UNITY_") + "/SN_params/"
-    subprocess.getoutput("mkdir -p " + p_wd)
+    do_it("mkdir -p " + p_wd)
 
 
     f_ladder = open(opts.prefixname + "/distance_ladder_true_vals_%03i.txt" % dataset_ind, 'a')
@@ -458,7 +465,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
         if observed_SNe[i]:
             SN_name = "SN%s%s%04i" % (z_range_key, all_SNe[i]["outlier"]*"O" + (1 - all_SNe[i]["outlier"])*"I", i)
             this_wd = wd + "/" + SN_name
-            subprocess.getoutput("mkdir -p " + this_wd)
+            do_it("mkdir -p " + this_wd)
 
 
             f = open(this_wd + "/lightfile", 'w')
@@ -528,7 +535,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             
     f_ladder.close()
 
-def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low, cosmomodel, distance_ladder_fl):
+def set_up_UNITY(wd, dataset_ind, oneDint, nocal, noselection, twopop, include_low, cosmomodel, distance_ladder_fl, two_x1):
     dataset_list = ["../dataset_S_%03i_v1.txt" % dataset_ind]*include_low*(opts.zrangekeys.count("S") > 0) + ["../dataset_L_%03i_v1.txt" % dataset_ind]*include_low*(opts.zrangekeys.count("L") > 0) + ["../dataset_H_%03i_v1.txt" % dataset_ind] + ["../dataset_V_%03i_v1.txt" % dataset_ind]*include_low
     dataset_list = str(dataset_list).replace(" ", "")
 
@@ -606,7 +613,7 @@ include_pec_cov		0
 separate_mass_x1c	1
 """ % (dataset_list,
        '"../mag_cuts.txt"'*(params["obs_mag_selection"]) + '"../mag_cuts_x0.txt"'*(1 - params["obs_mag_selection"]),
-       '"$UNITY/scripts/stan_code_H0.txt"'*(1 - noselection) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
+       '"$UNITY/scripts/stan_code_H0.txt"'*(1 - noselection)*(two_x1 == 0) + '"$UNITY/scripts/stan_code_x12.txt"'*(1 - noselection)*(two_x1 == 0) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
        '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
        distance_ladder_fl,
        population_model, 1 - oneDint, fix_Om))
@@ -632,7 +639,7 @@ export UNION=../
 
     f.close()
 
-pwd = subprocess.getoutput("pwd")
+pwd = do_it("pwd")
 
 
 parser = argparse.ArgumentParser()
@@ -661,7 +668,7 @@ opts = parser.parse_args()
 salt2_version = "salt3-f22"
 source = sncosmo.SALT3Source(modeldir = os.environ["PATHMODEL"] + "/" + salt2_version + "/")
 
-nonSALTkeys = ["latentmu", "MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "latentcB", "latentcR", "beta_R", "delta_mB", "delta_x1", "delta_c", "delta_mu", "outlier"]
+nonSALTkeys = ["latentmu", "MB", "mass", "delta_mBx1c", "latentMB", "latentx1", "latentc", "latentcB", "latentcR", "beta_R", "delta_mB", "delta_x1", "delta_c", "delta_mu", "outlier", "x1_slow"]
 
 dict_of_obsframe_filt = {}
 for filt in "griz":
@@ -696,11 +703,11 @@ if opts.simtype == "Union3":
                   beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
                   step_width = 0., #0.15,
                   outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
-else:
+elif opts.simtype == "Union3.1":
     params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperset = opts.nnearbyperset, ncalibperset = opts.ncalibperset,
                   ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
                   obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
-                  Rx1_fast = 0.8, R_x1_slow = 0.5,
+                  Rx1_fast = 0.8, Rx1_slow = 0.5,
                   x1_star_fast = -0.9, x1_star_slow = 0.5,
                   Rc_fast = 0.06, Rc_slow = 0.04,
                   c_star_fast = -0.05, c_star_slow = -0.08,
@@ -711,10 +718,11 @@ else:
                   beta_B = 2.1, beta_R = 3.8, delta_beta_R = 1.2, delta = 0.0, MB = -19.1, MB_fast_minus_slow = -0.14,
                   step_width = 0., #0.15,
                   outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
-
+else:
+    assert "Unknown type!" + str(opts.simtype)
     
-subprocess.getoutput("rm -fr " + opts.prefixname)
-subprocess.getoutput("mkdir " + opts.prefixname)
+do_it("rm -fr " + opts.prefixname)
+do_it("mkdir " + opts.prefixname)
 
 if params["volume_limited"]:
     nominal_mag_limits = dict(S = 19.0, L = 19.0, H = 24.0, V = 26.0)
@@ -947,7 +955,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
 
     for z_range_key in opts.zrangekeys:
         wd = opts.prefixname + "/dataset_%s_%03i/" % (z_range_key, dataset_ind)
-        subprocess.getoutput("mkdir " + wd)
+        do_it("mkdir " + wd)
         make_dataset(wd, cal_offsets = cal_offsets, dataset_ind = dataset_ind)
 
 
@@ -973,14 +981,14 @@ for dataset_ind in tqdm.trange(opts.ndataset):
 
     if opts.ncalibperset == 0:
         # Test dark energy
-        for include_low in [0] + [1]*ever_include_low:
-            for oneDint, nocal, noselection, twopop in ([0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
+        for include_low in [1]: #[0] + [1]*ever_include_low:
+            for oneDint, nocal, noselection, twopop, two_x1 in ([0, 0, 0, 0, 0], [0, 0, 0, 0, 1]): #[1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
                 for cosmomodel in [1]*(1 - include_low) + [5]*include_low:
                     wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
                                                                          "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
-                    subprocess.getoutput("mkdir " + wd)
+                    do_it("mkdir " + wd)
 
-                    set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel, distance_ladder_fl = "None")
+                    set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel, distance_ladder_fl = "None", two_x1 = two_x1)
 
                     f_UNITY[include_low].write("cd " + pwd + '\n')
                     f_UNITY[include_low].write("cd " + wd + '\n')
@@ -1000,7 +1008,7 @@ for dataset_ind in tqdm.trange(opts.ndataset):
         
         wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
                                                              "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
-        subprocess.getoutput("mkdir " + wd)
+        do_it("mkdir " + wd)
         
         set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel,
                      distance_ladder_fl = "../distance_ladder_obs_vals_common=%.3f_unexp=%.3f_%03i.txt" % (0.02, 0.0, dataset_ind))
