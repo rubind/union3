@@ -508,6 +508,15 @@ def make_dataset(wd, cal_offsets, dataset_ind):
                                                  phase = (these_dates - all_SNe[i]["t0"])/(1. + all_SNe[i]["z"]))
 
                     r_cov = np.clip(r_cov, -1, 1)
+
+                    while numpy.linalg.det(r_cov) == 0:
+                        print("Had to rescale!")
+                        tmp_scale = np.diag([0.2]*len(r_cov), dtype=np.float64)
+                        tmp_scale += 0.8
+
+                        r_cov *= tmp_scale
+                        
+                    
                     fluxcov = np.outer(fluxes, fluxes)*r_cov
                     #rcov = source.rcov_()
                     #fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab") # For SALT2, not SALT3
@@ -984,8 +993,8 @@ for dataset_ind in tqdm.trange(opts.ndataset):
         for include_low in [1]: #[0] + [1]*ever_include_low:
             for oneDint, nocal, noselection, twopop, two_x1 in ([0, 0, 0, 0, 0], [0, 0, 0, 0, 1]): #[1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 1, 1]): # [0, 1, 0, 0]
                 for cosmomodel in [1]*(1 - include_low) + [5]*include_low:
-                    wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
-                                                                         "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
+                    wd = opts.prefixname + "/UNITY%s%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
+                                                                           "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_twox1"*two_x1, "_cos=" + str(cosmomodel), dataset_ind)
                     do_it("mkdir " + wd)
 
                     set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel, distance_ladder_fl = "None", two_x1 = two_x1)
@@ -1006,8 +1015,8 @@ for dataset_ind in tqdm.trange(opts.ndataset):
         twopop = 0
         cosmomodel = 1
         
-        wd = opts.prefixname + "/UNITY%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
-                                                             "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "_cos=" + str(cosmomodel), dataset_ind)
+        wd = opts.prefixname + "/UNITY%s%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
+                                                               "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "twox1"*two_x1, "_cos=" + str(cosmomodel), dataset_ind)
         do_it("mkdir " + wd)
         
         set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel,

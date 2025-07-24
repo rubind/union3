@@ -47,7 +47,7 @@ def check_sampling(logfl):
 leave_running_jobs_alone = int(sys.argv[1])
 
 whoami = getoutput("whoami")
-grepout = getoutput("squeue | grep " + whoami + " | grep -v ' R '")
+grepout = getoutput("squeue | grep " + whoami + " | grep -v ' R ' | grep -v ' CG ' ")
 
 assert grepout.strip() == "", "Some jobs are still queued"
 

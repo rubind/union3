@@ -56,7 +56,7 @@ IG_extinction_coeff	0.001
 do_twoalphabeta		1
 threeD_unexplained	1
 
-iter			3000
+iter			2500
 n_jobs			4
 chains			4
 
@@ -100,7 +100,7 @@ separate_mass_x1c	1
     f.write("""#!/bin/bash
 #SBATCH --job-name=UNITY
 #SBATCH --partition=shared
-#SBATCH --time=1-12:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=1-18:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G # Memory per node my job requires
