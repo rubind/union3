@@ -48,16 +48,17 @@ def make_plot(keys, pltname):
 
 
     for key in keys:
-        if key.count(":") == 0:
-            if np.std(fit_params[key]) > 0:
-                samples.append(fit_params[key])
-                labels.append(get_label(key))
-        else:
-            ind = int(key.split(":")[-1])
-            if np.std(fit_params[key.split(":")[0]][:,ind]) > 0:
-                samples.append(fit_params[key.split(":")[0]][:,ind])
-                print("taking ", ind, key)
-                labels.append(get_label(key))
+        if key in fit_params:
+            if key.count(":") == 0:
+                if np.std(fit_params[key]) > 0:
+                    samples.append(fit_params[key])
+                    labels.append(get_label(key))
+            else:
+                ind = int(key.split(":")[-1])
+                if np.std(fit_params[key.split(":")[0]][:,ind]) > 0:
+                    samples.append(fit_params[key.split(":")[0]][:,ind])
+                    print("taking ", ind, key)
+                    labels.append(get_label(key))
 
 
     kde_corner(samples, labels, bw_method = 0.2, colors = [[(104/255., 140/255., 184/255.), (37/255., 85/255., 145/255.)]], ax_limits = [(item.min(), item.max()) for item in samples], labelfontsize = 14)
@@ -108,7 +109,7 @@ for pfl in pfls:
     
 if plt_choice == 0:
     
-    make_plot(["H0"]*has_H0 + ["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "MB:0"] + ["step_mass"]*("step_mass" in fit_params) + ["mass_width"]*("mass_width" in fit_params) + ["delta_0", "delta_h"], "standardization_coeffs.pdf")
+    make_plot(["H0"]*has_H0 + ["Om", "alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R", "delta_beta_R", "MB:0"] + ["step_mass", "mass_width"] + ["delta_0", "delta_h"], "standardization_coeffs.pdf")
 elif plt_choice == 1:
     try:
         fit_params["outl_mBx1c_uncertainties_mB"]

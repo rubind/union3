@@ -1060,7 +1060,7 @@ except:
 
 #summarize_parameters(fit_params)
 
-helper_functions.write_latent_variables(the_data = the_data, fit_params = fit_params)
+helper_functions.write_latent_variables(the_data = the_data, stan_data = stan_data, fit_params = fit_params)
 
 
 try:

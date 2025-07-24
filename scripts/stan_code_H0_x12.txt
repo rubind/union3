@@ -562,8 +562,7 @@ model {
     
 
     if (do_twoalphabeta == 0) {
-       beta_angle_blue_fast ~ normal(0, 1);
-       beta_angle_blue_slow ~ normal(0, 1);
+       beta_angle_blue ~ normal(0, 1);
     }
 
     outl_mBx1c_uncertainties_mB ~ normal(0.5, 0.5);

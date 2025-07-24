@@ -81,7 +81,11 @@ def approxmB(model, date, redshift):
     return -2.5*np.log10(x0 * np.exp(  -0.5*(   (date - t0)/width_around_t0   )**2.  )
                          )
 
-def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key):
+def mag_to_negflux(mag, obs_err):
+    return -10.**(-0.4*(mag - 27.5)) + np.random.normal()*obs_err
+
+
+def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key, obs_err):
     observed_SNe = np.array([all_SNe[i]["z"] < 0.01 for i in range(nsne)], dtype=np.int32) #np.zeros(nsne, dtype=np.int16)
     
     for night in dates:
@@ -92,13 +96,13 @@ def get_observed_SNe_followup_limited(nsne, dates, all_SNe, model, z_range_key):
                 model = get_SNCosmo_model(all_SNe[i], source)
                 if params["obs_mag_selection"]:
                     if z_range_key == "L" or z_range_key == "S":
-                        all_mags.append(model.bandmag("sdssr", "ab", night))
+                        all_mags.append(mag_to_negflux(model.bandmag("sdssr", "ab", night), obs_err = obs_err))
                     elif z_range_key == "H":
-                        all_mags.append(model.bandmag("sdssi", "ab", night))
+                        all_mags.append(mag_to_negflux(model.bandmag("sdssi", "ab", night), obs_err = obs_err))
                     else:
                         raise Exception("Unknown z_range_key " + z_range_key)
                 else:
-                    all_mags.append(approxmB(model, night, all_SNe[i]["z"]))
+                    all_mags.append(mag_to_negflux(approxmB(model, night, all_SNe[i]["z"]), obs_err = obs_err))
             else:
                 all_mags.append(1e20)
                 
@@ -167,6 +171,94 @@ def get_observed_SNe_volume_limited(nsne, dates, all_SNe, model):
     return observed_SNe
 
 
+def generate_p_for_one_SN_Union3(params, z):
+    if np.random.random() < params["outlierfrac"]:
+        # Outlier
+        p = dict(z = z, t0 = np.random.uniform(min_date, max_date),
+                 outlier = 1,
+                 MB = params["MB"] + np.random.normal()*0.5,
+                 x1 = np.random.normal()*2,
+                 c = np.random.normal()*0.2,
+                 mass = 10. + np.random.normal(),
+
+                 latentmu = np.sqrt(-1.),
+                 latentMB = np.sqrt(-1.),
+                 latentx1 = np.sqrt(-1.),
+                 latentc = np.sqrt(-1.),
+                 latentcB = np.sqrt(-1.),
+                 latentcR = np.sqrt(-1.),
+                 beta_R = np.sqrt(-1.),
+                 delta_mBx1c = np.sqrt(-1*np.ones(3)),
+                 delta_mB = np.sqrt(-1.),
+                 delta_x1 = np.sqrt(-1.),
+                 delta_c = np.sqrt(-1.),
+                 delta_mu = np.sqrt(-1.))
+
+    else:
+        p = dict(z = z,
+                 outlier = 0,
+                 t0 = np.random.uniform(min_date, max_date))
+        
+        if z >= 0.01:
+            pec_vel_variance = (0.00217/z)**2.
+            p["mass"] = 10. + np.random.normal()
+        else:
+            # Calibrator
+            pec_vel_variance = 0.
+            p["mass"] = 10.4 + np.random.normal()
+
+        relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
+        relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
+        P_high_eff = relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*np.sqrt(0.03**2. + params["step_width"]**2.))   ))
+
+        mass_term = -params["delta"]*P_high_eff
+
+            
+        if opts.simtype == "Union3":
+            p = dict(latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
+                     latentcB = np.random.normal()*params["Rc"],
+                     beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
+                     latentcR = (np.random.exponential() - 1.)*params["tau_c"])
+        else:
+            p["x1_slow"] = np.random.random() <= params["frac_x1_slow_" + "high"*(p["mass"] > 10) + "low"*(p["mass"] <= 10)]
+            slow_fast = ["fast", "slow"][p["x1_slow"]]
+
+            p = dict(latentx1 = np.random.normal()*params["Rx1_" + slow_fast] + params["x1_star_" + slow_fast],
+                     latentcB = np.random.normal()*params["Rc_" + slow_fast] + params["c_star_" + slow_fast],
+                     beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
+                     latentcR = (np.random.exponential() - 1.)*params["tau_c"])
+
+            
+        p["latentc"] = p["latentcB"] + p["latentcR"]
+        p["beta_R"] += relative_step_z*(0.5 - P_high_eff)*params["delta_beta_R"]
+
+        p["latentMB"] = params["MB"] + (1. - p["x1_slow"])*params["MB_fast_minus_slow"] - params["alpha"]*p["latentx1"] + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
+
+
+        if opts.simtype == "Union3":
+            p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + pec_vel_variance),
+                                                                    params["sigma_unexplained_3d"][1],
+                                                                    params["sigma_unexplained_3d"][2]])
+        else:
+            p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d_" + slow_fast][0]**2. + (0.055*z)**2. + pec_vel_variance),
+                                                                    params["sigma_unexplained_3d_" + slow_fast][1],
+                                                                    params["sigma_unexplained_3d_" + slow_fast][2]])
+ 
+            
+        p["MB"] = p["latentMB"] + p["delta_mBx1c"][0]
+        p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
+        p["c"] = p["latentc"] + p["delta_mBx1c"][2]
+
+        cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
+        p["latentmu"] = cosmo.distmod(p["z"]).value
+
+        p["delta_mB"] = p["delta_mBx1c"][0]
+        p["delta_x1"] = p["delta_mBx1c"][1]
+        p["delta_c"] = p["delta_mBx1c"][2]
+
+        p["delta_mu"] = p["delta_mB"] + 0.14*p["delta_x1"] - 3.*p["delta_c"]
+
+    
 def make_dataset(wd, cal_offsets, dataset_ind):
     z_range_key = "ABC"
 
@@ -277,74 +369,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
     
     all_SNe = []
     for z in zlist:        
-        if np.random.random() < params["outlierfrac"]:
-            # Outlier
-            p = dict(z = z, t0 = np.random.uniform(min_date, max_date),
-                     outlier = 1,
-                     MB = params["MB"] + np.random.normal()*0.5,
-                     x1 = np.random.normal()*2,
-                     c = np.random.normal()*0.2,
-                     mass = 10. + np.random.normal(),
-
-                     latentmu = np.sqrt(-1.),
-                     latentMB = np.sqrt(-1.),
-                     latentx1 = np.sqrt(-1.),
-                     latentc = np.sqrt(-1.),
-                     latentcB = np.sqrt(-1.),
-                     latentcR = np.sqrt(-1.),
-                     beta_R = np.sqrt(-1.),
-                     delta_mBx1c = np.sqrt(-1*np.ones(3)),
-                     delta_mB = np.sqrt(-1.),
-                     delta_x1 = np.sqrt(-1.),
-                     delta_c = np.sqrt(-1.),
-                     delta_mu = np.sqrt(-1.))
-
-        else:
-            p = dict(z = z,
-                     outlier = 0,
-                     t0 = np.random.uniform(min_date, max_date),
-                     latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
-                     latentcB = np.random.normal()*params["Rc"],
-                     beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
-                     latentcR = (np.random.exponential() - 1.)*params["tau_c"])
-            p["latentc"] = p["latentcB"] + p["latentcR"]
-            
-            if z >= 0.01:
-                pec_vel_variance = (0.00217/z)**2.
-                p["mass"] = 10. + np.random.normal()
-            else:
-                # Calibrator
-                pec_vel_variance = 0.
-                p["mass"] = 10.4 + np.random.normal()
-
-            
-            relative_step_z = 1.9/(1. + 0.9*10.**(0.95*p["z"]))
-            relative_step_z = relative_step_z*(1 - params["delta_h"]) + params["delta_h"]
-            P_high_eff = relative_step_z * 0.5*(1. + erf(   (p["mass"] - 10.)/(1.414*np.sqrt(0.05**2. + params["step_width"]**2.))   ))
-            
-            mass_term = -params["delta"]*P_high_eff
-
-            p["beta_R"] += relative_step_z*(0.5 - P_high_eff)*params["delta_beta_R"]
-
-            p["latentMB"] = params["MB"] - params["alpha"]*p["latentx1"] + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
-
-                
-            p["delta_mBx1c"] = np.random.normal(size = 3)*np.array([np.sqrt(params["sigma_unexplained_3d"][0]**2. + (0.055*z)**2. + pec_vel_variance),
-                                                                    params["sigma_unexplained_3d"][1],
-                                                                    params["sigma_unexplained_3d"][2]])
-            p["MB"] = p["latentMB"] + p["delta_mBx1c"][0]
-            p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
-            p["c"] = p["latentc"] + p["delta_mBx1c"][2]
-
-            cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
-            p["latentmu"] = cosmo.distmod(p["z"]).value
-
-            p["delta_mB"] = p["delta_mBx1c"][0]
-            p["delta_x1"] = p["delta_mBx1c"][1]
-            p["delta_c"] = p["delta_mBx1c"][2]
-
-            p["delta_mu"] = p["delta_mB"] + 0.14*p["delta_x1"] - 3.*p["delta_c"]
-
+        p = 
         all_SNe.append(p)
 
 
@@ -356,7 +381,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             else:
                 observed_SNe = get_observed_SNe_mag_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, mag_limit = 16.5, sigma_mag_limit = 0.25, z_range_key = z_range_key)
         else:
-            observed_SNe = get_observed_SNe_followup_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, z_range_key = z_range_key)
+            observed_SNe = get_observed_SNe_followup_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model, z_range_key = z_range_key, obs_err = obs_err)
     else:
         observed_SNe = get_observed_SNe_volume_limited(nsne = nsne, dates = dates, all_SNe = all_SNe, model = model)
 
@@ -442,7 +467,7 @@ def make_dataset(wd, cal_offsets, dataset_ind):
             f.write("MWEBV 0.0\n")
             f.write("RA  0.0\n")
             f.write("DEC  0.0\n")
-            f.write("Mass  %f  -0.05  0.05\n" % all_SNe[i]["mass"])
+            f.write("Mass  %f  -0.03  0.03\n" % all_SNe[i]["mass"])
             f.close()
             
             if all_SNe[i]["z"] < 0.01:
@@ -626,6 +651,7 @@ parser.add_argument('--sigzp', help="Zeropoint Uncertainty Size", type=float)
 parser.add_argument('--nvisit', help="Number of visits", type=int, default = 200)
 parser.add_argument('--sigmabetaR', help="Scatter in beta_R", type=float)
 parser.add_argument("--sigunexplained", help="Unexplained dispersion", type=float, default=0.12)
+parser.add_argument("--simtype", help="Union3 or Union3.1", type=str)
 
 
 
@@ -659,16 +685,34 @@ if opts.zrangekeys.count("S"):
 SN_rate_function = interp1d(tmpx, tmpy*1e-4, kind = 'linear')
 
 
-params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperset = opts.nnearbyperset, ncalibperset = opts.ncalibperset,
-              ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
-              obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
-              Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
-              Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
-              tot_sig_unexplained = opts.sigunexplained, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
-              beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
-              step_width = 0., #0.15,
-              outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
+if opts.simtype == "Union3":
+    params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperset = opts.nnearbyperset, ncalibperset = opts.ncalibperset,
+                  ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
+                  obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
+                  Rx1 = 0.5 + 0.45*(1 - opts.skewdist), tau_x1 = -0.8*opts.skewdist,
+                  Rc = 0.05 + 0.035*(1 - opts.skewdist), tau_c = 0.07*opts.skewdist,
+                  tot_sig_unexplained = opts.sigunexplained, sigma_int_fast = 0.,
+                  alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
+                  beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
+                  step_width = 0., #0.15,
+                  outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
+else:
+    params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperset = opts.nnearbyperset, ncalibperset = opts.ncalibperset,
+                  ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
+                  obs_mag_selection = opts.obsmagselection, volume_limited = opts.volumelimited, modeluncertainty = opts.modeluncertainty,
+                  Rx1_fast = 0.8, R_x1_slow = 0.5,
+                  x1_star_fast = -0.9, x1_star_slow = 0.5,
+                  Rc_fast = 0.06, Rc_slow = 0.04,
+                  c_star_fast = -0.05, c_star_slow = -0.08,
+                  frac_x1_slow_high = 0.5, frac_x1_slow_low = 0.8,
+                  
+                  tau_c = 0.07*opts.skewdist,
+                  tot_sig_unexplained = opts.sigunexplained, sigma_int_fast = 0.08, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
+                  beta_B = 2.1, beta_R = 3.8, delta_beta_R = 1.2, delta = 0.0, MB = -19.1, MB_fast_minus_slow = -0.14,
+                  step_width = 0., #0.15,
+                  outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
 
+    
 subprocess.getoutput("rm -fr " + opts.prefixname)
 subprocess.getoutput("mkdir " + opts.prefixname)
 
@@ -883,6 +927,13 @@ for dataset_ind in tqdm.trange(opts.ndataset):
                                       params["tot_sig_unexplained"]*np.sqrt(params["frac_var_mBx1c"][1])/0.14,
                                       params["tot_sig_unexplained"]*np.sqrt(params["frac_var_mBx1c"][2])/3.]
 
+    params["sigma_unexplained_3d_slow"] = params["sigma_unexplained_3d"]
+    
+    params["sigma_unexplained_3d_fast"] = [np.sqrt(params["tot_sig_unexplained"]**2. + params["sigma_int_fast"]**2.)*np.sqrt(params["frac_var_mBx1c"][0]),
+                                           np.sqrt(params["tot_sig_unexplained"]**2. + params["sigma_int_fast"]**2.)*np.sqrt(params["frac_var_mBx1c"][1])/0.14,
+                                           np.sqrt(params["tot_sig_unexplained"]**2. + params["sigma_int_fast"]**2.)*np.sqrt(params["frac_var_mBx1c"][2])/3.]
+
+    
     assert np.isclose(params["tot_sig_unexplained"], np.sqrt(
         params["sigma_unexplained_3d"][0]**2.
         + (0.14*params["sigma_unexplained_3d"][1])**2.
