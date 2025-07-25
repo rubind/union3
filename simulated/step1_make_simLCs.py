@@ -186,7 +186,6 @@ def generate_p_for_one_SN(params, z, min_date, max_date):
                  c = np.random.normal()*0.2,
                  mass = 10. + np.random.normal(),
 
-                 latentmu = np.sqrt(-1.),
                  latentMB = np.sqrt(-1.),
                  latentx1 = np.sqrt(-1.),
                  latentc = np.sqrt(-1.),
@@ -255,14 +254,15 @@ def generate_p_for_one_SN(params, z, min_date, max_date):
         p["x1"] = p["latentx1"] + p["delta_mBx1c"][1]
         p["c"] = p["latentc"] + p["delta_mBx1c"][2]
 
-        cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
-        p["latentmu"] = cosmo.distmod(p["z"]).value
 
         p["delta_mB"] = p["delta_mBx1c"][0]
         p["delta_x1"] = p["delta_mBx1c"][1]
         p["delta_c"] = p["delta_mBx1c"][2]
 
         p["delta_mu"] = p["delta_mB"] + 0.14*p["delta_x1"] - 3.*p["delta_c"]
+        
+    cosmo = FlatLambdaCDM(Om0 = 0.3, H0 = true_H0)
+    p["latentmu"] = cosmo.distmod(p["z"]).value
     return p
 
     
