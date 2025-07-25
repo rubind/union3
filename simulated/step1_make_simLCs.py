@@ -509,21 +509,20 @@ def make_dataset(wd, cal_offsets, dataset_ind):
 
                     r_cov = np.clip(r_cov, -1, 1)
 
-                    while numpy.linalg.det(r_cov) == 0:
-                        print("Had to rescale!")
-                        tmp_scale = np.diag([0.2]*len(r_cov), dtype=np.float64)
-                        tmp_scale += 0.8
-
-                        r_cov *= tmp_scale
-                        
-                    
                     fluxcov = np.outer(fluxes, fluxes)*r_cov
                     #rcov = source.rcov_()
                     #fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab") # For SALT2, not SALT3
                     
+                    try:
+                        model_fluxes = fluxes + np.random.multivariate_normal(mean = fluxes*0.,
+                                                                              cov = fluxcov*(opts.modeluncertainty*0.9999 + 0.0001))
 
-                    model_fluxes = fluxes + np.random.multivariate_normal(mean = fluxes*0.,
-                                                                                cov = fluxcov*(opts.modeluncertainty*0.9999 + 0.0001))
+                    except:
+                        print("Couldn't get", list(r_cov))
+                        print(list(fluxcov))
+
+                        fldkasjfdlkjfds
+                        
                     obs_fluxes = model_fluxes + np.random.normal(size = len(model_fluxes))*obs_err*opts.addnoise
                     
                     f = open(this_wd + "/lc2fit_" + band + ".dat", 'w')
@@ -1014,21 +1013,22 @@ for dataset_ind in tqdm.trange(opts.ndataset):
         noselection = 0
         twopop = 0
         cosmomodel = 1
+        for two_x1 in [0, 1]:
         
-        wd = opts.prefixname + "/UNITY%s%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
-                                                               "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "twox1"*two_x1, "_cos=" + str(cosmomodel), dataset_ind)
-        do_it("mkdir " + wd)
-        
-        set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel,
-                     distance_ladder_fl = "../distance_ladder_obs_vals_common=%.3f_unexp=%.3f_%03i.txt" % (0.02, 0.0, dataset_ind))
+            wd = opts.prefixname + "/UNITY%s%s%s%s%s%s%s_%03i/" % ("L"*include_low + "H", "_1D"*oneDint,
+                                                                   "_nocal"*nocal, "_nosel"*noselection, "_twopop"*twopop, "twox1"*two_x1, "_cos=" + str(cosmomodel), dataset_ind)
+            do_it("mkdir " + wd)
+            
+            set_up_UNITY(wd, dataset_ind = dataset_ind, oneDint = oneDint, nocal = nocal, noselection = noselection, twopop = twopop, include_low = include_low, cosmomodel = cosmomodel, two_x1=two_x1,
+                         distance_ladder_fl = "../distance_ladder_obs_vals_common=%.3f_unexp=%.3f_%03i.txt" % (0.02, 0.0, dataset_ind))
 
-        f_UNITY[include_low].write("cd " + pwd + '\n')
-        f_UNITY[include_low].write("cd " + wd + '\n')
-        f_UNITY[include_low].write("sbatch run.sh\n")
-        
-        f_interleave.write("cd " + pwd + '\n')
-        f_interleave.write("cd " + wd + '\n')
-        f_interleave.write("sbatch run.sh\n")
+            f_UNITY[include_low].write("cd " + pwd + '\n')
+            f_UNITY[include_low].write("cd " + wd + '\n')
+            f_UNITY[include_low].write("sbatch run.sh\n")
+            
+            f_interleave.write("cd " + pwd + '\n')
+            f_interleave.write("cd " + wd + '\n')
+            f_interleave.write("sbatch run.sh\n")
 
         
         
