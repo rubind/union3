@@ -492,7 +492,9 @@ def make_dataset(wd, cal_offsets, dataset_ind):
                   
                 try:
                     fluxes = model.bandflux(band, these_dates, zp = 27.5, zpsys = "ab")
-
+                    if np.any(np.isnan(fluxes)):
+                        print("NaN found!", list(fluxes))
+                        raise_time
                     good_band = 1
                 except:
                     print("Couldn't get band", all_SNe[i]["z"], band)
@@ -513,15 +515,9 @@ def make_dataset(wd, cal_offsets, dataset_ind):
                     #rcov = source.rcov_()
                     #fluxes, fluxcov = model.bandfluxcov(band, all_SNe[i]["t0"], zp = 27.5, zpsys = "ab") # For SALT2, not SALT3
                     
-                    try:
-                        model_fluxes = fluxes + np.random.multivariate_normal(mean = fluxes*0.,
-                                                                              cov = fluxcov*(opts.modeluncertainty*0.9999 + 0.0001))
 
-                    except:
-                        print("Couldn't get", list(r_cov))
-                        print(list(fluxcov))
-
-                        fldkasjfdlkjfds
+                    model_fluxes = fluxes + np.random.multivariate_normal(mean = fluxes*0.,
+                                                                          cov = fluxcov*(opts.modeluncertainty*0.9999 + 0.0001))
                         
                     obs_fluxes = model_fluxes + np.random.normal(size = len(model_fluxes))*obs_err*opts.addnoise
                     
