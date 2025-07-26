@@ -629,7 +629,7 @@ separate_mass_x1c	1
     f = open(wd + "run.sh", 'w')
     f.write("""#!/bin/bash
 #SBATCH --job-name=example
-#SBATCH --partition=shared
+#SBATCH --partition=""" + opts.UQ + """
 #SBATCH --time=0-""" + str(int(5 + 6*opts.nvisit/200 + 6*include_low*opts.nvisit/200)) + """:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
@@ -668,6 +668,7 @@ parser.add_argument('--sigmabetaR', help="Scatter in beta_R", type=float)
 parser.add_argument("--sigunexplained", help="Unexplained dispersion", type=float, default=0.12)
 parser.add_argument("--simtype", help="Union3 or Union3.1", type=str)
 parser.add_argument("--outlfrac", help="Outlier Fraction", type=float)
+parser.add_argument("--UQ", help="Queue for UNITY", type=str)
 
 
 

@@ -10,7 +10,7 @@
 source ~/.bash_profile
 cd /home/drubin/union3/simulated
 
-python step1_make_simLCs.py --ndataset 20 --addnoise 1 --addcalibration 1 --modeluncertainty 1 --prefixname /home/drubin/koa_scratch/sim_data_simplex_H0 --skewdist 1 --volumelimited 0 --obsmagselection 1 --zrangekeys SLHV --sigzp 0.01 --ncalibperset 20 --sigmabetaR 0.0 --nnearbyperset 200 --nvisit 200  --simtype Union3.1
+python step1_make_simLCs.py --ndataset 20 --addnoise 1 --addcalibration 1 --modeluncertainty 1 --prefixname /home/drubin/koa_scratch/sim_data_simplex_H0 --skewdist 1 --volumelimited 0 --obsmagselection 1 --zrangekeys SLHV --sigzp 0.01 --ncalibperset 20 --sigmabetaR 0.0 --nnearbyperset 200 --nvisit 200  --simtype Union3.1 --outlfrac 0.015 --sigunexplained 0.08 --UQ kill-shared
 
 cd /home/drubin/koa_scratch/sim_data_simplex_H0
 python /home/drubin/salt2_union//python_code/slurmfit.py 10 dontsort --write_files 0 
@@ -18,5 +18,4 @@ python /home/drubin/SimpleBayesJLA/wait_for_one_job.py
 python /home/drubin/salt2_union//python_code/slurmfit.py 10 dontsort --write_files 0
 python /home/drubin/SimpleBayesJLA/wait_for_one_job.py
 
-grep -v 1D run_interleave.sh | grep -v nosel > run_interleave2.sh
-sbatch run_interleave2.sh
+sbatch run_interleave.sh
