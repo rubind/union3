@@ -223,15 +223,16 @@ def generate_p_for_one_SN(params, z, min_date, max_date):
             p.update(latentx1 = np.random.normal()*params["Rx1"] + (np.random.exponential() - 1.)*params["tau_x1"],
                      latentcB = np.random.normal()*params["Rc"],
                      beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
-                     latentcR = (np.random.exponential() - 1.)*params["tau_c"])
+                     latentcR = np.random.exponential() * params["tau_c"])
         else:
-            p["x1_slow"] = np.random.random() <= params["frac_x1_slow_" + "high"*(p["mass"] > 10) + "low"*(p["mass"] <= 10)]
+            high_low = "high"*(p["mass"] > 10) + "low"*(p["mass"] <= 10)
+            p["x1_slow"] = np.random.random() <= params["frac_x1_slow_" + high_low]
             slow_fast = ["fast", "slow"][p["x1_slow"]]
 
             p.update(latentx1 = np.random.normal()*params["Rx1_" + slow_fast] + params["x1_star_" + slow_fast],
                      latentcB = np.random.normal()*params["Rc_" + slow_fast] + params["c_star_" + slow_fast],
                      beta_R = params["beta_R"] + np.random.normal()*params["sigma_beta_R"],
-                     latentcR = (np.random.exponential() - 1.)*params["tau_c"])
+                     latentcR = np.random.exponential() * params["tau_c"])
 
             
         p["latentc"] = p["latentcB"] + p["latentcR"]
@@ -593,7 +594,7 @@ pec_vel_disp		0.001
 # Units of magnitudes per redshift
 lensing_disp		0.055
 MWEBV_zeropoint_EBV	0.0001
-outl_frac		0.02
+outl_frac		%.4f
 redshift_coeff_type     %s
 electron_coeff		[0.000042,0.0000042]
 IG_extinction_coeff	0.0001
@@ -620,6 +621,7 @@ separate_mass_x1c	1
        '"$UNITY/scripts/stan_code_H0.txt"'*(1 - noselection)*(two_x1 == 0) + '"$UNITY/scripts/stan_code_x12.txt"'*(1 - noselection)*(two_x1 == 1) + '"$UNITY/scripts/stan_code_simple_no_sel.txt"'*noselection,
        '"../calibration_uncertainties.txt"'*(1 - nocal) + '"../calibration_uncertainties_small.txt"'*nocal,
        distance_ladder_fl,
+       params["outlierfrac"],
        population_model, 1 - oneDint, fix_Om))
     f.close()
 
@@ -663,6 +665,7 @@ parser.add_argument('--nvisit', help="Number of visits", type=int, default = 200
 parser.add_argument('--sigmabetaR', help="Scatter in beta_R", type=float)
 parser.add_argument("--sigunexplained", help="Unexplained dispersion", type=float, default=0.12)
 parser.add_argument("--simtype", help="Union3 or Union3.1", type=str)
+parser.add_argument("--outlfrac", help="Outlier Fraction", type=float)
 
 
 
@@ -706,7 +709,7 @@ if opts.simtype == "Union3":
                   alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
                   beta_B = 3.1, beta_R = 3.1, delta_beta_R = 0., delta = 0.08, MB = -19.1,
                   step_width = 0., #0.15,
-                  outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
+                  outlierfrac = opts.outlfrac, sigzp = opts.sigzp, true_H0 = true_H0)
 elif opts.simtype == "Union3.1":
     params = dict(salt2_version = salt2_version, n_visit = opts.nvisit, nnearbyperset = opts.nnearbyperset, ncalibperset = opts.ncalibperset,
                   ndeg2 = 10., nsnepernight = 3, ndataset = opts.ndataset, cadence = 4., HST_cadence = 17., HST_visit = 6.,
@@ -721,7 +724,7 @@ elif opts.simtype == "Union3.1":
                   tot_sig_unexplained = opts.sigunexplained, sigma_int_fast = 0.08, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
                   beta_B = 2.1, beta_R = 3.8, delta_beta_R = 1.2, delta = 0.0, MB = -19.1, MB_fast_minus_slow = -0.14,
                   step_width = 0., #0.15,
-                  outlierfrac = 0.02, sigzp = opts.sigzp, true_H0 = true_H0)
+                  outlierfrac = opts.outlfrac, sigzp = opts.sigzp, true_H0 = true_H0)
 else:
     assert "Unknown type!" + str(opts.simtype)
     
