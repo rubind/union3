@@ -573,6 +573,7 @@ do_blind		0
 filenamelist		%s
 
 weird_sn_list		"../weird_sn_list.txt"
+blinding_fl             "$UNITY/paramfiles/z_mu_dmudOm_w0wa.txt"
 mag_cut			%s
 stan_code		%s
 sample_file		"None"
