@@ -227,7 +227,8 @@ for i in range(len(pars)):
 tmp_ind = 0
 
 for matchstr, description in [
-        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "Nominal UNITY1.6 Model")]:
+        ("UNITY" + suffix + "twox1_cos=" + cosmomodel + "_???", "UNITY1.8, Two-$x_1$ Modes")]:
+        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "UNITY1.7")]:
         #("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "Improved Outlier Limits"),
         #("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???", "No Selection Effects"),
         #("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Sel. Eff., $z$-Dep. Pop.")]:
