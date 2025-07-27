@@ -131,8 +131,7 @@ try:
     suffix = sys.argv[1]
     cosmomodel = sys.argv[2]
 except:
-    print("Needs suffix like LH or H")
-    assert 0
+    assert 0, "Needs suffix like LH or H"
     
 
 datasetkeys = []
@@ -143,13 +142,14 @@ for tmpind in range(1 + (suffix == "LH")*3):
     datasetkeys.append("sigma_int[%i]" % (tmpind + 1))
 
     
-pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
+pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "MB_fast_minus_slow"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
 
 
 labels = {"H0": "$H_0$",
           "Om": "$\Omega_m$", "wDE": "$w_0$",
           "wpivot12": "$w_0 + 0.12\;w_a$", "wpivot15": "$w_0 + 0.15\;w_a$", "wpivot18": "$w_0 + 0.18\;w_a$",
-          "waDE": "$w_a$", "this_MB": "$\mathcal{M}_B$", "alpha": "$\\alpha$",
+          "waDE": "$w_a$", "this_MB": "$\mathcal{M}_B$", "MB_fast_minus_slow": "$\mathcal{M}_B$ fast $-$ slow",
+          "alpha": "$\\alpha$", "alpha_fast": "$\\alpha$ fast", "alpha_slow": "$\\alpha$ slow",
           "beta_B": "$\\beta_B$",
           "beta_R_low": "$\\beta_{RL}$",
           "beta_R_high": "$\\beta_{RH}$",
@@ -158,18 +158,22 @@ labels = {"H0": "$H_0$",
           "mobs_cuts[1]": "$m_{50}$",
           "mobs_cut_sigmas[1]": "$\sigma_m$",
           "sigma_int[1]": "$\sigma^{\mathrm{unexpl}}$",
+          "sigma_int_fast": "$\sigma^{\mathrm{unexpl}}$ fast",
           "mBx1c_int_variance[1]": "$f^{m_B}$",
           "mBx1c_int_variance[2]": "$f^{x_1}$",
           "mBx1c_int_variance[3]": "$f^{c}$",
           "outl_frac": "$f^{\mathrm{outl}}$"}
 
 true_vals = {"H0": 71, "Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
-             "alpha": 0.15, "beta_B": 3.1, "beta_R_low": 3.1, "beta_R_high": 3.1,
-             "delta_0": 0.08,
+             "MB_fast_minus_slow": -0.14,
+             "alpha": 0.15, "alpha_fast": 0.15, "alpha_slow": 0.15,
+             "beta_B": 2.1, "beta_R_low": 4.4, "beta_R_high": 3.2,
+             "delta_0": 0.0,
              "delta_h": "$\mathcal{U}(0,\ 1)$",
              "mobs_cuts[1]": "\\nodata",
              "mobs_cut_sigmas[1]": "\\nodata",
-             "sigma_int[1]": 0.12,
+             "sigma_int[1]": 0.08,
+             "sigma_int_fast": 0.08,
              "mBx1c_int_variance[1]": "Simplex",
              "mBx1c_int_variance[2]": "Simplex",
              "mBx1c_int_variance[3]": "Simplex",
@@ -182,7 +186,7 @@ if suffix == "LH":
         labels["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "$\sigma_m$ %s-$z$" % tmpkey
         labels["sigma_int[%i]" % (tmpind + 1)] = "$\sigma^{\mathrm{unexpl}}$ %s-$z$" % tmpkey
 
-        true_vals["sigma_int[%i]" % (tmpind + 1)] = 0.12
+        true_vals["sigma_int[%i]" % (tmpind + 1)] = 0.08
         #if tmpkey != "High":
         true_vals["mobs_cuts[%i]" % (tmpind + 1)] = "\\nodata"
         true_vals["mobs_cut_sigmas[%i]" % (tmpind + 1)] = "\\nodata"
@@ -211,6 +215,7 @@ all_txt_grid = []
 all_fmB_true = []
 all_fmB_posterior = []
 
+"""
 fig = plt.figure(figsize = (12, 0.8*len(pars)))
 
 all_ax = []
@@ -220,14 +225,14 @@ for i in range(len(pars)):
         all_ax[i].append(
             bbox_subplot(i = i, j = j, pars = pars, fig = fig, add_label = (i == 0)*(j == 0))
         )
-
+"""
 
 
 
 tmp_ind = 0
 
 for matchstr, description in [
-        ("UNITY" + suffix + "twox1_cos=" + cosmomodel + "_???", "UNITY1.8, Two-$x_1$ Modes")]:
+        ("UNITY" + suffix + "twox1_cos=" + cosmomodel + "_???", "UNITY1.8, Two-$x_1$ Modes"),
         ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "UNITY1.7")]:
         #("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "Improved Outlier Limits"),
         #("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???", "No Selection Effects"),
@@ -243,7 +248,7 @@ for matchstr, description in [
     all_uncs_up = {}
     all_uncs_down = {}
     all_trues = {}
-    all_posterior_stacks = {}
+    #all_posterior_stacks = {}
 
     for par in pars:
         all_pars[par] = []
@@ -251,7 +256,7 @@ for matchstr, description in [
         all_uncs_up[par] = []
         all_uncs_down[par] = []
         all_trues[par] = []
-        all_posterior_stacks[par] = []
+        #all_posterior_stacks[par] = []
 
     
     
@@ -278,19 +283,34 @@ for matchstr, description in [
             if par.count("[") == 1:
                 ind = int(par.split("[")[-1].split("]")[0])
                 parnoind = par.split("[")[0]
-                
-                all_pars[par].append(np.median(fit_params[parnoind][:, ind - 1]))
-                all_uncs[par].append(0.5*(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - scoreatpercentile(fit_params[parnoind][:, ind - 1], 15.8655)))
-                all_uncs_up[par].append(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - np.median(fit_params[parnoind][:, ind - 1]))
-                all_uncs_down[par].append(np.median(fit_params[parnoind][:, ind - 1]) - scoreatpercentile(fit_params[parnoind][:,ind - 1], 15.8655))
-                all_posterior_stacks[par].extend(fit_params[parnoind][:, ind - 1])
-            else:
-                all_pars[par].append(np.median(fit_params[par]))
-                all_uncs[par].append(0.5*(scoreatpercentile(fit_params[par], 84.1345) - scoreatpercentile(fit_params[par], 15.8655)))
-                all_uncs_up[par].append(scoreatpercentile(fit_params[par], 84.1345) - np.median(fit_params[par]))
-                all_uncs_down[par].append(np.median(fit_params[par]) - scoreatpercentile(fit_params[par], 15.8655))
-                all_posterior_stacks[par].extend(fit_params[par])
 
+                if parnoind in fit_params:
+                    all_pars[par].append(np.median(fit_params[parnoind][:, ind - 1]))
+                    all_uncs[par].append(0.5*(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - scoreatpercentile(fit_params[parnoind][:, ind - 1], 15.8655)))
+                    all_uncs_up[par].append(scoreatpercentile(fit_params[parnoind][:,ind - 1], 84.1345) - np.median(fit_params[parnoind][:, ind - 1]))
+                    all_uncs_down[par].append(np.median(fit_params[parnoind][:, ind - 1]) - scoreatpercentile(fit_params[parnoind][:,ind - 1], 15.8655))
+                    #all_posterior_stacks[par].extend(fit_params[parnoind][:, ind - 1])
+                else:
+                    all_pars[par].append(np.sqrt(-1.))
+                    all_uncs[par].append(np.sqrt(-1.))
+                    all_uncs_up[par].append(np.sqrt(-1.))
+                    all_uncs_down[par].append(np.sqrt(-1.))
+                    #all_posterior_stacks[par].extend(np.sqrt(-1.))
+            else:
+                if par in fit_params:
+                    all_pars[par].append(np.median(fit_params[par]))
+                    all_uncs[par].append(0.5*(scoreatpercentile(fit_params[par], 84.1345) - scoreatpercentile(fit_params[par], 15.8655)))
+                    all_uncs_up[par].append(scoreatpercentile(fit_params[par], 84.1345) - np.median(fit_params[par]))
+                    all_uncs_down[par].append(np.median(fit_params[par]) - scoreatpercentile(fit_params[par], 15.8655))
+                    #all_posterior_stacks[par].extend(fit_params[par])
+                else:
+                    all_pars[par].append(np.sqrt(-1.))
+                    all_uncs[par].append(np.sqrt(-1.))
+                    all_uncs_up[par].append(np.sqrt(-1.))
+                    all_uncs_down[par].append(np.sqrt(-1.))
+                    #all_posterior_stacks[par].extend(np.sqrt(-1.))
+
+                    
 
             try:
                 float(true_vals[par])
@@ -331,35 +351,35 @@ for matchstr, description in [
     towrite = [description]
     for i, par in enumerate(pars):
         #plt.subplot(len(pars), 4, 4*i + 1)
-        plt.sca(all_ax[i][0])
-        if i == 0:
-            plt.title("Stacked Posterior")
+        #plt.sca(all_ax[i][0])
+        #if i == 0:
+        #    plt.title("Stacked Posterior")
         
-        lower_to_plot = scoreatpercentile(all_posterior_stacks[par], 15.8655)
-        upper_to_plot = scoreatpercentile(all_posterior_stacks[par], 84.1345)
-        med_to_plot = np.median(all_posterior_stacks[par])
+        #lower_to_plot = scoreatpercentile(all_posterior_stacks[par], 15.8655)
+        #upper_to_plot = scoreatpercentile(all_posterior_stacks[par], 84.1345)
+        #med_to_plot = np.median(all_posterior_stacks[par])
 
-        the_color = ['k', 'b', 'r', 'g'][tmp_ind]
-        the_linewidth = [2,2,1,1][tmp_ind]
+        #the_color = ['k', 'b', 'r', 'g'][tmp_ind]
+        #the_linewidth = [2,2,1,1][tmp_ind]
         
 
 
-        yval = 0.9 - tmp_ind*0.2 #0.125 + tmp_ind*0.25
-        plt.plot(med_to_plot, yval, '.', color = the_color)
-        plt.plot([lower_to_plot, upper_to_plot], [yval]*2, label = description, color = the_color)
+        #yval = 0.9 - tmp_ind*0.2 #0.125 + tmp_ind*0.25
+        #plt.plot(med_to_plot, yval, '.', color = the_color)
+        #plt.plot([lower_to_plot, upper_to_plot], [yval]*2, label = description, color = the_color)
 
 
-        if np.isclose(np.std(all_trues[par]), 0):
-            if tmp_ind == 0:
-                plt.axvline(all_trues[par][0], color = 'k')
+        #if np.isclose(np.std(all_trues[par]), 0):
+        #    if tmp_ind == 0:
+        #        plt.axvline(all_trues[par][0], color = 'k')
 
-        if labels[par].count(" ") < 2:
-            plt.ylabel(labels[par].replace(" ", '\n'), rotation = 0, horizontalalignment='right', verticalalignment = 'center', fontsize = 12)
-        else:
-            plt.ylabel(labels[par], rotation = 0, horizontalalignment='right', verticalalignment = 'center', fontsize = 12)
+        #if labels[par].count(" ") < 2:
+        #    plt.ylabel(labels[par].replace(" ", '\n'), rotation = 0, horizontalalignment='right', verticalalignment = 'center', fontsize = 12)
+        #else:
+        #    plt.ylabel(labels[par], rotation = 0, horizontalalignment='right', verticalalignment = 'center', fontsize = 12)
             
-        plot_cosmetics(make_symm = np.isclose(np.std(all_trues[par]), 0)*(tmp_ind == 3),
-                       true_val = all_trues[par][0])
+        #plot_cosmetics(make_symm = np.isclose(np.std(all_trues[par]), 0)*(tmp_ind == 3),
+        #               true_val = all_trues[par][0])
         
         #plt.hist(all_posterior_stacks[par], alpha = 0.5, label = description)
         
@@ -376,11 +396,11 @@ for matchstr, description in [
         
         towrite.append(fmt(the_mean, the_std/sqrtn, mean_unc = mean_unc, chi2_DoF = chi2_DoF))
 
-        plt.sca(all_ax[i][1])
+        #plt.sca(all_ax[i][1])
         #plt.subplot(len(pars), 4, 4*i + 2)
 
-        if i == 0:
-            plt.title("Stacked Pulls")
+        #if i == 0:
+        #    plt.title("Stacked Pulls")
 
         pulls = []
         for j in range(len(all_pars[par])):
@@ -394,6 +414,7 @@ for matchstr, description in [
         upper_to_plot = scoreatpercentile(pulls, 84.1345)
         med_to_plot = np.median(pulls)
 
+        """
         plt.plot(med_to_plot, yval, '.', color = the_color)
         plt.plot([lower_to_plot, upper_to_plot], [yval]*2, label = description, color = the_color)
 
@@ -412,37 +433,37 @@ for matchstr, description in [
                         color=span_color, zorder = -1)
                          
         plot_cosmetics(make_symm = (tmp_ind == 3), true_val = 0)
-        
+        """
 
         #plt.subplot(len(pars), 4, 4*i + 3)
         
-        plt.sca(all_ax[i][2])
-        if i ==	0:
-            plt.title("Mean(Pulls)")
+        #plt.sca(all_ax[i][2])
+        #if i ==	0:
+        #    plt.title("Mean(Pulls)")
 
         
-        plt.plot(np.mean(pulls), yval, '.', color = the_color)
-        plot_cosmetics(make_symm = (tmp_ind == 3), true_val = 0)
+        #plt.plot(np.mean(pulls), yval, '.', color = the_color)
+        #plot_cosmetics(make_symm = (tmp_ind == 3), true_val = 0)
 
-        if tmp_ind == 0 and np.all(1 - np.isnan(pulls)):
-            plt.axvspan(- 1./np.sqrt(1.*len(pulls)),
-                        1./np.sqrt(1.*len(pulls)), color=span_color, zorder = -1)
+        #if tmp_ind == 0 and np.all(1 - np.isnan(pulls)):
+        #    plt.axvspan(- 1./np.sqrt(1.*len(pulls)),
+        #                1./np.sqrt(1.*len(pulls)), color=span_color, zorder = -1)
 
         
         #plt.subplot(len(pars), 4, 4*i + 4)
 
-        plt.sca(all_ax[i][3])
-        if i == 0:
-            plt.title("RMS(Pulls)")
+        #plt.sca(all_ax[i][3])
+        #if i == 0:
+        #    plt.title("RMS(Pulls)")
 
-        plt.plot(np.std(pulls, ddof=1), yval, '.', color = the_color, label = description*(i == 0))
+        #plt.plot(np.std(pulls, ddof=1), yval, '.', color = the_color, label = description*(i == 0))
 
-        if tmp_ind == 0 and np.all(1 - np.isnan(pulls)):
-            plt.axvspan(1 - 1./np.sqrt(2.*len(pulls)),
-                        1 + 1./np.sqrt(2.*len(pulls)), color=span_color, zorder = -1)
+        #if tmp_ind == 0 and np.all(1 - np.isnan(pulls)):
+        #    plt.axvspan(1 - 1./np.sqrt(2.*len(pulls)),
+        #                1 + 1./np.sqrt(2.*len(pulls)), color=span_color, zorder = -1)
             
         
-        plot_cosmetics(make_symm = (tmp_ind == 3), true_val = 1)
+        #plot_cosmetics(make_symm = (tmp_ind == 3), true_val = 1)
 
 
         #the_mean = np.mean(all_uncs[par])
@@ -460,14 +481,14 @@ for j in range(1,4):
 """ 
     
 #for i, par in enumerate(pars):
-plt.sca(all_ax[0][3])
-plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+#plt.sca(all_ax[0][3])
+#plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 
             
 #plt.subplots_adjust(hspace = 0)
 #plt.tight_layout()
-plt.savefig("sim_parameters_" + suffix + ".pdf", bbox_inches = 'tight')
-plt.close()
+#plt.savefig("sim_parameters_" + suffix + ".pdf", bbox_inches = 'tight')
+#plt.close()
 
 
 all_txt_grid = np.array(all_txt_grid)    
