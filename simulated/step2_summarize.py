@@ -142,7 +142,7 @@ for tmpind in range(1 + (suffix == "LH")*3):
     datasetkeys.append("sigma_int[%i]" % (tmpind + 1))
 
     
-pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "MB_fast_minus_slow"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
+pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "step_mass", "MB_fast_minus_slow"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
 
 
 labels = {"H0": "$H_0$",
@@ -153,6 +153,7 @@ labels = {"H0": "$H_0$",
           "beta_B": "$\\beta_B$",
           "beta_R_low": "$\\beta_{RL}$",
           "beta_R_high": "$\\beta_{RH}$",
+          "step_mass": "step mass",
           "delta_0": "$\delta(0)$",
           "delta_h": "$\delta(\infty)/\delta(0)$",
           "mobs_cuts[1]": "$m_{50}$",
@@ -168,6 +169,7 @@ true_vals = {"H0": 71, "Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot1
              "MB_fast_minus_slow": -0.14,
              "alpha": 0.15, "alpha_fast": 0.15, "alpha_slow": 0.15,
              "beta_B": 2.1, "beta_R_low": 4.4, "beta_R_high": 3.2,
+             "step_mass": 10.,
              "delta_0": 0.0,
              "delta_h": "$\mathcal{U}(0,\ 1)$",
              "mobs_cuts[1]": "\\nodata",

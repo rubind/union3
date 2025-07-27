@@ -238,7 +238,7 @@ def generate_p_for_one_SN(params, z, min_date, max_date):
         p["latentc"] = p["latentcB"] + p["latentcR"]
         p["beta_R"] += relative_step_z*(0.5 - P_high_eff)*params["delta_beta_R"]
 
-        p["latentMB"] = params["MB"] + (1. - p["x1_slow"])*params["MB_fast_minus_slow"] - params["alpha"]*p["latentx1"] + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
+        p["latentMB"] = params["MB"] + (1. - p["x1_slow"])*params["MB_fast_minus_slow"] - params["alpha_" + slow_fast]*p["latentx1"] + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
 
 
         if opts.simtype == "Union3":
@@ -725,7 +725,7 @@ elif opts.simtype == "Union3.1":
                   frac_x1_slow_high = 0.5, frac_x1_slow_low = 0.8,
                   
                   tau_c = 0.07*opts.skewdist,
-                  tot_sig_unexplained = opts.sigunexplained, sigma_int_fast = 0.08, alpha = 0.15, sigma_beta_R = opts.sigmabetaR,
+                  tot_sig_unexplained = opts.sigunexplained, sigma_int_fast = 0.08, alpha_fast = 0.24, alpha_slow = 0.17, sigma_beta_R = opts.sigmabetaR,
                   beta_B = 2.1, beta_R = 3.8, delta_beta_R = 1.2, delta = 0.0, MB = -19.1, MB_fast_minus_slow = -0.14,
                   step_width = 0., #0.15,
                   outlierfrac = opts.outlfrac, sigzp = opts.sigzp, true_H0 = true_H0)
