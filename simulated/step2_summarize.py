@@ -127,11 +127,18 @@ def bbox_subplot(i, j, pars, fig, add_label = 0):
     
     return ax
 
-try:
-    suffix = sys.argv[1]
-    cosmomodel = sys.argv[2]
-except:
-    assert 0, "Needs suffix like LH or H"
+matchstrs = sys.argv[1:]
+
+for matchstr in matchstrs:
+    if matchstrs[0].count("UNITYLH"):
+        suffix = "LH"
+    else:
+        suffix = "H"
+    assert matchstrs[0].count("UNITYLH") == matchstr.count("UNITYLH")
+    
+    cosmomodel = matchstrs[0].split("cos=")[1][0]
+    assert matchstrs[0].split("cos=")[1][0] == matchstr.split("cos=")[1][0]
+
     
 
 datasetkeys = []
@@ -141,8 +148,19 @@ for tmpind in range(1 + (suffix == "LH")*3):
     datasetkeys.append("mobs_cut_sigmas[%i]" % (tmpind + 1))
     datasetkeys.append("sigma_int[%i]" % (tmpind + 1))
 
+poppars = []
+for x1c in ["x1", "c"]:
+    for fast_slow in ["fast", "slow"]:
+        poppars.append(x1c + "_star_" + fast_slow)
+        poppars.append("R_" + x1c + "_" + fast_slow)
+
     
-pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "step_mass", "MB_fast_minus_slow"] + datasetkeys  + ["mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
+pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "step_mass", "MB_fast_minus_slow"] + poppars  + datasetkeys  + ["sigma_int_fast", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
+
+
+dir_labels = {"UNITY" + suffix + "twox1_cos=" + cosmomodel + "_": "UNITY1.8, Two-$x_1$ Modes",
+              "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_noutlmod_": "1.8, No Outl, No Outl Model",
+              "UNITY" + suffix + "_cos=" + cosmomodel + "_": "UNITY1.7"}
 
 
 labels = {"H0": "$H_0$",
@@ -156,6 +174,15 @@ labels = {"H0": "$H_0$",
           "step_mass": "step mass",
           "delta_0": "$\delta(0)$",
           "delta_h": "$\delta(\infty)/\delta(0)$",
+          "x1_star_fast": "$x_1^*$ Fast",
+          "x1_star_slow": "$x_1^*$ Slow",
+          "R_x1_fast": "$R^{x_1}$ Fast",
+          "R_x1_slow": "$R^{x_1}$ Slow",
+          "c_star_fast": "$c^*$ Fast",
+          "c_star_slow": "$c^*$ Slow",
+          "R_c_fast": "$R^c$ Fast",
+          "R_c_slow": "$R^c$ Slow",
+
           "mobs_cuts[1]": "$m_{50}$",
           "mobs_cut_sigmas[1]": "$\sigma_m$",
           "sigma_int[1]": "$\sigma^{\mathrm{unexpl}}$",
@@ -167,7 +194,6 @@ labels = {"H0": "$H_0$",
 
 true_vals = {"H0": 71, "Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
              "MB_fast_minus_slow": -0.14,
-             "alpha": 0.15, "alpha_fast": 0.15, "alpha_slow": 0.15,
              "beta_B": 2.1, "beta_R_low": 4.4, "beta_R_high": 3.2,
              "step_mass": 10.,
              "delta_0": 0.0,
@@ -233,17 +259,15 @@ for i in range(len(pars)):
 
 tmp_ind = 0
 
-for matchstr, description in [
-        ("UNITY" + suffix + "twox1_cos=" + cosmomodel + "_???", "UNITY1.8, Two-$x_1$ Modes"),
-        ("UNITY" + suffix + "_cos=" + cosmomodel + "_???", "UNITY1.7")]:
+for matchstr in matchstrs:
         #("UNITY" + suffix + "_fixed_cos=" + cosmomodel + "_???", "Improved Outlier Limits"),
         #("UNITY" + suffix + "_nosel_cos=" + cosmomodel + "_???", "No Selection Effects"),
         #("UNITY" + suffix + "_nosel_twopop_cos=" + cosmomodel + "_???", "No Sel. Eff., $z$-Dep. Pop.")]:
         #("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
         #("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 
-    sampfls = glob.glob(matchstr + "/*samples*pickle")
-    
+    sampfls = glob.glob(matchstr + "???/*samples*pickle")
+    description = dir_labels[matchstr]
 
     all_pars = {}
     all_uncs = {}
@@ -272,12 +296,18 @@ for matchstr, description in [
             fit_params["wpivot15"] = fit_params["wDE"] + 0.15*fit_params["waDE"]
             #fit_params["wpivot18"] = fit_params["wDE"] + 0.18*fit_params["waDE"]
 
-        if description == "Nominal UNITY1.5 Model":
+        if tmp_ind == 0:
             fmB_true = read_param(sim_paramfl, "frac_var_mBx1c")
             assert fmB_true[0] == "["
             fmB_true = fmB_true.replace("[", "").replace("]", "")
             all_fmB_true.append(float(fmB_true))
             all_fmB_posterior.append(fit_params["mBx1c_int_variance"][:,0])
+
+            for true_key in ["alpha", "alpha_fast", "alpha_slow", "x1_star_fast", "x1_star_slow", "R_x1_fast", "R_x1_slow", "c_star_fast", "c_star_slow", "R_c_fast", "R_c_slow"]:
+                try:
+                    true_vals[true_key] = float(read_param(sim_paramfl, true_key.replace("R_", "R")))
+                except:
+                    true_vals[true_key] = np.sqrt(-1.)
             
         true_outl_frac = verify_filenamelist(sampfl)
             
@@ -501,14 +531,14 @@ print("all_txt_grid", all_txt_grid, all_txt_grid.shape)
 print("Parameter & Input & " + " & ".join(all_txt_grid[:,0]))
 
 print("\hline % &")
-print("\multicolumn{5}{c}{Cosmology Parameters}\\\\ % &")
+print("\multicolumn{" + str(len(matchstrs) + 2) + "}{c}{Cosmology Parameters}\\\\ % &")
 print("\hline % &")
 
 
 for i in range(len(pars)):
     if pars[i] == "alpha":
         print("\hline % &")
-        print("\multicolumn{5}{c}{Other Parameters}\\\\ % &")
+        print("\multicolumn{" + str(len(matchstrs) + 2) + "}{c}{Other Parameters}\\\\ % &")
         print("\hline % &")
         
     for valunc in range(1):

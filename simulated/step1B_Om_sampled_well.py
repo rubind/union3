@@ -41,6 +41,10 @@ def check_sampling(logfl):
         if grepout.count("DistutilsExecError") == 1:
             return 0
 
+        grepout = getoutput("grep 'CANCELLED AT' " + errfl)
+        if grepout.count("CANCELLED AT") == 1:
+            return 0
+        
     return 1
 
 
