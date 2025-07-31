@@ -1,4 +1,5 @@
 import glob
+import subprocess
 import pickle
 import gzip
 from scipy.stats import scoreatpercentile
@@ -13,6 +14,7 @@ import pystan
 import matplotlib.pyplot as plt
 
 
+hostname = subprocess.getoutput("hostname")
 
 def fmt(val, unc, mean_unc, chi2_DoF):
     if np.isnan(val):
@@ -159,7 +161,11 @@ pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmom
 
 
 dir_labels = {"UNITY" + suffix + "twox1_cos=" + cosmomodel + "_": "UNITY1.8, Two-$x_1$ Modes",
+              "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_MBx_": "UNITY1.8, refactored x1",
+              "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_MB_": "UNITY1.8, refactored x1+c",
+              "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_": "1.8, No Outl",
               "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_noutlmod_": "1.8, No Outl, No Outl Model",
+              "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_noutlmod_nosel_": "1.8, No Outl, No Outl Model, No Sel Model",
               "UNITY" + suffix + "_cos=" + cosmomodel + "_": "UNITY1.7"}
 
 
@@ -581,13 +587,14 @@ model {
 }
 """
 
+stan_pickle = "skew_fit_" + hostname + ".pickle"
 try:
-    sk, sc = pickle.load(open("skew.pickle", 'rb'))
+    sk, sc = pickle.load(open(stan_pickle, 'rb'))
     if sc != skew_code:
         time_to_raise
 except:
     sk = pystan.StanModel(model_code=skew_code)
-    pickle.dump([sm, skew_code], open("skew.pickle", 'wb'))
+    pickle.dump([sm, skew_code], open(stan_pickle, 'wb'))
 
         
 stan_code = """
@@ -619,13 +626,15 @@ model {
 }
 """
 
+
+stan_pickle = "skew_fit_all_" + hostname + ".pickle"
 try:
-    sm, sc = pickle.load(open("stan.pickle", 'rb'))
+    sm, sc = pickle.load(open(stan_pickle, 'rb'))
     if sc != stan_code:
         time_to_raise
 except:
     sm = pystan.StanModel(model_code=stan_code)
-    pickle.dump([sm, stan_code], open("stan.pickle", 'wb'))
+    pickle.dump([sm, stan_code], open(stan_pickle, 'wb'))
 
 stan_data = dict(n_obs = len(all_fmB_posterior), mu = [], sig = [], alpha = [], xvals = all_fmB_true, pltx = np.linspace(0, 1, 100))
 

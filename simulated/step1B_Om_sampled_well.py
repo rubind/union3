@@ -65,7 +65,7 @@ for logfl in logfls:
     check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone)
 
     other_checks = 1
-    for key in ["beta_B", "mBx1c_int_variance\[1\]", "beta_R_low", "beta_R_high"]:
+    for key in ["beta_B", "mBx1c_int_variance\[1\]", "beta_R_low", "beta_R_high", "alpha_fast", "alpha_slow", "alpha"]:
         other_checks *= check_param(logfl, param = key, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
 
     other_checks *= check_calibs(logfl, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
