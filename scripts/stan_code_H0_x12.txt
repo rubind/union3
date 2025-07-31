@@ -95,7 +95,7 @@ transformed data {
 
 parameters {
     vector [n_samples*MB_by_sample + 1*(1 - MB_by_sample)] MB_slow;
-    real <lower = -0.3, upper = 0.3> MB_fast_minus_slow;
+    real <lower = -1, upper = 1> MB_fast_minus_slow;
 
     real <lower = 50, upper = 100> H0;
     real <lower = 0, upper = 0.35> alpha_angle_fast;

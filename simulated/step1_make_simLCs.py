@@ -667,6 +667,7 @@ parser.add_argument('--sigzp', help="Zeropoint Uncertainty Size", type=float)
 parser.add_argument('--nvisit', help="Number of visits", type=int, default = 200)
 parser.add_argument('--sigmabetaR', help="Scatter in beta_R", type=float)
 parser.add_argument("--sigunexplained", help="Unexplained dispersion", type=float, default=0.12)
+parser.add_argument("--sigintfast", help="Extra Unexplained Dispersion for Fast", type=float)
 parser.add_argument("--simtype", help="Union3 or Union3.1", type=str)
 parser.add_argument("--outlfrac", help="Outlier Fraction", type=float)
 parser.add_argument("--UQ", help="Queue for UNITY", type=str)
@@ -725,7 +726,7 @@ elif opts.simtype == "Union3.1":
                   frac_x1_slow_high = 0.5, frac_x1_slow_low = 0.8,
                   
                   tau_c = 0.07*opts.skewdist,
-                  tot_sig_unexplained = opts.sigunexplained, sigma_int_fast = 0.08, alpha_fast = 0.24, alpha_slow = 0.17, sigma_beta_R = opts.sigmabetaR,
+                  tot_sig_unexplained = opts.sigunexplained, sigma_int_fast = opts.sigintfast, alpha_fast = 0.24, alpha_slow = 0.17, sigma_beta_R = opts.sigmabetaR,
                   beta_B = 2.1, beta_R = 3.8, delta_beta_R = 1.2, delta = 0.0, MB = -19.1, MB_fast_minus_slow = -0.14,
                   step_width = 0., #0.15,
                   outlierfrac = opts.outlfrac, sigzp = opts.sigzp, true_H0 = true_H0)

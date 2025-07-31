@@ -114,7 +114,7 @@ def read_dat():
 
 
     allderivs = []
-    for v1fl in glob.glob("*_v1.txt"):
+    for v1fl in glob.glob("*[0-9]_v1.txt"):
         [SNe] = readcol(v1fl, 'a')
         derivs = [item.replace("$UNION/", "") + "/result_deriv.dat" for item in SNe]
         allderivs += derivs
