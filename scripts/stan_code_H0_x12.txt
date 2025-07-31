@@ -95,7 +95,7 @@ transformed data {
 
 parameters {
     vector [n_samples*MB_by_sample + 1*(1 - MB_by_sample)] MB_slow;
-    real <lower = -0.3, upper = 0.3> MB_fast_minus_slow;
+    real <lower = -1, upper = 1> MB_fast_minus_slow;
 
     real <lower = 50, upper = 100> H0;
     real <lower = 0, upper = 0.35> alpha_angle_fast;
@@ -390,8 +390,8 @@ transformed parameters {
         }
 
 
-	mobs_by_SN_except_c_R_fast[i] = this_MB_slow + MB_fast_minus_slow + model_mu[i] + mobs_cut0[i] - alpha_fast*x1_star_fast + (beta_B + mobs_cut1[i])*c_star_fast - delta_0*p_high_mass_eff;
-	mobs_by_SN_except_c_R_slow[i] = this_MB_slow                      + model_mu[i] + mobs_cut0[i] - alpha_slow*x1_star_slow + (beta_B + mobs_cut1[i])*c_star_slow - delta_0*p_high_mass_eff;
+	mobs_by_SN_except_c_R_fast[i] = this_MB_slow + MB_fast_minus_slow + model_mu[i] + mobs_cut0[i] + (beta_B + mobs_cut1[i])*c_star_fast - delta_0*p_high_mass_eff;
+	mobs_by_SN_except_c_R_slow[i] = this_MB_slow                      + model_mu[i] + mobs_cut0[i] + (beta_B + mobs_cut1[i])*c_star_slow - delta_0*p_high_mass_eff;
 	
 	mobs_var_by_SN_except_c_R_fast[i] = mobs_cut_sigmas[sample_list[i]]^2
                                       	  + model_mBx1c_cov_fast[i][1,1] + model_mBx1c_cov_fast[i][3,3] * mobs_cut1[i]^2 + 2.*mobs_cut1[i]*model_mBx1c_cov_fast[i][1,3]
@@ -401,11 +401,11 @@ transformed parameters {
                                       	  + (alpha_slow*R_x1_slow)^2 + ((beta_B + mobs_cut1[i])*R_c_slow)^2;
 
 
-        model_mBx1c_fast[i][1] = this_MB_slow + MB_fast_minus_slow + model_mu[i] - alpha_fast*true_x1[i] + beta_B*true_cB[i] + (beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff)*true_cR[i] - delta_0*p_high_mass_eff;
+        model_mBx1c_fast[i][1] = this_MB_slow + MB_fast_minus_slow + model_mu[i] - alpha_fast*(true_x1[i] - x1_star_fast) + beta_B*true_cB[i] + (beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff)*true_cR[i] - delta_0*p_high_mass_eff;
         model_mBx1c_fast[i][2] = true_x1[i];
         model_mBx1c_fast[i][3] = true_cB[i] + true_cR[i];
 
-        model_mBx1c_slow[i][1] = this_MB_slow                      + model_mu[i] - alpha_slow*true_x1[i] + beta_B*true_cB[i] + (beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff)*true_cR[i] - delta_0*p_high_mass_eff;
+        model_mBx1c_slow[i][1] = this_MB_slow                      + model_mu[i] - alpha_slow*(true_x1[i] - x1_star_slow) + beta_B*true_cB[i] + (beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff)*true_cR[i] - delta_0*p_high_mass_eff;
         model_mBx1c_slow[i][2] = true_x1[i];
         model_mBx1c_slow[i][3] = true_cB[i] + true_cR[i];
 

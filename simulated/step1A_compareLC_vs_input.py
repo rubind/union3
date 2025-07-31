@@ -274,78 +274,89 @@ all_dat["pulls_mu"] = all_dat["delta_mu"]/all_dat["obs_sig_mu"]
 all_dat["weight_mu_with0.12"] = 1/(0.12**2. + all_dat["obs_sig_mu"]**2.)
 
 
-for include_outlier in [0, 1]:
-    plt.figure(1, figsize = (12, 5))
-    nplt = 4
-    
-    for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
+for z_not_x1 in [0, 1]:
+    for include_outlier in [0, 1]:
+        plt.figure(1, figsize = (12, 5))
+        nplt = 4
 
-        for LH in "LSHV":
-            pltcolor = dict(S = 'm', L = 'b', H = 'g', V = 'r')[LH]
-            pltsymb = dict(S = 'v', L = '.', H = '^', V = '*')[LH]
-            pltlabel = dict(S = "Low-$z$ $UBV$", L = "Low-$z$ $ugriz$", H = "Mid-$z$", V = "High-$z$")[LH]
+        for pltind, key in enumerate(["mu", "mag", "x1", "c"]):
 
-            if include_outlier:
-                outlier_mask = np.ones(len(all_dat["outlier"]))
-            else:
-                outlier_mask = all_dat["outlier"] == 0
-                
-            inds = np.where((all_dat["LH"] == LH)*outlier_mask)
-            zs = all_dat["redshift"][inds]
+            for LH in "LSHV":
+                pltcolor = dict(S = 'm', L = 'b', H = 'g', V = 'r')[LH]
+                pltsymb = dict(S = 'v', L = '.', H = '^', V = '*')[LH]
+                pltlabel = dict(S = "Low-$z$ $UBV$", L = "Low-$z$ $ugriz$", H = "Mid-$z$", V = "High-$z$")[LH]
 
-            bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
-            bin_edges[0] -= 0.001
-            bin_edges[-1] += 0.001
+                if include_outlier:
+                    outlier_mask = np.ones(len(all_dat["outlier"]))
+                else:
+                    outlier_mask = all_dat["outlier"] == 0
 
-            print("bin_edges", bin_edges)
+                inds = np.where((all_dat["LH"] == LH)*outlier_mask)
+                if z_not_x1:
+                    zs = all_dat["redshift"][inds]
+                else:
+                    zs = all_dat["true_x1"][inds]
 
-            for i in range(len(bin_edges) - 1):
-                inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1])*outlier_mask)
+                    
+                bin_edges = scoreatpercentile(zs, np.linspace(0, 100, int(len(zs)/400.)))
+                bin_edges[0] -= 0.001
+                bin_edges[-1] += 0.001
 
-                rms = np.std(all_dat["pulls_" + key][inds], ddof=1)
-                uncrms = rms/np.sqrt(2.*len(inds[0]))
+                print("bin_edges", bin_edges)
 
-                mean = np.mean(all_dat["pulls_" + key][inds])
-                uncmean = rms/np.sqrt(len(inds[0]))
+                for i in range(len(bin_edges) - 1):
+                    if z_not_x1:
+                        inds = np.where((all_dat["LH"] == LH)*(all_dat["redshift"] >= bin_edges[i])*(all_dat["redshift"] < bin_edges[i+1])*outlier_mask)
+                    else:
+                        inds = np.where((all_dat["LH"] == LH)*(all_dat["true_x1"] >= bin_edges[i])*(all_dat["true_x1"] < bin_edges[i+1])*outlier_mask)
 
-                mean_bin = 0.5*(bin_edges[i] + bin_edges[i+1])
-                #plt.plot(mean_bin, rms, '.', color = pltcolor)
-                #plt.plot([mean_bin]*2, [rms - uncrms - 0.9, rms + uncrms - 0.9], color = pltcolor)
-                plt.figure(1)
-                plt.subplot(2, nplt, 1 + pltind)
-                plt.plot(mean_bin, mean, pltsymb, color = pltcolor, label = (i == 0)*pltlabel)
-                plt.subplot(2, nplt, nplt + 1 + pltind)
-                plt.plot(mean_bin, rms, pltsymb, color = pltcolor)
+                        
+                    rms = np.std(all_dat["pulls_" + key][inds], ddof=1)
+                    uncrms = rms/np.sqrt(2.*len(inds[0]))
 
-        plt.figure(1)
-        plt.subplot(2, nplt, 1 + pltind)
-        if pltind == 0:
-            plt.legend(loc = 'upper right', bbox_to_anchor = (1.05, 1.05))
+                    mean = np.mean(all_dat["pulls_" + key][inds])
+                    uncmean = rms/np.sqrt(len(inds[0]))
 
-        plt.axhline(0, color = 'k', linewidth = 0.8)
-        plt.title(dict(mu = "$m_B + %.2f %s x_1 - %.2f %s c$" % (global_alpha, '\,', global_beta, '\,'),
-                       mag = "$m_B$", x1 = "$x_1$", c = "$c$")[key])
+                    mean_bin = 0.5*(bin_edges[i] + bin_edges[i+1])
+                    #plt.plot(mean_bin, rms, '.', color = pltcolor)
+                    #plt.plot([mean_bin]*2, [rms - uncrms - 0.9, rms + uncrms - 0.9], color = pltcolor)
+                    plt.figure(1)
+                    plt.subplot(2, nplt, 1 + pltind)
+                    plt.plot(mean_bin, mean, pltsymb, color = pltcolor, label = (i == 0)*pltlabel)
+                    plt.subplot(2, nplt, nplt + 1 + pltind)
+                    plt.plot(mean_bin, rms, pltsymb, color = pltcolor)
 
-        plt.xscale('log')
-        plt.subplot(2, nplt, nplt + 1 + pltind)
-        plt.axhline(1, color = 'k', linewidth = 0.8)
-        plt.xscale('log')
-        plt.xlabel("Sim LC Redshift Bin")
-        if pltind == 0:
+            plt.figure(1)
             plt.subplot(2, nplt, 1 + pltind)
-            plt.ylabel("Sim LC Mean Pull,\nEqual Number per Bin")
+            if pltind == 0:
+                plt.legend(loc = 'upper right', bbox_to_anchor = (1.05, 1.05))
+
+            plt.axhline(0, color = 'k', linewidth = 0.8)
+            plt.title(dict(mu = "$m_B + %.2f %s x_1 - %.2f %s c$" % (global_alpha, '\,', global_beta, '\,'),
+                           mag = "$m_B$", x1 = "$x_1$", c = "$c$")[key])
+
+            if z_not_x1:
+                plt.xscale('log')
             plt.subplot(2, nplt, nplt + 1 + pltind)
-            plt.ylabel("Sim LC RMS Pull,\nEqual Number per Bin")
+            plt.axhline(1, color = 'k', linewidth = 0.8)
+            if z_not_x1:
+                plt.xscale('log')
+            plt.xlabel("Sim LC Redshift Bin")
+            if pltind == 0:
+                plt.subplot(2, nplt, 1 + pltind)
+                plt.ylabel("Sim LC Mean Pull,\nEqual Number per Bin")
+                plt.subplot(2, nplt, nplt + 1 + pltind)
+                plt.ylabel("Sim LC RMS Pull,\nEqual Number per Bin")
 
 
-    fig = plt.figure(1)
-    fig.align_ylabels()
-    
-    plt.tight_layout()
-    plt.figtext(0.98, 1.00, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
+        fig = plt.figure(1)
+        fig.align_ylabels()
 
-    plt.savefig("LC_compare_pulls_incloutl=%i.pdf" % include_outlier, bbox_inches = 'tight')
-    plt.close()
+        plt.tight_layout()
+        plt.figtext(0.98, 1.00, "Simulated Data", color = 'r', ha = 'right', va = 'top', bbox=dict(edgecolor = 'r', pad = 1, facecolor = 'w'))
+
+        plt.savefig("LC_compare_pulls_incloutl=%i_vs_%s.pdf" % (include_outlier, ["x1", "z"][z_not_x1]), bbox_inches = 'tight')
+        plt.close()
 
 
 
