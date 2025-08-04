@@ -548,14 +548,14 @@ for i in range(len(pars)):
         print("\hline % &")
         
     for valunc in range(1):
-        if np.isnan(true_vals[pars[i]]):
-            input_text = "\\nodata"
-        else:
-            try:
-                float(true_vals[pars[i]])
+        try:
+            float(true_vals[pars[i]])
+            if np.isnan(true_vals[pars[i]]):
+                input_text = "\\nodata"
+            else:
                 input_txt = "$%.3f$" % true_vals[pars[i]]
-            except:
-                input_txt = true_vals[pars[i]]
+        except:
+            input_txt = true_vals[pars[i]]
 
         if pars[i] == "outl_frac":
             input_txt = "%.3f--%.3f" % (min(all_trues[par]), max(all_trues[par]))
