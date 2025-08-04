@@ -166,7 +166,8 @@ dir_labels = {"UNITY" + suffix + "twox1_cos=" + cosmomodel + "_": "UNITY1.8, Two
               "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_": "1.8, No Outl",
               "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_noutlmod_": "1.8, No Outl, No Outl Model",
               "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_noutlmod_nosel_": "1.8, No Outl, No Outl Model, No Sel Model",
-              "UNITY" + suffix + "_cos=" + cosmomodel + "_": "UNITY1.7"}
+              "UNITY" + suffix + "_cos=" + cosmomodel + "_": "UNITY1.7",
+              "UNITY" + suffix + "twox1_cos=" + cosmomodel + "_nooutl_MBx_1Dfast_": "1.8, 1D UnExplFast"}
 
 
 labels = {"H0": "$H_0$",
@@ -199,7 +200,6 @@ labels = {"H0": "$H_0$",
           "outl_frac": "$f^{\mathrm{outl}}$"}
 
 true_vals = {"H0": 71, "Om": 0.3, "wDE": -1, "waDE": 0, "wpivot12": -1, "wpivot15": -1, "wpivot18": -1,
-             "MB_fast_minus_slow": -0.14,
              "beta_B": 2.1, "beta_R_low": 4.4, "beta_R_high": 3.2,
              "step_mass": 10.,
              "delta_0": 0.0,
@@ -309,7 +309,7 @@ for matchstr in matchstrs:
             all_fmB_true.append(float(fmB_true))
             all_fmB_posterior.append(fit_params["mBx1c_int_variance"][:,0])
 
-            for true_key in ["alpha", "alpha_fast", "alpha_slow", "x1_star_fast", "x1_star_slow", "R_x1_fast", "R_x1_slow", "c_star_fast", "c_star_slow", "R_c_fast", "R_c_slow"]:
+            for true_key in ["alpha", "alpha_fast", "alpha_slow", "x1_star_fast", "x1_star_slow", "R_x1_fast", "R_x1_slow", "c_star_fast", "c_star_slow", "R_c_fast", "R_c_slow", "MB_fast_minus_slow"]:
                 try:
                     true_vals[true_key] = float(read_param(sim_paramfl, true_key.replace("R_", "R")))
                 except:
@@ -548,11 +548,14 @@ for i in range(len(pars)):
         print("\hline % &")
         
     for valunc in range(1):
-        try:
-            float(true_vals[pars[i]])
-            input_txt = "$%.3f$" % true_vals[pars[i]]
-        except:
-            input_txt = true_vals[pars[i]]
+        if np.isnan(true_vals[pars[i]]):
+            input_text = "\\nodata"
+        else:
+            try:
+                float(true_vals[pars[i]])
+                input_txt = "$%.3f$" % true_vals[pars[i]]
+            except:
+                input_txt = true_vals[pars[i]]
 
         if pars[i] == "outl_frac":
             input_txt = "%.3f--%.3f" % (min(all_trues[par]), max(all_trues[par]))

@@ -238,7 +238,7 @@ def generate_p_for_one_SN(params, z, min_date, max_date):
         p["latentc"] = p["latentcB"] + p["latentcR"]
         p["beta_R"] += relative_step_z*(0.5 - P_high_eff)*params["delta_beta_R"]
 
-        p["latentMB"] = params["MB"] + (1. - p["x1_slow"])*params["MB_fast_minus_slow"] - params["alpha_" + slow_fast]*p["latentx1"] + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
+        p["latentMB"] = params["MB"] + (1. - p["x1_slow"])*params["MB_fast_minus_slow"] - params["alpha_" + slow_fast]*(p["latentx1"] - params["x1_star_" + slow_fast]) + params["beta_B"]*p["latentcB"] + p["beta_R"]*p["latentcR"] + mass_term
 
 
         if opts.simtype == "Union3":
@@ -634,7 +634,7 @@ separate_mass_x1c	1
 #SBATCH --time=0-""" + str(int(5 + 6*opts.nvisit/200 + 6*include_low*opts.nvisit/200)) + """:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=""" + str(int((10 + 10*include_low)*opts.nvisit/200)) +  """G # Memory per node my job requires
+#SBATCH --mem=""" + str(int(10*opts.nvisit/200. + 8*include_low*opts.nnearbyperset/200.)) +  """G # Memory per node my job requires
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
@@ -727,7 +727,7 @@ elif opts.simtype == "Union3.1":
                   
                   tau_c = 0.07*opts.skewdist,
                   tot_sig_unexplained = opts.sigunexplained, sigma_int_fast = opts.sigintfast, alpha_fast = 0.24, alpha_slow = 0.17, sigma_beta_R = opts.sigmabetaR,
-                  beta_B = 2.1, beta_R = 3.8, delta_beta_R = 1.2, delta = 0.0, MB = -19.1, MB_fast_minus_slow = -0.14,
+                  beta_B = 2.1, beta_R = 3.8, delta_beta_R = 1.2, delta = 0.0, MB = -19.1, MB_fast_minus_slow = 0.18,
                   step_width = 0., #0.15,
                   outlierfrac = opts.outlfrac, sigzp = opts.sigzp, true_H0 = true_H0)
 else:

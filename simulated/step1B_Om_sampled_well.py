@@ -6,7 +6,7 @@ import sys
 import glob
 
 def check_param(logfl, param, leave_running_jobs_alone, threshold = 1.05):
-    grepout = getoutput("grep '" + param + " ' " + logfl).split(None)
+    grepout = getoutput("grep -a '" + param + " ' " + logfl).split(None)
     print(grepout)
     
     if grepout == []:
@@ -17,7 +17,7 @@ def check_param(logfl, param, leave_running_jobs_alone, threshold = 1.05):
         return 0
 
 def check_calibs(logfl, leave_running_jobs_alone, threshold):
-    grepout = getoutput("grep 'calibs\[' " + logfl).split('\n')
+    grepout = getoutput("grep -a 'calibs\[' " + logfl).split('\n')
     print(grepout)
 
     if len(grepout) < 2:
@@ -37,11 +37,11 @@ def check_sampling(logfl):
     
     for errfl in errfls:
         print("Checking", errfl)
-        grepout = getoutput("grep " + '"' + "distutils.errors.DistutilsExecError: command '/usr/bin/gcc' failed with exit code 1" + '" ' + errfl)
+        grepout = getoutput("grep -a " + '"' + "distutils.errors.DistutilsExecError: command '/usr/bin/gcc' failed with exit code 1" + '" ' + errfl)
         if grepout.count("DistutilsExecError") == 1:
             return 0
 
-        grepout = getoutput("grep 'CANCELLED AT' " + errfl)
+        grepout = getoutput("grep -a 'CANCELLED AT' " + errfl)
         if grepout.count("CANCELLED AT") == 1:
             return 0
         
@@ -65,7 +65,7 @@ for logfl in logfls:
     check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone)
 
     other_checks = 1
-    for key in ["beta_B", "mBx1c_int_variance\[1\]", "beta_R_low", "beta_R_high", "alpha_fast", "alpha_slow", "alpha"]:
+    for key in ["beta_B", "mBx1c_int_variance\[1\]", "beta_R_low", "beta_R_high", "alpha_fast", "alpha_slow", "alpha", "MB_fast_minus_slow"]:
         other_checks *= check_param(logfl, param = key, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
 
     other_checks *= check_calibs(logfl, leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.2)
