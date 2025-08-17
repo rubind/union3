@@ -12,6 +12,8 @@ def get_label(key):
     try:
         return {"H0": "$H_0$",
                 "MB:0": "$\mathcal{M}_B$",
+                "MB_slow:0": "$\mathcal{M}_B$ slow",
+                "MB_fast_minus_slow": "$\mathcal{M}_B$ fast - slow",
                 "alpha": "$\\alpha$",
                 "beta_B": "$\\beta_B$",
                 "beta_R": "$\\beta_R$",
@@ -93,9 +95,13 @@ for pfl in pfls:
     fdlksjfljk
     """ 
 
-
-    fit_params["beta_R"] = 0.5*(fit_params["beta_R_high"] + fit_params["beta_R_low"])
-    fit_params["delta_beta_R"] = fit_params["beta_R_high"] - fit_params["beta_R_low"]
+    try:
+        fit_params["beta_R"] = 0.5*(fit_params["beta_R_high"] + fit_params["beta_R_low"])
+        fit_params["delta_beta_R"] = fit_params["beta_R_high"] - fit_params["beta_R_low"]
+    except:
+        fit_params["beta_R"] = 0.5*(fit_params["beta_R_slow"] + fit_params["beta_R_fast"])
+        fit_params["delta_beta_R"] = fit_params["beta_R_slow"] - fit_params["beta_R_fast"]
+        
     fit_params["mean_sigma_int"] = np.mean(fit_params["sigma_int"], axis = 1)
 
     fit_params_list.append(fit_params)
@@ -109,7 +115,7 @@ for pfl in pfls:
     
 if plt_choice == 0:
     
-    make_plot(["H0"]*has_H0 + ["Om", "alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R", "delta_beta_R", "MB:0"] + ["step_mass", "mass_width"] + ["delta_0", "delta_h"], "standardization_coeffs.pdf")
+    make_plot(["H0"]*has_H0 + ["Om", "alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R", "delta_beta_R", "MB_slow:0", "MB_fast_minus_slow"] + ["step_mass", "mass_width"] + ["delta_0", "delta_h"], "standardization_coeffs.pdf")
 elif plt_choice == 1:
     try:
         fit_params["outl_mBx1c_uncertainties_mB"]

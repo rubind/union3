@@ -687,7 +687,7 @@ def add_zbins(stan_data, cosmo_model):
 
 
     zbins = np.concatenate((
-        np.linspace(0.05, z_cutoff_for_05, int(np.around(z_cutoff_for_05/0.05))),
+        np.linspace(0.01, z_cutoff_for_05, int(1 + np.around(z_cutoff_for_05/0.05))),
         np.linspace(z_cutoff_for_05, zbins[0], int(np.around((zbins[0] - z_cutoff_for_05)/0.1)) + 1)[1:-1],
         zbins))
 
@@ -737,19 +737,19 @@ def add_zbins(stan_data, cosmo_model):
         nodes[j] = 1.
 
         if cosmo_model == 6:
-
+            assert 0, "Deprecated for now!"
+            
             minz = min(stan_data["redshifts"])*0.999
             ifn = interp1d(
                 np.concatenate(([0, minz], stan_data["zbins"])),
                 np.concatenate(([0, minz], nodes)), kind = 'cubic')
         else:
             assert cosmo_model == 2
-            ifn = interp1d(np.concatenate(([0], stan_data["zbins"])),
-                           np.concatenate(([0], nodes)), kind = 'quadratic')
-
+            ifn = interp1d(stan_data["zbins"],
+                           nodes, kind = 'quadratic')
             
         for i in range(stan_data["n_sne"]):
-            stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i])
+            stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i]) - np.mean(ifn(np.linspace(0.1, 0.6, 10)))
             stan_data["dmudz_dbin"][i, j] = (ifn(stan_data["redshifts"][i] + 0.001) - ifn(stan_data["redshifts"][i]))/0.001
 
     if cosmo_model == 6:
@@ -763,9 +763,15 @@ def add_zbins(stan_data, cosmo_model):
                                                  z_helio_list = stan_data["zhelio"]) - stan_data["mu_const"])
 
 
-    plt.figure()
-    plt.imshow(stan_data["dmu_dbin"])
-    plt.savefig("dmu_dbin.pdf")
+    plt.figure(figsize = (8, 20))
+    for i in range(len(stan_data["dmu_dbin"][0])):
+        plt.plot(stan_data["redshifts"], stan_data["dmu_dbin"][:,i] + i*2, '.')
+        plt.axhline(i*2, color = 'k')
+    plt.xlabel("Redshift")
+    plt.ylabel("$\mu(z) - $ Fiducial")
+    plt.yticks([])
+    
+    plt.savefig("dmu_dbin.pdf", bbox_inches = 'tight')
     plt.close()
 
     save_img(stan_data["dmu_dbin"], "dmu_dbin.fits")

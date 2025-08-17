@@ -14,6 +14,11 @@ import time
 
 UNION = os.environ["UNION"]
 
+if UNION[-1] != "/":
+    UNION += "/"
+print("UNION=", UNION)
+
+
 def randomexp():
     ind_choice = np.random.choice(np.arange(len(exp_approx_norm)), size = 1, replace = True, p = exp_approx_norm)[0]
     return np.random.normal()*exp_approx_width[ind_choice] + exp_approx_pos[ind_choice]
@@ -28,14 +33,30 @@ def make_a_SN(samp_ind, sn_ind, sn_pars):
     bad_fit = 1
     
     while bad_fit == 1:
-        p_high_mass_eff = (1.9*(1 - fit_params["delta_h"][samp_ind])/(1 + 0.9*np.exp(0.95*np.log(10.)*stan_data["redshifts"][sn_ind])) + fit_params["delta_h"][samp_ind])*stan_data["p_high_mass"][sn_ind]
+        p_high_mass = normal_cdf(stan_data["mass"][sn_ind], fit_params["step_mass"][samp_ind], stan_data["mass_err"][sn_ind]);
+
+        p_high_mass_eff = (   1.9*(1 - fit_params["delta_h"][samp_ind])/(1 + 0.9*np.exp(0.95*np.log(10.)*stan_data["redshifts"][sn_ind])) + fit_params["delta_h"][samp_ind]   )*p_high_mass
         beta_R = fit_params["beta_R_low"][samp_ind]*(1. - p_high_mass_eff) + fit_params["beta_R_high"][samp_ind]*p_high_mass_eff
 
+        
+        slow_not_fast = int(np.random.random() < fit_params["frac_x1_slow_by_SN"][samp_ind][sn_ind])
+        #print("slow_not_fast", slow_not_fast, fit_params["frac_x1_slow_by_SN"][samp_ind][sn_ind])
+        slow_fast = ["fast", "slow"][slow_not_fast]
 
-        true_cB = np.random.normal()*fit_params["R_c_by_SN"][samp_ind][sn_ind] + fit_params["c_star_by_SN"][samp_ind][sn_ind]
+
+        true_cB = np.random.normal()*fit_params["R_c_" + slow_fast][samp_ind] + fit_params["c_star_" + slow_fast][samp_ind]
         true_cR = randomexp()*fit_params["tau_c_by_SN"][samp_ind][sn_ind]
-        true_x1 = np.random.normal()*fit_params["R_x1_by_SN"][samp_ind][sn_ind] + randomexp()*fit_params["tau_x1_by_SN"][samp_ind][sn_ind] + fit_params["x1_star_by_SN"][samp_ind][sn_ind]
-        true_mB = fit_params["MB"][samp_ind][0] + fit_params["model_mu"][samp_ind][sn_ind] - fit_params["alpha"][samp_ind]*true_x1 + fit_params["beta_B"][samp_ind]*true_cB + beta_R*true_cR - fit_params["delta_0"][samp_ind]*p_high_mass_eff
+        true_x1 = np.random.normal()*fit_params["R_x1_" + slow_fast][samp_ind] + fit_params["x1_star_" + slow_fast][samp_ind]
+
+        if slow_not_fast:
+            this_MB = fit_params["MB_slow"][samp_ind][0]
+        else:
+            this_MB = fit_params["MB_slow"][samp_ind][0] + fit_params["MB_fast_minus_slow"][samp_ind]
+            
+        true_mB = (this_MB + fit_params["model_mu"][samp_ind][sn_ind]
+                   - fit_params["alpha_" + slow_fast][samp_ind]*(true_x1 - fit_params["x1_star_" + slow_fast][samp_ind])
+                   + fit_params["beta_B"][samp_ind]*true_cB + beta_R*true_cR - fit_params["delta_0"][samp_ind]*p_high_mass_eff
+                   )
 
 
         obs_cov_mat = np.zeros([3,3], dtype=np.float64)
@@ -52,7 +73,7 @@ def make_a_SN(samp_ind, sn_ind, sn_pars):
         obs_cov_mat[1,2] = modelfn_var(P = sn_pars["x1c"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
         obs_cov_mat[2,1] = modelfn_var(P = sn_pars["x1c"], mB0 = sn_pars["mB0"], mB = true_mB, c = true_cB + true_cR)
 
-        cov_mat_unexpl_disp = fit_params["model_mBx1c_cov"][samp_ind][sn_ind] - stan_data["obs_mBx1c_cov"][sn_ind]
+        cov_mat_unexpl_disp = fit_params["model_mBx1c_cov_" + slow_fast][samp_ind][sn_ind] - stan_data["obs_mBx1c_cov"][sn_ind]
 
         obs_mBx1c = np.array([true_mB, true_x1, true_cB + true_cR]) + np.random.multivariate_normal([0., 0., 0.], cov_mat_unexpl_disp + obs_cov_mat)
         obs_mBx1c -= np.dot(stan_data["d_mBx1c_d_calib"][sn_ind], fit_params["calibs"][samp_ind]) # d_mBx1c_d_calib[i] * calibs
@@ -81,6 +102,7 @@ def make_a_SN(samp_ind, sn_ind, sn_pars):
                 obs_mag = obs_mag,
                 model_mu = fit_params["model_mu"][samp_ind][sn_ind],
                 true_mBx1cBcR = [true_mB, true_x1, true_cB, true_cR],
+                slow_fast = slow_fast,
                 found = found)
 
 def make_a_SN_conditional(samp_ind, sn_ind, sn_pars, needs_to_be_found = 1):
@@ -125,9 +147,9 @@ def single_SN_fn(both_inds):
     return_dict["true_mBx1cBcR"] = SN_dict["true_mBx1cBcR"]
     return_dict["found"] = SN_dict["found"]
     return_dict["model_mu"] = SN_dict["model_mu"]
-    return_dict["mB_unc"] = np.sqrt(fit_params["model_mBx1c_cov"][samp_ind][sn_ind][0,0])
-    return_dict["x1_unc"] = np.sqrt(fit_params["model_mBx1c_cov"][samp_ind][sn_ind][1,1])
-    return_dict["c_unc"] = np.sqrt(fit_params["model_mBx1c_cov"][samp_ind][sn_ind][2,2])
+    return_dict["mB_unc"] = np.sqrt(fit_params["model_mBx1c_cov_" + SN_dict["slow_fast"]][samp_ind][sn_ind][0,0])
+    return_dict["x1_unc"] = np.sqrt(fit_params["model_mBx1c_cov_" + SN_dict["slow_fast"]][samp_ind][sn_ind][1,1])
+    return_dict["c_unc"] = np.sqrt(fit_params["model_mBx1c_cov_" + SN_dict["slow_fast"]][samp_ind][sn_ind][2,2])
 
     
 
@@ -159,7 +181,7 @@ def get_cmat_interp_fns(snpath):
     [mB, c, mBmB, x1x1, cc, mBx1, mBc, x1c] = readcol(snpath + "/mBx1c_cov_by_mag_color.txt", 'ff,fff,fff')
     mB0 = np.mean(mB)
 
-    assert mB0 > 0
+    assert mB0 > 0, snpath
     
     sn_pars = {"mB0": mB0}
     for var, var_name in [(mBmB, "mBmB"),
@@ -228,17 +250,22 @@ PPD["true_mBx1cBcR|obsx1c"] = []
 
 pool = multiprocessing.Pool(processes = 10)
 
-n_samples = len(fit_params["alpha"])
+n_samples = len(fit_params["beta_B"])
 
 for sn_ind in tqdm.trange(stan_data["n_sne"]):
-    in_minus_out = np.median(fit_params["inl_loglike_by_SN"][:, sn_ind]) - np.median(fit_params["outl_loglike_by_SN"][:, sn_ind])
-    print(the_data["snpaths"][sn_ind], in_minus_out)
+    inl_like_by_SN_fast = np.exp(np.median(fit_params["inl_loglike_by_SN_fast"][:, sn_ind]))
+    inl_like_by_SN_slow = np.exp(np.median(fit_params["inl_loglike_by_SN_slow"][:, sn_ind]))
+    outl_like_by_SN = np.exp(np.median(fit_params["outl_loglike_by_SN"][:, sn_ind]))
+
+    out_prob = outl_like_by_SN/(outl_like_by_SN + inl_like_by_SN_slow + inl_like_by_SN_fast)
+     
+    print(the_data["snpaths"][sn_ind], "out_prob", out_prob)
 
     
     for key in PPD:
         PPD[key].append([])
         
-    if in_minus_out > 0:
+    if out_prob < 0.5:
         new_path = UNION + "/".join(the_data["snpaths"][sn_ind].split("/")[-2:])
         
         sn_pars = get_cmat_interp_fns(new_path)

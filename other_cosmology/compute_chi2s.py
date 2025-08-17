@@ -77,11 +77,12 @@ def chi2fn(P, passdata, get_n_data_instead = False):
     if run_settings["include_H0Ceph"]:
         assert run_settings["include_H0TRGB"] == 0
         #chi2 += ((cosmo["h"]*100. - 72.53)/0.99)**2.
-        chi2 += ((cosmo["h"]*100. - 73.29)/0.90)**2.
+        #chi2 += ((cosmo["h"]*100. - 73.29)/0.90)**2. Leveraging SN Ia spectroscopic similarity to improve the measurement of 
+        chi2 += ((cosmo["h"]*100. - 73.17)/0.86)**2. # Small Magellanic Cloud Cepheids Observed with the Hubble Space Telescope Provide a New Anchor for the SH0ES Distance Ladder
         n_data += 1
     if run_settings["include_H0TRGB"]:
         assert run_settings["include_H0Ceph"] == 0
-        chi2 += ((cosmo["h"]*100. - 69.8)/1.7088)**2.
+        chi2 += ((cosmo["h"]*100. - 70.39)/1.80)**2. # Status Report on the Chicago-Carnegie Hubble Program (CCHP): Measurement of the Hubble Constant Using the Hubble and James Webb Space Telescopes
         n_data += 1
     if run_settings["include_BAO"]:
         chi2 += get_BAO_chi2(BAO_data, cosmo)

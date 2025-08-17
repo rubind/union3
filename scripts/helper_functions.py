@@ -458,7 +458,6 @@ def remap_x1(x1, params):
 ################################################# Chain Functions ###################################################
 
 def write_latent_variables(the_data, stan_data, fit_params):
-    assert len(the_data["snpaths"]) == len(fit_params["true_cR"][0])
     assert len(the_data["snpaths"]) == len(fit_params["true_cB"][0])
     assert len(the_data["snpaths"]) == len(fit_params["true_x1"][0])
 
@@ -469,17 +468,39 @@ def write_latent_variables(the_data, stan_data, fit_params):
                      np.median(fit_params["true_cB"], axis = 0),
                      np.std(fit_params["true_cB"], axis = 0, ddof=1),
                      np.median(fit_params["true_cR"], axis = 0),
-                     np.std(fit_params["true_cR"], axis = 0, ddof=1)]
+                     np.std(fit_params["true_cR"], axis = 0, ddof=1),
+                     np.median(fit_params["model_mu"], axis = 0)]
 
-    headings = ["SN", "Phigh", "true_x1", "dtrue_x1", "true_cB", "dtrue_cB", "true_cR", "dtrue_cR"]
+    headings = ["SN", "Phigh", "true_x1", "dtrue_x1", "true_cB", "dtrue_cB", "true_cR", "dtrue_cR", "model_mu"]
     
     for key in fit_params:
         if key.count("loglike_by_SN") == 1:
             data_to_write.append(np.median(fit_params[key], axis = 0))
             headings.append(key)
-        
+            
+    for key in fit_params:
+        if key.count("model_mBx1c") == 1 and key.count("cov") == 0:
+            med_model = np.median(fit_params[key], axis = 0)
+            assert med_model.shape == (len(the_data["snpaths"]), 3)
+            for mBx1c_ind in range(3):
+                data_to_write.append(med_model[:, mBx1c_ind])
+                headings.append(key + "_" + ["mB", "x1", "c"][mBx1c_ind])
+
+
     writecol("latent_table.txt", data_to_write,
              headings = headings)
+
+    f = open("latent_table.txt", 'r')
+    lines = f.read()
+    f.close()
+
+    for key in fit_params:
+        if len(fit_params[key].shape) == 1:
+            lines = ("# %s %f %f\n" % (key, np.median(fit_params[key]), np.std(fit_params[key], ddof=1))) + lines
+    f = open("latent_table.txt", 'w')
+    f.write(lines)
+    f.close()
+    
 
 
 def gelman_rubin_R(samples):
