@@ -16,8 +16,11 @@ import matplotlib.pyplot as plt
 
 hostname = subprocess.getoutput("hostname")
 
-def fmt(val, unc, mean_unc, chi2_DoF):
-    if np.isnan(val):
+def fmt(the_par, unc, mean_unc, the_true, RMS_of_val):
+    N_realizations = float(len(the_par))
+
+    the_mean = np.mean(the_par)
+    if np.isnan(the_mean):
         assert np.isnan(unc)
         return "\\nodata"
     else:
@@ -29,8 +32,10 @@ def fmt(val, unc, mean_unc, chi2_DoF):
             chi2_DoF_fmt = "%.2f" % chi2_DoF
 
 
-        return "$%.3f \pm %.3f \pm %.3f \ (%s)$" % (val, unc, mean_unc, chi2_DoF_fmt)
-
+        #return "$%.3f \pm %.3f \pm %.3f \ (%s)$" % (val, unc, mean_unc, chi2_DoF_fmt)
+        return "$%.3f \pm %.3f\ (%s%.2f \pm %.2f) \sigma$" % (the_mean, mean_unc, "+"*int(the_mean > np.mean(the_true)), (the_mean - np.mean(the_true))/mean_unc, (RMS_of_val/np.sqrt(N_realizations))/mean_unc)
+        #return "$%.3f \pm %.3f (%s)$" % (the_mean, mean_unc, "+"*int(the_mean > np.mean(the_true)))
+    
 def verify_filenamelist(sampfl):
     filenamelist = read_param(sampfl.split("/")[0] + "/paramfile.txt", "filenamelist")
     if suffix == "LH":
@@ -157,7 +162,7 @@ for x1c in ["x1", "c"]:
         poppars.append("R_" + x1c + "_" + fast_slow)
 
     
-pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "step_mass", "MB_fast_minus_slow"] + poppars  + datasetkeys  + ["sigma_int_fast", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
+pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_fast", "alpha_slow", "MB_fast_minus_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "step_mass"] + poppars  + datasetkeys  + ["sigma_int_fast", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
 
 
 dir_labels = {"UNITY" + suffix + "twox1_cos=" + cosmomodel + "_": "UNITY1.8, Two-$x_1$ Modes",
@@ -432,7 +437,8 @@ for matchstr in matchstrs:
         chi2_DoF = np.sqrt(sum(pulls**2. / len(all_pars[par])))
         #chi2_DoF = sum(chi2_DoF**2.)/len(all_pars[par])
         
-        towrite.append(fmt(the_mean, the_std/sqrtn, mean_unc = mean_unc, chi2_DoF = chi2_DoF))
+        towrite.append(fmt(the_par = np.array(all_pars[par]), unc = the_std/sqrtn, mean_unc = mean_unc, the_true = np.array(all_trues[par]), RMS_of_val = np.std(all_pars[par], ddof=1)
+                           ))
 
         #plt.sca(all_ax[i][1])
         #plt.subplot(len(pars), 4, 4*i + 2)
@@ -544,9 +550,14 @@ print("\hline % &")
 for i in range(len(pars)):
     if pars[i] == "alpha":
         print("\hline % &")
-        print("\multicolumn{" + str(len(matchstrs) + 2) + "}{c}{Other Parameters}\\\\ % &")
+        print("\multicolumn{" + str(len(matchstrs) + 2) + "}{c}{Standardization Parameters}\\\\ % &")
         print("\hline % &")
-        
+    if pars[i] == "x1_star_fast":
+        print("\hline % &")
+        print("\multicolumn{" + str(len(matchstrs) + 2) + "}{c}{Population Parameters}\\\\ % &")
+        print("\hline % &")
+
+
     for valunc in range(1):
         try:
             float(true_vals[pars[i]])

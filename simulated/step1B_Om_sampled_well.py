@@ -44,6 +44,10 @@ def check_sampling(logfl):
         grepout = getoutput("grep -a 'CANCELLED AT' " + errfl)
         if grepout.count("CANCELLED AT") == 1:
             return 0
+
+        grepout = getoutput("grep 'output error' " + errfl)
+        if grepout.count("output error") == 1:
+            return 0
         
     return 1
 
