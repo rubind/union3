@@ -805,12 +805,18 @@ def init_fn():
             "H0": np.random.random()*5 + 70.,
             "wDE": -1.01,
             "mu_zbins": mu_init,
+            
             "alpha_angle": arctan(random.random()*0.2),
             "alpha_angle_fast": arctan(random.random()*0.2),
             "alpha_angle_slow": arctan(random.random()*0.2),
             "beta_angle_blue": arctan(random.random()*0.5 + 2.5),
+            "beta_angle_blue_fast": arctan(random.random()*0.5 + 2.5),
+            "beta_angle_blue_slow": arctan(random.random()*0.5 + 2.5),
             "beta_angle_red_low": arctan(random.random()*0.5 + 2.5),
             "beta_angle_red_high": arctan(random.random()*0.5 + 2.5),
+            "beta_angle_red_fast": arctan(random.random()*0.5 + 2.5),
+            "beta_angle_red_slow": arctan(random.random()*0.5 + 2.5),
+            
             #"log10_sigma_int": log10(random.random(size = n_samples)*0.1 + 0.1),
             "mBx1c_int_variance": [0.9, 0.05, 0.05],
             #"mass_0": 10,
