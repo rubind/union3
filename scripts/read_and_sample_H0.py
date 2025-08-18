@@ -788,22 +788,26 @@ def init_fn():
     print("n_sne ", n_sne)
     print("n_samples ", n_samples)
 
-    if stan_data["cosmo_model"] == 2 or stan_data["cosmo_model"] == 6:
+    if stan_data["cosmo_model"] == 6:
         zbins_tmp = np.array(stan_data["zbins"])
         mu_init = 43.2 + 5*np.log10((zbins_tmp - 0.225*zbins_tmp**2.)*(1. + zbins_tmp))
     #elif stan_data["cosmo_model"] == 6:
     #    zbins_tmp = np.array(stan_data["zbins"])
     #    mu_init = zbins_tmp - 0.225*zbins_tmp**2.
     else:
-        mu_init = np.zeros(stan_data["n_zbins"], dtype=np.float64)
+        mu_init = np.random.normal(size = stan_data["n_zbins"])*0.05
         
             
     return {"MB": random.random(size = [(n_samples - 1)*stan_data["MB_by_sample"] + 1])*0.2 - 19.1,
+            "MB_slow": random.random(size = [(n_samples - 1)*stan_data["MB_by_sample"] + 1])*0.2 - 19.1,
+            "MB_fast_minus_slow": np.random.random()*0.1,
             "Om": 0.3,
             "H0": np.random.random()*5 + 70.,
             "wDE": -1.01,
             "mu_zbins": mu_init,
             "alpha_angle": arctan(random.random()*0.2),
+            "alpha_angle_fast": arctan(random.random()*0.2),
+            "alpha_angle_slow": arctan(random.random()*0.2),
             "beta_angle_blue": arctan(random.random()*0.5 + 2.5),
             "beta_angle_red_low": arctan(random.random()*0.5 + 2.5),
             "beta_angle_red_high": arctan(random.random()*0.5 + 2.5),
@@ -825,9 +829,19 @@ def init_fn():
             "tau_x1": -random.random(size = stan_data["n_x1c_star"]),
             "R_x1": random.random(size = stan_data["n_x1c_star"])*0.5 + 0.25,
 
+            "x1_star_fast": random.random()*0.5 - 1,
+            "x1_star_slow": random.random()*0.5,
+            "R_x1_fast": random.random()*0.25 + 0.4,
+            "R_x1_slow": random.random()*0.25 + 0.4,
+
             "c_star": -random.random(size = stan_data["n_x1c_star"])*0.05,
+            "c_star_fast": -random.random()*0.05,
+            "c_star_slow": -random.random()*0.05,
             "tau_c": random.random(size = stan_data["n_x1c_star"])*0.05 + 0.02,
             "R_c": random.random(size = stan_data["n_x1c_star"])*0.05 + 0.02,
+
+
+
             
             "outl_frac": random.random()*0.02 + 0.01,
             "mobs_cuts": stan_data["est_mobs_cuts"] + random.normal(size = n_samples)*0.1, "mobs_cut_sigmas": [0.5]*n_samples,
