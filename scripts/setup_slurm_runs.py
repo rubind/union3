@@ -37,9 +37,9 @@ def check_if_good(wd, par_name):
 pwd = getoutput("pwd")
 whoami = getoutput("whoami")
 
-assert getoutput('squeue | grep drubin | grep -v " R "').strip() == ""
+#assert getoutput('squeue | grep drubin | grep -v " R "').strip() == ""
 
-print("python union3/scripts/setup_slurm_runs.py union3/scripts/union3 koa_scratch/Union3 100 1356 0 1")
+print("python union3/scripts/setup_slurm_runs.py union3/scripts/union3 koa_scratch/Union3 100 1356 0 1 50")
 
 orig_dir = sys.argv[1]
 new_dir_loc = sys.argv[2]
@@ -106,7 +106,7 @@ for i in range(n_copy):
 #SBATCH --time=""" + time_limit + """ ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=24G # Memory per node my job requires
+#SBATCH --mem=30G # Memory per node my job requires
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
@@ -117,7 +117,7 @@ conda info --envs
 conda activate py39
 
 cd """ + wd + """
-~/.conda/envs/py39/bin/python3.9 $UNITY/scripts/read_and_sample.py inputs*pickle %i > log.txt
+~/.conda/envs/py39/bin/python3.9 $UNITY/scripts/read_and_sample_H0.py inputs*pickle %i > log.txt
 """ % cosmomodel)
             f.close()
             do_it("cd " + wd + '\n' + "sbatch run.sh")
