@@ -321,7 +321,8 @@ transformed parameters {
     alpha_fast = tan(alpha_angle_fast);
     
     if (do_twoalphabeta == 0) {
-        beta_B = tan(beta_angle_red_low);
+        beta_B_fast = tan(beta_angle_red_low);
+        beta_B_slow = tan(beta_angle_red_low);
         beta_R_low = tan(beta_angle_red_low);
         beta_R_high = tan(beta_angle_red_low);
     } else {
