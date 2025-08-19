@@ -1,6 +1,7 @@
 from subprocess import getoutput
 import numpy as np
 import sys
+import tqdm
 
 print("python relative_unblind.py Om 1.05 */log.txt")
 
@@ -8,7 +9,10 @@ par_name = sys.argv[1]
 max_Rhat = float(sys.argv[2])
 logs = sys.argv[3:]
 
-grepout = [getoutput("grep '%s ' %s" % (par_name, item)) for item in logs]
+grepout = []
+
+for item in tqdm.tqdm(logs):
+    grepout.append(getoutput("grep '%s ' %s" % (par_name, item)))
 
 grepout = [item for item in grepout if item != ""]
 
