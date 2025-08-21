@@ -687,7 +687,7 @@ def add_zbins(stan_data, cosmo_model):
 
 
     zbins = np.concatenate((
-        np.linspace(0.01, z_cutoff_for_05, int(1 + np.around(z_cutoff_for_05/0.05))),
+        np.linspace(0.05, z_cutoff_for_05, int(0 + np.around(z_cutoff_for_05/0.05))),
         np.linspace(z_cutoff_for_05, zbins[0], int(np.around((zbins[0] - z_cutoff_for_05)/0.1)) + 1)[1:-1],
         zbins))
 
@@ -745,11 +745,11 @@ def add_zbins(stan_data, cosmo_model):
                 np.concatenate(([0, minz], nodes)), kind = 'cubic')
         else:
             assert cosmo_model == 2
-            ifn = interp1d(stan_data["zbins"],
-                           nodes, kind = 'quadratic')
+            ifn = interp1d(np.concatenate(([0], stan_data["zbins"])),
+                           np.concatenate(([-1], nodes)), kind = 'quadratic')
             
         for i in range(stan_data["n_sne"]):
-            stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i]) - np.mean(ifn(np.linspace(0.1, 0.6, 10)))
+            stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i])
             stan_data["dmudz_dbin"][i, j] = (ifn(stan_data["redshifts"][i] + 0.001) - ifn(stan_data["redshifts"][i]))/0.001
 
     if cosmo_model == 6:
