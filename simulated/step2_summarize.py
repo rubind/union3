@@ -162,7 +162,7 @@ for x1c in ["x1", "c"]:
         poppars.append("R_" + x1c + "_" + fast_slow)
 
     
-pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_fast", "alpha_slow", "MB_fast_minus_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "step_mass"] + poppars  + datasetkeys  + ["sigma_int_fast", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
+pars = ["H0"] + ["Om"]*(cosmomodel == "1") + ["wDE", "wpivot15", "waDE"]*(cosmomodel == "5") + ["alpha", "alpha_slow", "alpha_fast_minus_slow", "MB_fast_minus_slow", "beta_B", "beta_R_low", "beta_R_high", "delta_0", "delta_h", "step_mass"] + poppars  + datasetkeys  + ["sigma_int_fast", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]", "outl_frac"]
 
 
 dir_labels = {"UNITY" + suffix + "twox1_cos=" + cosmomodel + "_": "UNITY1.8, Two-$x_1$ Modes",
@@ -180,6 +180,7 @@ labels = {"H0": "$H_0$",
           "wpivot12": "$w_0 + 0.12\;w_a$", "wpivot15": "$w_0 + 0.15\;w_a$", "wpivot18": "$w_0 + 0.18\;w_a$",
           "waDE": "$w_a$", "this_MB": "$\mathcal{M}_B$", "MB_fast_minus_slow": "$\mathcal{M}_B$ fast $-$ slow",
           "alpha": "$\\alpha$", "alpha_fast": "$\\alpha$ fast", "alpha_slow": "$\\alpha$ slow",
+          "alpha_fast_minus_slow": "$\\alpha$ fast $-$ slow",
           "beta_B": "$\\beta_B$",
           "beta_R_low": "$\\beta_{RL}$",
           "beta_R_high": "$\\beta_{RH}$",
@@ -307,6 +308,12 @@ for matchstr in matchstrs:
             fit_params["wpivot15"] = fit_params["wDE"] + 0.15*fit_params["waDE"]
             #fit_params["wpivot18"] = fit_params["wDE"] + 0.18*fit_params["waDE"]
 
+        try:
+            fit_params["alpha_fast_minus_slow"] = fit_params["alpha_fast"] - fit_params["alpha_slow"]
+        except:
+            pass
+        
+            
         if tmp_ind == 0:
             fmB_true = read_param(sim_paramfl, "frac_var_mBx1c")
             assert fmB_true[0] == "["
@@ -319,7 +326,12 @@ for matchstr in matchstrs:
                     true_vals[true_key] = float(read_param(sim_paramfl, true_key.replace("R_", "R")))
                 except:
                     true_vals[true_key] = np.sqrt(-1.)
+            try:
+                true_vals["alpha_fast_minus_slow"] = true_vals["alpha_fast"] - true_vals["alpha_slow"]
+            except:
+                pass
             
+                    
         true_outl_frac = verify_filenamelist(sampfl)
             
         for par in pars:

@@ -65,8 +65,8 @@ else:
     logfls = sys.argv[2:]
 
 for logfl in logfls:
-    check_Om = check_param(logfl, param = "Om", leave_running_jobs_alone = leave_running_jobs_alone)
-    check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone)
+    check_Om = check_param(logfl, param = "Om", leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.02)
+    check_wDE = check_param(logfl, param = "wDE", leave_running_jobs_alone = leave_running_jobs_alone, threshold = 1.02)
 
     other_checks = 1
     for key in ["beta_B", "mBx1c_int_variance\[1\]", "beta_R_low", "beta_R_high", "alpha_fast", "alpha_slow", "alpha", "MB_fast_minus_slow"]:

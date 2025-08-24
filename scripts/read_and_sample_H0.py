@@ -835,7 +835,7 @@ def init_fn():
             "tau_x1": -random.random(size = stan_data["n_x1c_star"]),
             "R_x1": random.random(size = stan_data["n_x1c_star"])*0.5 + 0.25,
 
-            "x1_star_fast": random.random()*0.5 - 1,
+            "x1_star_fast": random.random()*0.5 - 1.25,
             "x1_star_slow": random.random()*0.5,
             "R_x1_fast": random.random()*0.25 + 0.4,
             "R_x1_slow": random.random()*0.25 + 0.4,
