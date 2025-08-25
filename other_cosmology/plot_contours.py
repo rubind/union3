@@ -343,12 +343,12 @@ for fl in sys.argv[1:]:
     all_latex_lines += "\hline\n \multicolumn{8}{c}{" + model_labels[all_grids["model"]] + "}\\\\ \n \hline\n"
     all_latex_lines += make_latex_table(all_grids)
     
-    make_contours(all_grids, BAO_Omh2 = 0)
-    make_contours(all_grids, BAO_Omh2 = 1)
-    make_contours(all_grids, show_all_four = 1)
-    make_contours(all_grids, show_all_four = 2)
-    make_contours(all_grids, show_H0s = 1)
-    make_contours(all_grids, show_H0s = 2)
-    make_contours(all_grids, combined_and_SNe = 1)
+    #make_contours(all_grids, BAO_Omh2 = 0)
+    #make_contours(all_grids, BAO_Omh2 = 1)
+    #make_contours(all_grids, show_all_four = 1)
+    #make_contours(all_grids, show_all_four = 2)
+    #make_contours(all_grids, show_H0s = 1)
+    #make_contours(all_grids, show_H0s = 2)
+    #make_contours(all_grids, combined_and_SNe = 1)
 
 print(all_latex_lines)
