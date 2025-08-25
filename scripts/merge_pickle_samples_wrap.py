@@ -21,23 +21,6 @@ for logfl in getoutput("ls -lthr *cosmo=*/log.txt | grep 'M '").split('\n'):
 print("unique_prefixes", unique_prefixes)
 
 for prefix in unique_prefixes:
-    f = open("merge.sh", 'w')
-    f.write("""#!/bin/bash
-#SBATCH --job-name=merge
-#SBATCH --partition=shared
-#SBATCH --time=00-14:00:00 ## time format is DD-HH:MM:SS
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=16G # Memory per node my job requires
-#SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
-#SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
-source ~/.bash_profile
-module load lang/Anaconda3/2023.03-1
-
-conda info --envs
-conda activate py39
-""")
-
     print("Checking sample size")
     sample_file = glob.glob(unique_prefixes[prefix][0].split("/")[0] + "/sample*pickle")
     assert len(sample_file) == 1
@@ -48,21 +31,41 @@ conda activate py39
     print(sample_file, the_size)
 
     if the_size > 100e6:
-        # Looks like all parameters saved. Must be for PPD.
-        thin = 47
-        max_param = 10000
+        # Looks like all parameters saved. Must be for PPD. But also want unthinned for uncertainty analysis.
+        thins = [0, 47]
+        max_params = [1000, 10000]
     else:
-        thin = 0
+        thins = [0]
         if prefix.count("cosmo=2"):
-            max_param = 100 # Only want cosmology samples
+            max_params = [100] # Only want cosmology samples
         else:
-            max_param = 1000 # Want everything but per-SN parameters
+            max_params = [1000] # Want everything but per-SN parameters
         
+    for max_param, thin in zip(max_params, thins):
+        f = open("merge.sh", 'w')
+        f.write("""#!/bin/bash
+#SBATCH --job-name=merge                                      
+#SBATCH --partition=shared
+#SBATCH --time=00-14:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=24G # Memory per node my job requires
+#SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
+#SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
+source ~/.bash_profile
 
-    f.write("cd " + pwd + '\n')
-    f.write("python $UNITY/scripts/merge_pickle_samples.py %i %i %s\n" % (max_param, thin, " ".join(unique_prefixes[prefix])))
-    f.close()
+module load lang/Anaconda3/2023.03-1
+conda info --envs
+conda activate py39
+""")
+        
+        f.write("cd " + pwd + '\n')
+        the_files = [item.split("/")[0] + "/" + sample_file.split("/")[-1] for item in unique_prefixes[prefix]]
+        the_files.sort()
+        
+        f.write("python $UNITY/scripts/merge_pickle_samples.py %i %i %s\n" % (max_param, thin, " ".join(the_files)))
+        f.close()
     
-    print(getoutput("sbatch merge.sh"))
+        print(getoutput("sbatch merge.sh"))
     
     
