@@ -1,5 +1,7 @@
 import subprocess
 import time
+import sys
+
 
 for cosmo in """6 1 flatLCDM
 6 1 flatwCDM
@@ -13,7 +15,7 @@ for cosmo in """6 1 flatLCDM
 
     f = open("tmp.sh", 'w')
     f.write("""#!/bin/bash
-#SBATCH --job-name=example
+#SBATCH --job-name=cosmo
 #SBATCH --partition=shared
 #SBATCH --time=02-00:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
@@ -29,7 +31,7 @@ conda info --envs
 conda activate py39
 
 cd /home/drubin/union3/other_cosmology
-~/.conda/envs/py39/bin/python3.9 compute_chi2s.py mu_mat_union3_cosmo=2.fits """ + cosmo)
+~/.conda/envs/py39/bin/python3.9 compute_chi2s.py """ + sys.argv[1] + " " + cosmo)
     f.close()
 
     print(subprocess.getoutput("sbatch tmp.sh"))

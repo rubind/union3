@@ -53,6 +53,7 @@ def check_sampling(logfl):
 
 
 leave_running_jobs_alone = int(sys.argv[1])
+assert leave_running_jobs_alone == 1, "leave_running_jobs_alone doesn't work anymore, as any missing parameter will cause a redo, and some parameters are misssing"
 
 whoami = getoutput("whoami")
 grepout = getoutput("squeue | grep " + whoami + " | grep -v ' R ' | grep -v ' CG ' ")
