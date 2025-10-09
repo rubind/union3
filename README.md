@@ -1,3 +1,33 @@
+# UNITY
+
+A package for performing supernova cosmology using Bayesian Hierarchical Models
+
+## Getting Started
+
+
+
+For convenience, many of the top-level administrative functions are collected into a Makefile. To install this repository, simply run `make install`.
+
+TODO: Add proper steps. Add actual mkdocs. Do everything lol
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*****
+
+# OLD README BELOW
+
+
 # union3
 Union3/UNITY1.5 repo
 

@@ -1,0 +1,26 @@
+[project]
+name = "union3"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "David Rubin", email = "drubin@hawaii.edu" },
+    { name = "Samuel Hinton", email = "samuelreay@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "astropy>=6.0.1",
+    "fastparquet>=2024.11.0",
+    "matplotlib>=3.9.4",
+    "numpy>=1.26.4",
+    "pandas>=2.3.2",
+    "pystan>=3.9.1",
+    "scipy>=1.13.1",
+]
+
+[project.scripts]
+union3 = "union3.main:main"
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
