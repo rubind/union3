@@ -13,7 +13,7 @@ data {
     int<lower=0> n_samples;
     int<lower=0> n_calib;
     int<lower=0> n_photoz; // number of SNe with photo-z's
-    int n_x1c_star;    
+    int n_x1c_star;
 
     array[n_sne] int <lower=1, upper = n_samples> sample_list;
     array[n_sne] real <lower=0> redshifts;
@@ -33,7 +33,7 @@ data {
     vector [n_sne] dmu_const_dz;
     matrix [n_sne, n_zbins] dmu_dbin;
     matrix [n_sne, n_zbins] dmudz_dbin;
-    
+
     array [n_sne] int  has_distmod ;
     vector [n_sne] distmod;
 
@@ -103,7 +103,7 @@ parameters {
     real <lower = -5, upper = 5> waDE;
     real <lower = -2, upper = 2> q0;
     real <lower = -5, upper = 5> j0;
-    
+
     vector [n_zbins] mu_zbins;
 
     array[n_samples] real <lower=0.01, upper = 0.3> sigma_int;
@@ -117,13 +117,13 @@ parameters {
 
 
     // Population parameters:
-  
+
     real <lower = -5, upper = -0.5> x1_star_fast;
     real <lower= 0.1, upper = 2> R_x1_fast;
     real <lower = -0.5, upper = 5> x1_star_slow;
     real <lower= 0.1, upper = 2> R_x1_slow;
     vector <lower= 0.01, upper = 0.99> [n_x1c_star] frac_x1_slow;
-    
+
 
     real <lower = -0.5, upper = 0.5> c_star_slow;
     real <lower = -0.5, upper = 0.5> c_star_fast;
@@ -141,7 +141,7 @@ parameters {
     array[n_samples] real <lower = 0.1, upper = 3> mobs_cut_sigmas;
 
     vector <lower = -0.6, upper = 0.6> [n_photoz] dz; // dc/dz is about 1, so +- 0.3 range in color covers z errors up to about 0.6 but not larger.
-    
+
     real <lower = 0.2, upper = 2> outl_mBx1c_uncertainties_mB;
     real <lower = 1, upper = 10> outl_mBx1c_uncertainties_x1;
     real <lower = 0.1, upper = 1> outl_mBx1c_uncertainties_cB;
@@ -209,7 +209,7 @@ transformed parameters {
     // -------------Begin numerical integration-----------------
 
 
-    
+
 
     if ((cosmo_model == 1) || (cosmo_model == 3) || (cosmo_model == 5)) {
         for (i in 1: 2*(n_sne + nzadd) - 1) {    // Inverse Hubble parameter
@@ -267,7 +267,7 @@ transformed parameters {
         for (i in 1:n_zbins) {
             r_comove_bins[i] = 10^(0.2*(mu_zbins[i] - 43.1586133146))  /  (1. + zbins[i]);
         }
-	
+
         model_mu = dmu_dbin * r_comove_bins;
 	for (i in 1:n_sne) {
 	    model_mu[i] = 5.*log10((1. + zhelio[i])*model_mu[i]) + 43.1586133146;
@@ -297,16 +297,16 @@ transformed parameters {
             dz_from_photoz[photoz_inds[i]] = (dz[photoz_inds[i]] + redshifts[i]) - photo_z0[photoz_inds[i]];
 	}
     }
-    
+
 
     model_mBx1c_cov_fast = obs_mBx1c_cov;
     model_mBx1c_cov_slow = obs_mBx1c_cov;
     model_mBx1c_cov_outl = obs_mBx1c_cov;
-    
+
 
     alpha_slow = tan(alpha_angle_slow);
     alpha_fast = tan(alpha_angle_fast);
-    
+
     if (do_twoalphabeta == 0) {
         beta_B = tan(beta_angle_red_low);
         beta_R_low = tan(beta_angle_red_low);
@@ -322,7 +322,7 @@ transformed parameters {
             sig_int_vector_fast[i][1] = sqrt(mBx1c_int_variance[1])*sqrt(sigma_int[i]^2 + sigma_int_fast^2);        // This vector is in dispersion, not variance
             sig_int_vector_fast[i][2] = sqrt(mBx1c_int_variance[2])*sqrt(sigma_int[i]^2 + sigma_int_fast^2)/0.14;
             sig_int_vector_fast[i][3] = sqrt(mBx1c_int_variance[3])*sqrt(sigma_int[i]^2 + sigma_int_fast^2)/(-3.);
-	    
+
             sig_int_vector_slow[i][1] = sqrt(mBx1c_int_variance[1])*sigma_int[i];        // This vector is in dispersion, not variance
             sig_int_vector_slow[i][2] = sqrt(mBx1c_int_variance[2])*sigma_int[i]/0.14;
             sig_int_vector_slow[i][3] = sqrt(mBx1c_int_variance[3])*sigma_int[i]/(-3.);
@@ -347,7 +347,7 @@ transformed parameters {
             } else {
 	        this_delta_h = delta_h;
             }
-	    
+
 	    p_high_mass_eff = (1.9*(1 - this_delta_h)/(1 + 0.9*exp(0.95*log(10.)*redshifts[i])) + this_delta_h)*p_high_mass;
         } else {
             p_high_mass_eff = 0;
@@ -357,7 +357,7 @@ transformed parameters {
             model_mBx1c_cov_fast[i][j,j] = model_mBx1c_cov_fast[i][j,j] + sig_int_vector_fast[sample_list[i]][j]^2;
             model_mBx1c_cov_slow[i][j,j] = model_mBx1c_cov_slow[i][j,j] + sig_int_vector_slow[sample_list[i]][j]^2;
         }
-	
+
 
 	if (has_distmod[i] == 1) {
  	    model_mBx1c_cov_fast[i][1,1] = model_mBx1c_cov_fast[i][1,1] + sigma_int_calibrator^2;
@@ -381,7 +381,7 @@ transformed parameters {
 
 	mobs_by_SN_except_c_R_fast[i] = this_MB_slow + MB_fast_minus_slow + model_mu[i] + mobs_cut0[i] + (beta_B + mobs_cut1[i])*c_star_fast - delta_0*p_high_mass_eff;
 	mobs_by_SN_except_c_R_slow[i] = this_MB_slow                      + model_mu[i] + mobs_cut0[i] + (beta_B + mobs_cut1[i])*c_star_slow - delta_0*p_high_mass_eff;
-	
+
 	mobs_var_by_SN_except_c_R_fast[i] = mobs_cut_sigmas[sample_list[i]]^2
                                       	  + model_mBx1c_cov_fast[i][1,1] + model_mBx1c_cov_fast[i][3,3] * mobs_cut1[i]^2 + 2.*mobs_cut1[i]*model_mBx1c_cov_fast[i][1,3]
                                      	  + (alpha_fast*R_x1_fast)^2 + ((beta_B + mobs_cut1[i])*R_c_fast)^2;
@@ -425,13 +425,13 @@ transformed parameters {
 	for (g_indc in 1:n_gauss) {
             this_norm_LL_fast += exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]] | //  + d_mBx1c_d_calib[i][1] * calibs
 											      mobs_by_SN_except_c_R_fast[i] + ((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i],
-											   
+
                                                       	                                      sqrt(mobs_var_by_SN_except_c_R_fast[i]
 											      + (((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2
 											      )   );
             this_norm_LL_slow += exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]]| //  + d_mBx1c_d_calib[i][1] * calibs
 											      mobs_by_SN_except_c_R_slow[i] + ((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i],
-											   
+
                                                       	                                      sqrt(mobs_var_by_SN_except_c_R_slow[i]
 											      + (((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2
 											      )   );
@@ -485,7 +485,7 @@ transformed parameters {
 	//      ", ", tau_x1_by_SN[i],
 	//      ", ", R_c_by_SN[i],
 	//      ", ", tau_c_by_SN[i], "}");
-	      
+
     }
 
 }
@@ -498,7 +498,7 @@ model {
         log_sum_vector_three_parts[1] = outl_loglike_by_SN[i];
         log_sum_vector_three_parts[2] = inl_loglike_by_SN_fast[i];
         log_sum_vector_three_parts[3] = inl_loglike_by_SN_slow[i];
-	
+
         target += log_sum_exp(log_sum_vector_three_parts);
     }
 
@@ -508,11 +508,11 @@ model {
     }
 
     calibs ~ normal(0, 1.);
-    
+
     // if (cosmo_model == 2) {
     //    MB ~ normal(-19, 0.001);
     // } else {
-    
+
     if ((cosmo_model == 6) || (cosmo_model == 2)) {
     } else {
         mu_zbins ~ normal(0, 1);
@@ -524,7 +524,7 @@ model {
          Omw0wa_vect[1] = Om;
 	 Omw0wa_vect[2] = wDE;
 	 Omw0wa_vect[3] = waDE;
-	 
+
 	 Omw0wa_vect ~ multi_normal(BAOCMB_Om_w0_wa_mean, BAOCMB_Om_w0_wa_covmatrix);
     }
 
@@ -548,7 +548,7 @@ model {
     tau_c ~ normal(0.1, 0.2);
     R_c_slow ~ normal(0.1, 0.2);
     R_c_fast ~ normal(0.1, 0.2);
-    
+
 
     if (do_twoalphabeta == 0) {
        beta_angle_blue ~ normal(0, 1);

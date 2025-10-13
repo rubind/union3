@@ -103,3 +103,4 @@ ENV/
 src/union3/data
 
 tmp*
+.vscode/
