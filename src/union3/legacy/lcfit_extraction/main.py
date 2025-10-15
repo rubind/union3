@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings
 from pathlib import Path
 from union3 import logger
 import polars as pl
+from astropy.coordinates import SkyCoord
+from astropy import units as u
 
 
 class LCFitExtractionConfig(BaseSettings):
@@ -80,11 +82,11 @@ def parse_bullshit_line(line: str) -> dict:
     if line.startswith("#") or not line.strip():
         return {}
     key, *values = line.split()
-    key = key.strip()
+    key = key.strip().lower()
     data = {}
     if len(values) == 0:
         return {}
-    if len(values) == 1:
+    if len(values) >= 1:
         data[key] = maybe_float(values[0])
     if len(values) == 2:
         err = maybe_float(values[1])
@@ -97,6 +99,16 @@ def parse_bullshit_line(line: str) -> dict:
             data[f"{key}_err_lower"] = lower_err
         if isinstance(upper_err, float):
             data[f"{key}_err_upper"] = upper_err
+    val = data[key]
+    if not isinstance(val, float) and ":" in str(val):
+        if key == "ra":
+            coord = SkyCoord(ra=val, dec="0", unit=(u.deg, u.deg))  # type: ignore
+            data[key] = coord.ra.deg  # type: ignore
+        elif key == "dec":
+            coord = SkyCoord(ra="0", dec=val, unit=(u.deg, u.deg))  # type: ignore
+            data[key] = coord.dec.deg  # type: ignore
+        else:
+            raise ValueError(f"Unexpected key {key} for sexagesimal format")
     return data
 
 
