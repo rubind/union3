@@ -1,6 +1,6 @@
 from typing import Self
 import polars as pl
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from union3.config import Config
 from union3 import logger
@@ -9,6 +9,8 @@ from union3 import logger
 class Data(BaseModel):
     all_supernova: pl.DataFrame
     filtered_supernova: pl.DataFrame
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     def from_config(cls, config: Config) -> Self:
