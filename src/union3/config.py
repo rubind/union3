@@ -18,7 +18,12 @@ class FilterConfig(BaseSettings):
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
-        assert self.min_redshift < self.max_redshift, "min_redshift must be less than max_redshift"
+        assert self.min_redshift < self.max_redshift, (
+            f"min_redshift ({self.min_redshift}) must be less than max_redshift ({self.max_redshift})"
+        )
+        assert self.min_color < self.max_color, (
+            f"min_color ({self.min_color}) must be less than max_color ({self.max_color})"
+        )
         return self
 
 
