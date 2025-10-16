@@ -11,7 +11,7 @@ class Config(FileConfig):
         description="Base config YAML file in the configs directory. If None, will use the defaults from config.py",
     )
     data_dir: Path = Field(default=Path(__file__).parents[2] / "data")
-
+    output_dir: Path = Field(default=Path(__file__).parents[2] / "output")
     #! Config to control what gets run
     cache_data_processing: bool = Field(
         default=True, description="Use caching for data processing and stan running if possible."
@@ -80,4 +80,6 @@ class Config(FileConfig):
     @model_validator(mode="after")
     def validate_model(self) -> Self:
         assert self.min_redshift < self.max_redshift, "min_redshift must be less than max_redshift"
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         return self
