@@ -1,0 +1,3 @@
+do_blinding: false
+filters:
+  max_redshift: 0.3

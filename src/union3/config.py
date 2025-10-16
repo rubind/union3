@@ -1,8 +1,25 @@
 from pathlib import Path
 from typing import Self
 from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings
 
 from union3.utils.base_config import FileConfig
+
+
+class FilterConfig(BaseSettings):
+    min_redshift: float = Field(default=0.01, ge=0.0, description="Cut on minimum redshift.")
+    max_redshift: float = Field(default=3.0, ge=0.0, description="Cut on maximum redshift.")
+    max_first_phase: float = Field(default=100.0, description="Cut on maximum first phase.")
+    min_last_phase: float = Field(default=-100.0, description="Cut on minimum last phase.")
+    max_color_uncertainty: float = Field(default=0.2, ge=0.0, description="Cut on maximum color uncertainty.")
+    min_color: float = Field(default=-0.3, description="Cut on minimum color.")
+    max_color: float = Field(default=0.3, description="Cut on maximum color.")
+    max_MWEBV: float = Field(default=0.3, description="Cut on maximum Milky Way E(B-V).")
+
+    @model_validator(mode="after")
+    def validate_model(self) -> Self:
+        assert self.min_redshift < self.max_redshift, "min_redshift must be less than max_redshift"
+        return self
 
 
 class Config(FileConfig):
@@ -12,6 +29,9 @@ class Config(FileConfig):
     )
     data_dir: Path = Field(default=Path(__file__).parents[2] / "data")
     output_dir: Path = Field(default=Path(__file__).parents[2] / "output")
+
+    filters: FilterConfig = Field(default_factory=FilterConfig)
+
     #! Config to control what gets run
     cache_data_processing: bool = Field(
         default=True, description="Use caching for data processing and stan running if possible."
@@ -37,14 +57,6 @@ class Config(FileConfig):
 
     #! Data processing config
     do_blinding: bool = Field(default=True, description="Whether to blind the data.")
-    min_redshift: float = Field(default=0.01, ge=0.0, description="Cut on minimum redshift.")
-    max_redshift: float = Field(default=3.0, ge=0.0, description="Cut on maximum redshift.")
-    max_first_phase: float = Field(default=100.0, description="Cut on maximum first phase.")
-    min_last_phase: float = Field(default=-100.0, description="Cut on minimum last phase.")
-    max_color_uncertainty: float = Field(default=0.2, ge=0.0, description="Cut on maximum color uncertainty.")
-    min_color: float = Field(default=-0.3, description="Cut on minimum color.")
-    max_color: float = Field(default=0.3, description="Cut on maximum color.")
-    max_MWEBV: float = Field(default=0.3, description="Cut on maximum Milky Way E(B-V).")
 
     #! Data augmentation config
     peculiar_velocity_dispersion: float = Field(
@@ -79,7 +91,5 @@ class Config(FileConfig):
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
-        assert self.min_redshift < self.max_redshift, "min_redshift must be less than max_redshift"
-
         self.output_dir.mkdir(parents=True, exist_ok=True)
         return self
