@@ -37,10 +37,12 @@ class Config(FileConfig):
 
     filters: FilterConfig = Field(default_factory=FilterConfig)
 
-    #! Config to control what gets run
-    cache_data_processing: bool = Field(
-        default=True, description="Use caching for data processing and stan running if possible."
+    #! Other file inputs
+    mag_cut_file: str = Field(
+        default="mapping/mag_cut.csv", description="Mag cut mapping file relative to data directory."
     )
+
+    #! Config to control what gets run
     cache_model_fitting: bool = Field(default=True, description="Use caching for stan model fitting if possible.")
     do_plotting: bool = Field(default=True, description="Generate plots after running.")
 
@@ -97,4 +99,10 @@ class Config(FileConfig):
     @model_validator(mode="after")
     def validate_model(self) -> Self:
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        assert self.data_dir.exists(), f"Data directory {self.data_dir} does not exist."
+        assert (self.data_dir / self.mag_cut_file).exists(), (
+            f"Mag cut file {self.mag_cut_file} does not exist in data directory {self.data_dir}."
+        )
+
         return self
