@@ -9,6 +9,16 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 
+# Create a count decorator to count the number of invocations of a function
+def count(func):
+    def wrapper(*args, **kwargs):
+        wrapper.count += 1  # type: ignore
+        return func(*args, **kwargs)
+
+    wrapper.count = 0  # type: ignore
+    return wrapper
+
+
 class LCFitExtractionConfig(BaseSettings):
     union3_dir: str = "tmp"
 
@@ -22,7 +32,7 @@ class LCFitExtractionConfig(BaseSettings):
         return Path(__file__).parents[4] / "data"
 
 
-def process_survey(survey_path: Path, config: LCFitExtractionConfig):
+def process_survey(survey_path: Path, config: LCFitExtractionConfig) -> int:
     logger.info(f"Processing directory: {survey_path.name}")
     data = []
     for sn_dir in sorted(survey_path.iterdir()):
@@ -33,14 +43,16 @@ def process_survey(survey_path: Path, config: LCFitExtractionConfig):
 
     if not data:
         logger.warning(f"No data found for survey {survey_path.name}")
-        return
+        return 0
 
     df = pl.DataFrame(data)
     output_file = config.output_dir / f"{survey_path.name}.parquet"
     df.write_parquet(output_file)
     logger.info(f"Written data to {output_file}")
+    return len(data)
 
 
+@count
 def process_supernova(sn_path: Path, survey: str):
     sn_name = sn_path.name
     logger.info(f"\tProcessing SN: {sn_name}")
@@ -154,10 +166,15 @@ def main():
 
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
+    num_snia = {}
     for directory in sorted(config.union3_path.iterdir()):
-        # for directory in [config.union3_path / "DES3_Shallow"]:
         if directory.is_dir():
-            process_survey(directory, config)
+            num_snia[directory.stem] = process_survey(directory, config)
+
+    logger.info("Processed supernova counts by survey:")
+    for survey, count in num_snia.items():
+        logger.info(f"\t{survey}: {count}")
+    logger.info(f"Processed {process_supernova.count} supernovae.")  # type: ignore
 
 
 if __name__ == "__main__":
