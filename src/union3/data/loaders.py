@@ -33,6 +33,9 @@ class Data(BaseModel):
         # selection effects and k-corrections. First, we load the mag_cut file
         mag_cut_file = pl.read_csv(config.data_dir / config.mag_cut_file, separator=",", comment_prefix="#")
 
+        # The mag_cut file has columns sample, kc_file, est_cut_value, and est_cut_sigma
+        filtered = filtered.join(mag_cut_file, on="survey", how="left")
+
         # Each row of this dataframe will have a the survey name, the k-correction file, and two numbers
         # characterising the selection effects: est_mobs_cuts and est_mobs_sigmas.
         k_correction_dataframes = {
@@ -42,13 +45,6 @@ class Data(BaseModel):
 
         # With the two cuts available for interpolation, we add them in as mobs_cut0 and mobs_cut1
         filtered = add_mobs_cuts(filtered, k_correction_dataframes)
-
-        # The mag_cut file has columns sample, kc_file, est_cut_value, and est_cut_sigma
-        # We'll join the last two on in a moment, but we also want to load in all the kc_files
-        # in one go.
-        filtered = filtered.join(
-            mag_cut_file.select(["survey", "est_mobs_cuts", "est_mobs_sigmas"]), on="survey", how="left"
-        )
 
         # TODO: port helper_functions.get_kcorrect_ifns (164) and interpolate to the redshift-specific values (287)
 
@@ -76,16 +72,19 @@ def add_mobs_cuts(snia: pl.DataFrame, k_corrections: dict[str, pl.DataFrame]) ->
     }
 
     def compute_mobs_cuts(row: dict) -> dict[str, float]:
+        assert row["kc_file"] in k_correction_cut0_interp, f"Unknown kc_file: {row['kc_file']}"
+        assert row["kc_file"] in k_correction_cut1_interp, f"Unknown kc_file: {row['kc_file']}"
+        assert isinstance(row["z_heliocentric"], (float, int)), "z_heliocentric must be numeric"
         return {
-            "mobs_cut0": k_correction_cut0_interp[row["survey"]](row["z_heliocentric"]),
-            "mobs_cut1": k_correction_cut1_interp[row["survey"]](row["z_heliocentric"]),
+            "mobs_cut0": k_correction_cut0_interp[row["kc_file"]](row["z_heliocentric"]),
+            "mobs_cut1": k_correction_cut1_interp[row["kc_file"]](row["z_heliocentric"]),
         }
 
     return snia.with_columns(
-        pl.struct(["survey", "z_heliocentric"]).map_elements(
+        mb_cuts=pl.struct(["kc_file", "z_heliocentric"]).map_elements(
             compute_mobs_cuts, return_dtype=pl.Struct({"mobs_cut0": pl.Float64, "mobs_cut1": pl.Float64})
         )
-    ).unnest(["mobs_cut0", "mobs_cut1"])
+    ).unnest("mb_cuts")
 
 
 class RedshiftResults(TypedDict):

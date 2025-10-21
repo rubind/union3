@@ -46,7 +46,7 @@ def process_survey(survey_path: Path, config: LCFitExtractionConfig) -> int:
         return 0
 
     df = pl.DataFrame(data)
-    output_file = config.output_dir / f"{survey_path.name}.parquet"
+    output_file = config.output_dir / f"supernova_lc_fits/{survey_path.name}.parquet"
     df.write_parquet(output_file)
     logger.info(f"Written data to {output_file}")
     return len(data)
