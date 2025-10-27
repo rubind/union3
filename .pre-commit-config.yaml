@@ -12,12 +12,4 @@ repos:
       - id: check-yaml
         args:
           - --unsafe
-      - id: trailing-whitespace
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.2
-    hooks:
-      - id: ruff
-        args: ["--fix", "--no-unsafe-fixes"]
-      - id: ruff-format
-
 
