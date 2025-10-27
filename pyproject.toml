@@ -33,3 +33,4 @@ build-backend = "uv_build"
 [tool.ruff]
 line-length = 120
 include = ["pyproject.toml", "src/**/*.py"]
+exclude = ["scripts", "paramfiles", "simulated","other_cosmology","DES_testing"]

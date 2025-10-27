@@ -20,9 +20,9 @@ class DeferredYamlConfigSettingsSource(YamlConfigSettingsSource):
         if yaml_file_to_reload is not None:
             config_dir = Path(__file__).parent.parent / "configs"
             names = [p.name for p in config_dir.glob("*.yml")]
-            assert yaml_file_to_reload in names, (
-                f"Config file {yaml_file_to_reload} not found in configs directory, options are {names}"
-            )
+            assert (
+                yaml_file_to_reload in names
+            ), f"Config file {yaml_file_to_reload} not found in configs directory, options are {names}"
             yaml_file_to_reload = config_dir / yaml_file_to_reload
 
         super().__init__(

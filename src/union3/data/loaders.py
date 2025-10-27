@@ -134,9 +134,9 @@ def load_bulk_flow_data(data_dir: Path) -> BulkFlowData:
     with fits.open(eigenvector_file) as hdul:
         eigenvectors = hdul[0].data  # type: ignore
 
-    assert len(eigenvectors) == redshifts.height, (
-        f"Mismatch between eigenvectors ({len(eigenvectors)}) and redshifts ({redshifts.height})"
-    )
+    assert (
+        len(eigenvectors) == redshifts.height
+    ), f"Mismatch between eigenvectors ({len(eigenvectors)}) and redshifts ({redshifts.height})"
 
     return {
         "redshifts": redshifts,

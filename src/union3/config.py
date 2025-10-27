@@ -18,12 +18,12 @@ class FilterConfig(BaseSettings):
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
-        assert self.min_redshift < self.max_redshift, (
-            f"min_redshift ({self.min_redshift}) must be less than max_redshift ({self.max_redshift})"
-        )
-        assert self.min_color < self.max_color, (
-            f"min_color ({self.min_color}) must be less than max_color ({self.max_color})"
-        )
+        assert (
+            self.min_redshift < self.max_redshift
+        ), f"min_redshift ({self.min_redshift}) must be less than max_redshift ({self.max_redshift})"
+        assert (
+            self.min_color < self.max_color
+        ), f"min_color ({self.min_color}) must be less than max_color ({self.max_color})"
         return self
 
 
@@ -101,8 +101,8 @@ class Config(FileConfig):
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         assert self.data_dir.exists(), f"Data directory {self.data_dir} does not exist."
-        assert (self.data_dir / self.mag_cut_file).exists(), (
-            f"Mag cut file {self.mag_cut_file} does not exist in data directory {self.data_dir}."
-        )
+        assert (
+            self.data_dir / self.mag_cut_file
+        ).exists(), f"Mag cut file {self.mag_cut_file} does not exist in data directory {self.data_dir}."
 
         return self
