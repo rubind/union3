@@ -1,7 +1,6 @@
 import numpy as np
 import copy
 from scipy.interpolate import interp1d
-import sys
 
 
 def get_percentile(orig_vals, percentile):

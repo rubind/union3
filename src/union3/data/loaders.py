@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Self, TypedDict
 import polars as pl
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -6,6 +7,8 @@ from union3.config import Config
 from union3 import logger
 from scipy.special import erf
 from scipy.interpolate import interp1d
+from astropy.io import fits
+import yaml
 
 
 class Data(BaseModel):
@@ -36,15 +39,11 @@ class Data(BaseModel):
         # The mag_cut file has columns sample, kc_file, est_cut_value, and est_cut_sigma
         filtered = filtered.join(mag_cut_file, on="survey", how="left")
 
-        # Each row of this dataframe will have a the survey name, the k-correction file, and two numbers
-        # characterising the selection effects: est_mobs_cuts and est_mobs_sigmas.
-        k_correction_dataframes = {
-            kc_file: pl.read_csv(config.data_dir / f"selection/{kc_file}.csv", separator=",", comment_prefix="#")
-            for kc_file in mag_cut_file["kc_file"].unique().to_list()
-        }
-
         # With the two cuts available for interpolation, we add them in as mobs_cut0 and mobs_cut1
-        filtered = add_mobs_cuts(filtered, k_correction_dataframes)
+        filtered = add_mobs_cuts(filtered, config.data_dir)
+
+        # TODO: add in the bulk flow load_bulk_flow_data function after figuring out wtf it does
+        filtered = add_pecv_and_bulk_flows(filtered, config)
 
         # TODO: port helper_functions.get_kcorrect_ifns (164) and interpolate to the redshift-specific values (287)
 
@@ -61,7 +60,13 @@ class Data(BaseModel):
         )
 
 
-def add_mobs_cuts(snia: pl.DataFrame, k_corrections: dict[str, pl.DataFrame]) -> pl.DataFrame:
+def add_mobs_cuts(snia: pl.DataFrame, data_dir: Path) -> pl.DataFrame:
+    # Each row of this dataframe will have a the survey name, the k-correction file, and two numbers
+    # characterising the selection effects: est_mobs_cuts and est_mobs_sigmas.
+    k_corrections = {
+        kc_file: pl.read_csv(data_dir / f"selection/{kc_file}.csv", separator=",", comment_prefix="#")
+        for kc_file in snia["kc_file"].unique().to_list()
+    }
     k_correction_cut0_interp = {
         kc_file: interp1d(df["redshift"].to_list(), df["c2"].to_list(), kind="linear")
         for kc_file, df in k_corrections.items()
@@ -85,6 +90,58 @@ def add_mobs_cuts(snia: pl.DataFrame, k_corrections: dict[str, pl.DataFrame]) ->
             compute_mobs_cuts, return_dtype=pl.Struct({"mobs_cut0": pl.Float64, "mobs_cut1": pl.Float64})
         )
     ).unnest("mb_cuts")
+
+
+def add_pecv_and_bulk_flows(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
+    bulk_flows = load_bulk_flow_data(config.data_dir)
+    bulk_df, eigenvectors = bulk_flows["redshifts"], bulk_flows["eigenvectors"]
+    # From read_and_sample_H0.py line 386, and knowing there are no calibrators, we need to extra pecv
+    pec_vel_diag = (
+        config.peculiar_velocity_dispersion
+        * (5 / np.log(10))
+        * (snia["z_cmb"] + 1)
+        / (snia["z_cmb"] * (snia["z_cmb"] * 0.5 + 1)) ** 2
+    )
+    calibrator_names = []
+    if config.include_peculiar_velocity_covariance:
+        for index, row in snia.iter_rows(named=True):
+            # For each supernova, we want to find the closest point in our bulk flow redshift list
+            # so that we can find the right set of (top 100) eigenvectors to use for the convariance
+            ra: float = row["RA"]  # type: ignore
+            dec: float = row["DEC"]  # type: ignore
+            z: float = row["z_cmb"]  # type: ignore
+
+            if z < 0.1:
+                continue
+
+            distances = (bulk_df["ra"] - ra) ** 2 + (bulk_df["dec"] - dec) ** 2 + 1e6(bulk_df["redshift"] - z) ** 2  # type: ignore
+            closest_index = distances.argmin()
+            # TODO: figure out wtf is going on with BULK_%03i at line 401
+
+            for bulk_i in range(len(eigenvectors)):
+                key = f"BULK_{bulk_i:03d}"
+
+
+class BulkFlowData(TypedDict):
+    redshifts: pl.DataFrame
+    eigenvectors: np.ndarray
+
+
+def load_bulk_flow_data(data_dir: Path) -> BulkFlowData:
+    redshifts = pl.read_csv(data_dir / "bulk_flows" / "bulk_flows_redshift.csv")
+
+    eigenvector_file = data_dir / "bulk_flows" / "dominant_evecs.fits"
+    with fits.open(eigenvector_file) as hdul:
+        eigenvectors = hdul[0].data  # type: ignore
+
+    assert len(eigenvectors) == redshifts.height, (
+        f"Mismatch between eigenvectors ({len(eigenvectors)}) and redshifts ({redshifts.height})"
+    )
+
+    return {
+        "redshifts": redshifts,
+        "eigenvectors": eigenvectors,
+    }
 
 
 class RedshiftResults(TypedDict):
@@ -139,11 +196,17 @@ def _load_snia_lightcurve_fits(config: Config):
             "mwebv": "MWEBV",
             "firstphase": "first_phase",
             "lastphase": "last_phase",
+            "ra": "RA",
+            "dec": "DEC",
         }
     )
 
 
 def _filter_snia(df: pl.DataFrame, config: Config):
+    weird_sn_file = config.data_dir / "misc/weird_sn.yml"
+    assert weird_sn_file.exists(), f"Weird SN file not found at: {weird_sn_file}"
+    weird_sn = [str(x) for x in yaml.safe_load(weird_sn_file.read_text())["weird_sn_names"]]
+
     df_filtered = df.filter(
         pl.col("redshift").is_between(config.filters.min_redshift, config.filters.max_redshift)
         & pl.col("mb").is_between(0, 50)
@@ -152,6 +215,9 @@ def _filter_snia(df: pl.DataFrame, config: Config):
         & pl.col("MWEBV").is_between(0, config.filters.max_MWEBV)
         & pl.col("first_phase").le(config.filters.max_first_phase)
         & pl.col("last_phase").ge(config.filters.min_last_phase)
+        & ~pl.col("name").is_in(weird_sn)
+        & pl.col("x1_err").is_not_null()
+        & ((pl.col("x1").abs() + pl.col("x1_err")) < 5)
     )
     logger.info(f"Filtered to {df_filtered.height} SNe Ia")
     return df_filtered
@@ -189,4 +255,9 @@ def impute_snia(df: pl.DataFrame) -> pl.DataFrame:
             .otherwise(pl.col("mass")),
             mass_err=pl.when(pl.col("bad_mass")).then(0.1).otherwise(pl.col("mass_err")),
         )
+        # The original code has a whole is_calibrator flag, but there are no paramfiles
+        # that utilise the distance_ladder key, so this functionality is unused right now.
+        # As such, the original code sets has_distmod and distmod to 0.
+        # TODO: check to see if I can remove this with David?
+        .with_columns(has_distmod=pl.lit(0), distmod=pl.lit(0))
     )
