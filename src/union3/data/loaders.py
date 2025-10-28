@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pathlib import Path
 from typing import Self, TypedDict
 import polars as pl
@@ -9,6 +10,7 @@ from scipy.special import erf
 from scipy.interpolate import interp1d
 from astropy.io import fits
 import yaml
+import polars.selectors as cs
 
 
 class Data(BaseModel):
@@ -32,9 +34,15 @@ class Data(BaseModel):
         all_supernova = _load_snia_lightcurve_fits(config)
         filtered = _filter_snia(all_supernova, config).pipe(impute_snia)
 
+        # Determine calibrators and add distmod information, if distance_ladder is provided
+        filtered, distmod_systematics = determine_calibrators(filtered, config)
+
+        # If there are photo-z supernova, we need to quantify their systematics
+        filtered, photoz_systematics = add_photoz_errors(filtered)
+
         # Each supernova is associated with a survey, and each survey has its own
         # selection effects and k-corrections. First, we load the mag_cut file
-        mag_cut_file = pl.read_csv(config.data_dir / config.mag_cut_file, separator=",", comment_prefix="#")
+        mag_cut_file = pl.read_csv(config.data_dir / config.mag_cut_file, comment_prefix="#")
 
         # The mag_cut file has columns sample, kc_file, est_cut_value, and est_cut_sigma
         filtered = filtered.join(mag_cut_file, on="survey", how="left")
@@ -43,7 +51,7 @@ class Data(BaseModel):
         filtered = add_mobs_cuts(filtered, config.data_dir)
 
         # TODO: add in the bulk flow load_bulk_flow_data function after figuring out wtf it does
-        filtered = add_pecv_and_bulk_flows(filtered, config)
+        snia, bulk_flow_systematics = add_pecv_and_bulk_flows(filtered, config)
 
         # TODO: port helper_functions.get_kcorrect_ifns (164) and interpolate to the redshift-specific values (287)
 
@@ -53,11 +61,65 @@ class Data(BaseModel):
         )
         # TODO: p_high_mass
 
+        # Combine all systematics into one dictionary
+        all_systematics = defaultdict(dict)
+        for d in [photoz_systematics, distmod_systematics, bulk_flow_systematics]:
+            for sn_name, sys_dict in d.items():
+                all_systematics[sn_name].update(sys_dict)
+
+        # TODO: photoz_inds need to be determined.
         return cls(
             all_supernova=all_supernova,
             filtered_supernova=filtered,
             **extra_redshifts,
         )
+
+
+def add_photoz_errors(snia: pl.DataFrame) -> tuple[pl.DataFrame, dict[str, dict[str, np.ndarray]]]:
+    if "photoz_mean" not in snia.columns:
+        logger.info("No photo-z supernova found, skipping photo-z error addition.")
+        return snia, {}
+
+    logger.info(
+        f"Adding photo-z error terms for {snia.filter(pl.col("photoz_mean").is_not_null()).height} photo-z supernova."
+    )
+    systematics: dict[str, dict[str, np.ndarray]] = defaultdict(dict)
+    for row in snia.filter(pl.col("photoz_mean").is_not_null()).iter_rows(named=True):
+        name: str = row["name"]  # type: ignore
+        systematics[name]["photoz_sys"] = np.array(
+            row["deriv_Redshift_dmB/dP"], row["deriv_Redshift_ds/dP"], row["deriv_Redshift_dc/dP"]
+        )  # type: ignore
+    return snia, systematics
+
+
+def determine_calibrators(snia: pl.DataFrame, config: Config) -> tuple[pl.DataFrame, dict[str, dict[str, np.ndarray]]]:
+    if config.distance_ladder is None:
+        return snia.with_columns(is_calibrator=pl.lit(False), distmod=pl.lit(0), has_distmod=pl.lit(0)), {}
+
+    # The calibrators are determined from the distance ladder file, which has N columns, the first two being
+    # the name and the distmod itself. The rest of the columns are the diag variance and then all the offdiag terms
+    dist_ladder_file = config.data_dir / config.distance_ladder
+    distance_ladder = (
+        pl.read_csv(dist_ladder_file, has_header=False)
+        .rename({"column_1": "name", "column_2": "distmod", "column_3": "distmod_err"})
+        .select(pl.all().name.map(lambda name: name.replace("column", "distmod_err_offdiag")))
+    )
+    logger.info(f"Loaded distance ladder from {dist_ladder_file}, providing {distance_ladder.height} calibrators.")
+    snia = snia.join(distance_ladder, on="name", how="left").with_columns(
+        is_calibrator=pl.col("distmod").is_not_null(),
+        has_distmod=pl.when(pl.col("distmod").is_not_null()).then(1).otherwise(0),
+        distmod=pl.col("distmod").fill_null(0),  # TODO: maybe we should do the awkward imputation right before stan?
+    )
+
+    # The distmod systematics are really just the uncertainties on the distance moduli for each calibrator
+    systematics: dict[str, dict[str, np.ndarray]] = defaultdict(dict)
+    # Iterating over snia instead of distance_ladder because there may be entries in distance_ladder not in snia
+    for row in snia.filter(pl.col("is_calibrator")).select("name", cs.starts_with("distmod_err")).iter_rows(named=True):
+        name = row.pop("name")
+        for key, value in row.items():
+            systematics[name][key] = np.array([value, 0, 0])  # Only the mag component has nonzero entries
+
+    return snia, systematics
 
 
 def add_mobs_cuts(snia: pl.DataFrame, data_dir: Path) -> pl.DataFrame:
@@ -92,34 +154,67 @@ def add_mobs_cuts(snia: pl.DataFrame, data_dir: Path) -> pl.DataFrame:
     ).unnest("mb_cuts")
 
 
-def add_pecv_and_bulk_flows(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
+def add_pecv_and_bulk_flows(
+    snia: pl.DataFrame, config: Config
+) -> tuple[pl.DataFrame, dict[str, dict[str, np.ndarray]]]:
+    logger.info("Adding peculiar velocity dispersion and bulk flow data.")
     bulk_flows = load_bulk_flow_data(config.data_dir)
     bulk_df, eigenvectors = bulk_flows["redshifts"], bulk_flows["eigenvectors"]
+
     # From read_and_sample_H0.py line 386, and knowing there are no calibrators, we need to extra pecv
-    pec_vel_diag = (
-        config.peculiar_velocity_dispersion
-        * (5 / np.log(10))
-        * (snia["z_cmb"] + 1)
-        / (snia["z_cmb"] * (snia["z_cmb"] * 0.5 + 1)) ** 2
+    snia = snia.with_columns(
+        pec_vel_on_diag=pl.when(pl.col("is_calibrator"))
+        .then(0.0)
+        .otherwise(
+            config.peculiar_velocity_dispersion
+            * (5 / np.log(10))
+            * (pl.col("z_cmb") + 1)
+            / (pl.col("z_cmb") * (pl.col("z_cmb") * 0.5 + 1)) ** 2
+        )
     )
-    calibrator_names = []
+
+    # Each supernova has calibration/calibrator uncertainty, and we want to keep track of
+    # the name of the SN and a key associated with each systematic name. In our case,
+    # this will be the 100 bulk flow eigenvectors.
+    d_mBx1c_dcalib: dict[str, dict[str, np.ndarray]] = defaultdict(dict)
+    final_pecvs: dict[str, float] = {}
     if config.include_peculiar_velocity_covariance:
-        for index, row in snia.iter_rows(named=True):
+        for row in snia.filter(pl.col("z_cmb") < 0.1).iter_rows(named=True):
             # For each supernova, we want to find the closest point in our bulk flow redshift list
             # so that we can find the right set of (top 100) eigenvectors to use for the convariance
             ra: float = row["RA"]  # type: ignore
             dec: float = row["DEC"]  # type: ignore
             z: float = row["z_cmb"]  # type: ignore
+            name: str = row["name"]  # type: ignore
 
-            if z < 0.1:
-                continue
+            distances = (bulk_df["ra"] - ra) ** 2 + (bulk_df["dec"] - dec) ** 2 + 1e6 * (bulk_df["z"] - z) ** 2
+            # This is the closest 100 bulk flow eigenvectors that we will use as calibration systematics
+            eigenvector = eigenvectors[distances.arg_min()]
 
-            distances = (bulk_df["ra"] - ra) ** 2 + (bulk_df["dec"] - dec) ** 2 + 1e6(bulk_df["redshift"] - z) ** 2  # type: ignore
-            closest_index = distances.argmin()
-            # TODO: figure out wtf is going on with BULK_%03i at line 401
-
-            for bulk_i in range(len(eigenvectors)):
+            for bulk_i in range(len(eigenvector)):
                 key = f"BULK_{bulk_i:03d}"
+                d_mBx1c_dcalib[name][key] = np.array([eigenvector[bulk_i], 0, 0])
+
+            # Now that we've done the bulk flow eigenvector systematics, we also want to add in
+            # the corr_redshift_sys, which I assume is either corrected or correlated redshift systematic.
+            d_mBx1c_dcalib[name]["corr_redshift_sys"] = np.array(
+                [(3.3e-5) * (5 / np.log(10)) * (1 + z) / (z * (1 + 0.5 * z)), 0, 0]
+            )
+
+            # We also have
+            total_bulk_quad = np.sum(eigenvector**2)
+            total_pec_v_on_diag = np.clip(row["pec_vel_on_diag"] - total_bulk_quad, 0, 100)
+            final_pecvs[name] = total_pec_v_on_diag
+            logger.debug(f"SN {name}: {total_bulk_quad=}, {total_pec_v_on_diag=}")
+
+    # The pec_vel_on_diag needs to be overwritten with the final_pecvs values if theres a value for that row
+    snia = snia.with_columns(
+        pec_vel_on_diag=pl.when(pl.col("name").is_in(final_pecvs.keys()))
+        .then(pl.col("name").replace(final_pecvs))
+        .otherwise(pl.col("pec_vel_on_diag"))
+    ).with_columns(mbmb_var=pl.col("mbmb_var") + pl.col("pec_vel_on_diag"))
+
+    return snia, d_mBx1c_dcalib
 
 
 class BulkFlowData(TypedDict):
@@ -132,7 +227,7 @@ def load_bulk_flow_data(data_dir: Path) -> BulkFlowData:
 
     eigenvector_file = data_dir / "bulk_flows" / "dominant_evecs.fits"
     with fits.open(eigenvector_file) as hdul:
-        eigenvectors = hdul[0].data  # type: ignore
+        eigenvectors = hdul[0].data.T  # type: ignore
 
     assert (
         len(eigenvectors) == redshifts.height
@@ -198,8 +293,14 @@ def _load_snia_lightcurve_fits(config: Config):
             "lastphase": "last_phase",
             "ra": "RA",
             "dec": "DEC",
-        }
-    )
+            "cluster": "in_cluster",
+            "p_spike": "photo_pspike",
+            "spikez": "photo_spikez",
+            "photoz_unc": "photo_sigz",
+            "photoz_mean": "photo_z0",
+        },
+        strict=False,
+    ).sort("name")
 
 
 def _filter_snia(df: pl.DataFrame, config: Config):
@@ -248,16 +349,17 @@ def impute_snia(df: pl.DataFrame) -> pl.DataFrame:
         # it could also have erronenous values. If so, we impute based upon a redshift
         # cut, which is right now hardcoded to z=0.1.
         .with_columns(mass_err=(pl.col("mass_err_lower").abs() * pl.col("mass_err_upper").abs()).sqrt())
-        .with_columns(bad_mass=pl.col("mass").is_null() | pl.col("mass").lt(1))
+        .with_columns(
+            bad_mass=pl.col("mass").is_null()
+            | pl.col("mass").lt(1)
+            | pl.col("mass_err").is_null()
+            | pl.col("mass_err").le(0)
+            | pl.col("mass_err").is_infinite()
+        )
         .with_columns(
             mass=pl.when(pl.col("bad_mass"))
             .then(pl.when(pl.col("z_cmb") < 0.1).then(10.0).otherwise(11.0))
             .otherwise(pl.col("mass")),
             mass_err=pl.when(pl.col("bad_mass")).then(0.1).otherwise(pl.col("mass_err")),
         )
-        # The original code has a whole is_calibrator flag, but there are no paramfiles
-        # that utilise the distance_ladder key, so this functionality is unused right now.
-        # As such, the original code sets has_distmod and distmod to 0.
-        # TODO: check to see if I can remove this with David?
-        .with_columns(has_distmod=pl.lit(0), distmod=pl.lit(0))
     )

@@ -41,6 +41,11 @@ class Config(FileConfig):
     mag_cut_file: str = Field(
         default="mapping/mag_cut.csv", description="Mag cut mapping file relative to data directory."
     )
+    distance_ladder: str | None = Field(
+        default="distance_ladder/dist_ladder_R22.csv",
+        description="Distance ladder file relative to data directory, used to determine calibrators.",
+        examples=["distance_ladder/dist_ladder_R22.csv"],
+    )
 
     #! Config to control what gets run
     cache_model_fitting: bool = Field(default=True, description="Use caching for stan model fitting if possible.")
@@ -56,7 +61,7 @@ class Config(FileConfig):
     fix_omega_m: bool = Field(default=False, description="Whether to fix Omega_m during fitting to 0.3.")
     MB_by_sample: bool = Field(default=False, description="Whether to fit for different absolute magnitude by sample.")
     include_peculiar_velocity_covariance: bool = Field(
-        default=False, description="Whether to include peculiar velocity covariance matrix."
+        default=True, description="Whether to include peculiar velocity covariance matrix."
     )
     separate_mass_x1c: bool = Field(
         default=True, description="Whether to separate x1 and color standardization by host mass."
@@ -104,5 +109,10 @@ class Config(FileConfig):
         assert (
             self.data_dir / self.mag_cut_file
         ).exists(), f"Mag cut file {self.mag_cut_file} does not exist in data directory {self.data_dir}."
+
+        if self.distance_ladder is not None:
+            assert (
+                self.data_dir / self.distance_ladder
+            ).exists(), f"Distance ladder file {self.distance_ladder} does not exist in data directory {self.data_dir}."
 
         return self

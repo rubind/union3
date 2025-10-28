@@ -33,7 +33,7 @@ class DeferredYamlConfigSettingsSource(YamlConfigSettingsSource):
 
 
 class FileConfig(BaseSettings):
-    model_config = SettingsConfigDict(cli_parse_args=True, env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(cli_parse_args=True, env_file_encoding="utf-8", env_nested_delimiter="__")
 
     @classmethod
     def settings_customise_sources(  # type: ignore

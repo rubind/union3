@@ -147,11 +147,11 @@ def load_derivatives(sn_path: Path):
             prefix="deriv_"
             + pl.col("#Parameter")
             + "_"
-            + pl.col("MagSys|Instrument|Band").str.replace("All|All|All", "")
+            + pl.col("MagSys|Instrument|Band").str.replace(r"All\|All\|All", "")
         )
         .drop("#Parameter", "MagSys|Instrument|Band", "Phase", "RestLamb")
         .unpivot(index="prefix")
-        .with_columns(name=pl.col("prefix") + "_" + pl.col("variable"), tmp=1)
+        .with_columns(name=(pl.col("prefix") + "_" + pl.col("variable")).str.replace_all(r"__", r"_"), tmp=1)
         .select("name", "value", "tmp")
         .pivot(on="name", values="value", index="tmp")
         .drop("tmp")

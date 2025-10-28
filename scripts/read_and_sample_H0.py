@@ -311,12 +311,12 @@ def read_data(params):
                     calib_ind = the_data["calib_names"].index(key)
                     the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = dist_mod_dict[this_SN_name][1] # 
 
-                    for dl_ind in range(len(dist_mod_dict[this_SN_name]) - 2): # First is distmod, second is diagonal uncertainty
+                    for dl_ind in range(len(dist_mod_dict[this_SN_name]) - 1): # First is distmod, second is diagonal uncertainty
                         key = "DISTMOD%03i" % dl_ind
                         if not the_data["calib_names"].count(key):
                             the_data["calib_names"].append(key)
                         calib_ind = the_data["calib_names"].index(key)
-                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = dist_mod_dict[this_SN_name][dl_ind + 2] # First is distance modulus, then diagonal uncertainty remaining after eigenvectors
+                        the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = dist_mod_dict[this_SN_name][dl_ind + 1] # First is distance modulus, then diagonal uncertainty remaining after eigenvectors
                 else:
                     the_data["has_distmod"] = np.append(the_data["has_distmod"], 0)
                     the_data["distmod"] = np.append(the_data["distmod"], 0.)
@@ -412,7 +412,7 @@ def read_data(params):
                         the_data["calib_names"].append(key)
                     calib_ind = the_data["calib_names"].index(key)
                     the_data["d_mBx1c_dcalib_list"][current_sn_ind, 0, calib_ind] = (3.3e-5)*(5./log(10.))*(the_data["z_CMB_list"][-1] + 1.)/(the_data["z_CMB_list"][-1]*(1 + the_data["z_CMB_list"][-1]/2.))
-
+    
                     
 
                 print("total_pec_vel_on_diag ", total_pec_vel_on_diag, "z", the_data["z_CMB_list"][-1])
