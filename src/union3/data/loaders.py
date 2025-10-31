@@ -50,7 +50,7 @@ class Data(BaseModel):
         # Calibration uncertainties can be scaled up or down, and this file is how we do so
         calibration_uncertaintes = load_calibration_uncertainties(config)
 
-        filtered = (
+        snia = (
             impute_snia(all_supernova, config)
             .pipe(_filter_snia, config)
             .pipe(flag_weird_supernova)
@@ -59,28 +59,29 @@ class Data(BaseModel):
             .pipe(add_photoz_errors)
             .join(mag_cut_file, on="survey", how="left")
             .pipe(add_mobs_cuts, config.data_dir)
-            .pipe(add_pecv_and_bulk_flows, config)
+            .pipe(add_pecv_and_bulk_flow_uncertainties, config)
             .pipe(add_MBEBV_uncertainties, config)
             .pipe(add_intergalactic_extinction_uncertainties, config)
             .pipe(add_electron_scattering_uncertainties, config)
-            # Now we rescale the uncertainties based on the calibration uncertainties
+            # TODO: add in Landolt Smith bins (get_dparam_dzps)
+            # Now we rescale the uncerts based on the calibration uncertainty scaling factors
             .pipe(rescale_uncertainties, calibration_uncertaintes)
             .pipe(remap_x1, config)
+            # At this point we should be done with all the deriv_ columns, having
+            # processed them into uncertainty_ columns, and can drop them.
+            .drop(cs.starts_with("deriv_") | cs.starts_with("instrument|"))
         )
 
-        # TODO port get_IG_extinction_sys
-        # TODO: port helper_functions.get_kcorrect_ifns (164) and interpolate to the redshift-specific values (287)
-
-        extra_redshifts = _get_redshifts(filtered["z_cmb"].to_list())
+        extra_redshifts = _get_redshifts(snia["z_cmb"].to_list())
         p_high_mass = 0.5 * (  # noqa: F841
-            1.0 + erf((np.array(filtered["mass"]) - 10.0) / (np.sqrt(2.0) * np.array(filtered["mass_err"])))
+            1.0 + erf((np.array(snia["mass"]) - 10.0) / (np.sqrt(2.0) * np.array(snia["mass_err"])))
         )
         # TODO: p_high_mass
 
         # TODO: photoz_inds need to be determined.
         return cls(
             all_supernova=all_supernova,
-            filtered_supernova=filtered,
+            filtered_supernova=snia,
             **extra_redshifts,
         )
 
@@ -110,7 +111,7 @@ def flag_weird_supernova(snia: pl.DataFrame) -> pl.DataFrame:
     """Flags any supernova that have weird properties."""
 
     snia = snia.with_columns(
-        h_resid=pl.col("mb")
+        h_resid=pl.col("mB")
         + 19.1
         + 0.13 * pl.col("x1")
         - 3.0 * pl.col("color")
@@ -248,7 +249,7 @@ def add_mobs_cuts(snia: pl.DataFrame, data_dir: Path) -> pl.DataFrame:
     ).unnest("mb_cuts")
 
 
-def add_pecv_and_bulk_flows(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
+def add_pecv_and_bulk_flow_uncertainties(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
     logger.info("Adding peculiar velocity dispersion and bulk flow data.")
     bulk_flows = load_bulk_flow_data(config.data_dir)
     bulk_df, eigenvectors = bulk_flows["redshifts"], bulk_flows["eigenvectors"]
@@ -298,7 +299,7 @@ def add_pecv_and_bulk_flows(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
 
     # Turn d_mBx1c_dcalib into a dataframe to join back on
     if d_mBx1c_dcalib:
-        systematics = pl.DataFrame(list(d_mBx1c_dcalib.values())).with_columns(
+        systematics = pl.DataFrame(list(d_mBx1c_dcalib.values())).select(
             pl.all().name.prefix("uncertainty_mB_"), pl.Series(list(d_mBx1c_dcalib.keys())).alias("name")
         )
         snia = snia.join(systematics, on="name", how="left")
@@ -382,8 +383,8 @@ def _load_snia_lightcurve_fits(config: Config):
     logger.info(f"Loaded {df.height} SNe Ia from {config.data_dir}")
     return df.rename(
         {
-            "restframemag_0_b": "mb",
-            "restframemag_0_b_err": "mb_err",
+            "restframemag_0_b": "mB",
+            "restframemag_0_b_err": "mB_err",
             "covrestframemag_0_bx1": "cov_mb_x1",
             "covcolorrestframemag_0_b": "cov_mb_color",
             "covx1x1": "cov_x1_x1",
@@ -415,7 +416,7 @@ def _filter_snia(df: pl.DataFrame, config: Config):
 
     df_filtered = df.filter(
         pl.col("redshift").is_between(config.filters.min_redshift, config.filters.max_redshift)
-        & pl.col("mb").is_between(0, 50)
+        & pl.col("mB").is_between(0, 50)
         & pl.col("color").is_between(config.filters.min_color, config.filters.max_color)
         & pl.col("color_err").is_between(0, config.filters.max_color_uncertainty)
         & pl.col("MWEBV").is_between(0, config.filters.max_MWEBV)
@@ -468,5 +469,5 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
             mass_err=pl.when(pl.col("bad_mass")).then(0.1).otherwise(pl.col("mass_err")),
         )
         # Add in mbmb_var from mb_err and the lensing dispersion
-        .with_columns(mbmb_var=pl.col("mb_err") ** 2 + (pl.col("z_cmb") * config.lensing_dispersion) ** 2)
+        .with_columns(mbmb_var=pl.col("mB_err") ** 2 + (pl.col("z_cmb") * config.lensing_dispersion) ** 2)
     )

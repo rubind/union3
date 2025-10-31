@@ -112,6 +112,8 @@ def add_electron_scattering_uncertainties(snia: pl.DataFrame, config: Config) ->
         .with_columns(mB=pl.col("mB") + pl.col("add_mag_electron"))
     )
 
+    assert all(snia["add_mag_electron"] < 0), "Electron scattering magnitudes should be negative (dimming)."
+
     return snia
 
 

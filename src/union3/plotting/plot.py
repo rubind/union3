@@ -18,8 +18,8 @@ def plot_approx_hubble_diagram(
     fig, ax = plt.subplots()
     ax.errorbar(
         data["redshift"],
-        data["mb"] - MB,
-        yerr=np.sqrt(data["mb_err"] ** 2 + (alpha * data["x1_err"]) ** 2 + (beta * data["color_err"]) ** 2),
+        data["mB"] - MB,
+        yerr=np.sqrt(data["mB_err"] ** 2 + (alpha * data["x1_err"]) ** 2 + (beta * data["color_err"]) ** 2),
         fmt="o",
         markersize=4,
         alpha=0.5,
