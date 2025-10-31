@@ -41,10 +41,26 @@ class Config(FileConfig):
     mag_cut_file: str = Field(
         default="mapping/mag_cut.csv", description="Mag cut mapping file relative to data directory."
     )
-    distance_ladder: str | None = Field(
+    distance_ladder_file: str | None = Field(
         default="distance_ladder/dist_ladder_R22.csv",
         description="Distance ladder file relative to data directory, used to determine calibrators.",
         examples=["distance_ladder/dist_ladder_R22.csv"],
+    )
+    lensing_bias_file: str = Field(
+        default="lensing/lensing_bias.csv",
+        description="Lensing bias file relative to data directory.",
+    )
+    calibration_uncertainties_file: str = Field(
+        default="calibration/calibration_uncertainties.csv",
+        description="Calibration uncertainties file relative to data directory.",
+    )
+    weird_sn_file: str | None = Field(
+        default="misc/weird_sn.yml",
+        description="File with list of weird SN names to exclude, relative to data directory.",
+    )
+    intergalactic_extinction_file: str | None = Field(
+        default="extinction/Azwave_grid.fits",
+        description="File with intergalactic extinction data, relative to data directory.",
     )
 
     #! Config to control what gets run
@@ -74,18 +90,23 @@ class Config(FileConfig):
     peculiar_velocity_dispersion: float = Field(
         default=0.001, ge=0.0, description="Peculiar velocity dispersion in units of c."
     )
+    use_lensing_file: bool = Field(
+        default=False,
+        description="Whether to use lensing bias file to add lensing uncertainties. If false, use lensing_dispersion.",
+    )
     lensing_dispersion: float = Field(
         default=0.055, ge=0.0, description="Lensing dispersion in magnitudes per redshift."
     )
     MWEBV_zeropoint_EBV: float = Field(default=0.005, ge=0.0, description="Zeropoint uncertainty on Milky Way E(B-V).")
     outlier_fraction: float = Field(default=0.02, ge=0.0, le=1.0, description="Fraction of outliers in the sample.")
-    # blinding_file?
-    # filename_list
-    # weird_sn_list
-    # mag_cuts
-    # sample file
-    # calibration_uncertainties
-    # max params to save
+    intergalactic_extinction_coefficient: float = Field(
+        default=1.0, description="The scale factor to apply to intergalactic extinction uncertainties."
+    )
+    # TODO: ask david for better descriptions of these
+    electron_scattering_tau: float = Field(default=0.0042, description="Electron scattering?")
+    electron_scattering_dtau: float = Field(default=0.00042, ge=0.0, description="Electron scattering grad?")
+    remap_x1_intercept: float = Field(default=0.0, description="Remapping to apply to x1.")
+    remap_x1_slope: float = Field(default=0.0, description="Remapping slope to apply to x1.")
 
     @property
     def model_path(self) -> Path:
@@ -101,18 +122,32 @@ class Config(FileConfig):
         assert v in names, f"Model {v} not found in models directory, options are {names}"
         return v
 
+    @field_validator("electron_scattering_tau")
+    def validate_electron_scattering_tau(cls, v: float) -> float:
+        assert abs(v) < 0.1, "electron_scattering_tau should be less than 0.1"
+        assert v > -0.001, "electron_scattering_tau should be greater than -0.001"
+        return v
+
+    @field_validator("electron_scattering_dtau")
+    def validate_electron_scattering_dtau(cls, v: float) -> float:
+        assert abs(v) < 0.01, "electron_scattering_dtau should be less than 0.01"
+        return v
+
+    def _check_file_exists(self, data_dir: Path, file_name: str | None) -> None:
+        if file_name is None:
+            return
+        file_path = data_dir / file_name
+        assert file_path.exists(), f"File {file_name} does not exist in data directory {data_dir}."
+
     @model_validator(mode="after")
     def validate_model(self) -> Self:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         assert self.data_dir.exists(), f"Data directory {self.data_dir} does not exist."
-        assert (
-            self.data_dir / self.mag_cut_file
-        ).exists(), f"Mag cut file {self.mag_cut_file} does not exist in data directory {self.data_dir}."
-
-        if self.distance_ladder is not None:
-            assert (
-                self.data_dir / self.distance_ladder
-            ).exists(), f"Distance ladder file {self.distance_ladder} does not exist in data directory {self.data_dir}."
-
+        self._check_file_exists(self.data_dir, self.mag_cut_file)
+        self._check_file_exists(self.data_dir, self.distance_ladder_file)
+        self._check_file_exists(self.data_dir, self.weird_sn_file)
+        self._check_file_exists(self.data_dir, self.lensing_bias_file)
+        self._check_file_exists(self.data_dir, self.calibration_uncertainties_file)
+        self._check_file_exists(self.data_dir, self.intergalactic_extinction_file)
         return self

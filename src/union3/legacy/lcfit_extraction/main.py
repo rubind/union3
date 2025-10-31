@@ -149,14 +149,15 @@ def load_derivatives(sn_path: Path):
             + "_"
             + pl.col("MagSys|Instrument|Band").str.replace(r"All\|All\|All", "")
         )
-        .drop("#Parameter", "MagSys|Instrument|Band", "Phase", "RestLamb")
+        .drop("#Parameter", "MagSys|Instrument|Band", "Phase")
         .unpivot(index="prefix")
         .with_columns(name=(pl.col("prefix") + "_" + pl.col("variable")).str.replace_all(r"__", r"_"), tmp=1)
         .select("name", "value", "tmp")
         .pivot(on="name", values="value", index="tmp")
         .drop("tmp")
     )
-    return df.to_dicts()[0]
+    result = df.to_dicts()[0]
+    return {k: maybe_float(v) for k, v in result.items()}
 
 
 def main():

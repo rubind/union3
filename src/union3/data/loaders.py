@@ -1,4 +1,5 @@
 from collections import defaultdict
+import json
 from pathlib import Path
 from typing import Self, TypedDict
 import polars as pl
@@ -11,6 +12,13 @@ from scipy.interpolate import interp1d
 from astropy.io import fits
 import yaml
 import polars.selectors as cs
+
+from union3.data.uncertainties import (
+    add_electron_scattering_uncertainties,
+    add_intergalactic_extinction_uncertainties,
+    add_MBEBV_uncertainties,
+    rescale_uncertainties,
+)
 
 
 class Data(BaseModel):
@@ -31,28 +39,36 @@ class Data(BaseModel):
 
     @classmethod
     def from_config(cls, config: Config) -> Self:
+        # We start by loading in all the data we should need
         all_supernova = _load_snia_lightcurve_fits(config)
-        filtered = _filter_snia(all_supernova, config).pipe(impute_snia)
-
-        # Determine calibrators and add distmod information, if distance_ladder is provided
-        filtered, distmod_systematics = determine_calibrators(filtered, config)
-
-        # If there are photo-z supernova, we need to quantify their systematics
-        filtered, photoz_systematics = add_photoz_errors(filtered)
 
         # Each supernova is associated with a survey, and each survey has its own
         # selection effects and k-corrections. First, we load the mag_cut file
+        # The mag_cut file has columns sample, kc_file, est_cut_value, and est_cut_sigma
         mag_cut_file = pl.read_csv(config.data_dir / config.mag_cut_file, comment_prefix="#")
 
-        # The mag_cut file has columns sample, kc_file, est_cut_value, and est_cut_sigma
-        filtered = filtered.join(mag_cut_file, on="survey", how="left")
+        # Calibration uncertainties can be scaled up or down, and this file is how we do so
+        calibration_uncertaintes = load_calibration_uncertainties(config)
 
-        # With the two cuts available for interpolation, we add them in as mobs_cut0 and mobs_cut1
-        filtered = add_mobs_cuts(filtered, config.data_dir)
+        filtered = (
+            impute_snia(all_supernova, config)
+            .pipe(_filter_snia, config)
+            .pipe(flag_weird_supernova)
+            .pipe(determine_calibrators, config)
+            .pipe(add_lensing_bias, config)
+            .pipe(add_photoz_errors)
+            .join(mag_cut_file, on="survey", how="left")
+            .pipe(add_mobs_cuts, config.data_dir)
+            .pipe(add_pecv_and_bulk_flows, config)
+            .pipe(add_MBEBV_uncertainties, config)
+            .pipe(add_intergalactic_extinction_uncertainties, config)
+            .pipe(add_electron_scattering_uncertainties, config)
+            # Now we rescale the uncertainties based on the calibration uncertainties
+            .pipe(rescale_uncertainties, calibration_uncertaintes)
+            .pipe(remap_x1, config)
+        )
 
-        # TODO: add in the bulk flow load_bulk_flow_data function after figuring out wtf it does
-        snia, bulk_flow_systematics = add_pecv_and_bulk_flows(filtered, config)
-
+        # TODO port get_IG_extinction_sys
         # TODO: port helper_functions.get_kcorrect_ifns (164) and interpolate to the redshift-specific values (287)
 
         extra_redshifts = _get_redshifts(filtered["z_cmb"].to_list())
@@ -60,12 +76,6 @@ class Data(BaseModel):
             1.0 + erf((np.array(filtered["mass"]) - 10.0) / (np.sqrt(2.0) * np.array(filtered["mass_err"])))
         )
         # TODO: p_high_mass
-
-        # Combine all systematics into one dictionary
-        all_systematics = defaultdict(dict)
-        for d in [photoz_systematics, distmod_systematics, bulk_flow_systematics]:
-            for sn_name, sys_dict in d.items():
-                all_systematics[sn_name].update(sys_dict)
 
         # TODO: photoz_inds need to be determined.
         return cls(
@@ -75,30 +85,112 @@ class Data(BaseModel):
         )
 
 
-def add_photoz_errors(snia: pl.DataFrame) -> tuple[pl.DataFrame, dict[str, dict[str, np.ndarray]]]:
+def remap_x1(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
+    intercept, slope = config.remap_x1_intercept, config.remap_x1_slope
+    if intercept == 0.0 and slope == 0.0:
+        return snia
+    logger.info(f"Remapping x1 with intercept {intercept} and slope {slope}.")
+
+    x1 = pl.col("x1")
+    return (
+        snia.with_columns(
+            x1=x1 + intercept * x1**2 + slope * x1**3,
+            new_x1_slope=1 + 2 * intercept * x1 + 3 * slope * x1**2,
+        )
+        .with_columns(
+            cov_mb_x1=pl.col("cov_mb_x1") * pl.col("new_x1_slope"),
+            cov_x1_color=pl.col("cov_x1_color") * pl.col("new_x1_slope"),
+            cov_x1_x1=pl.col("cov_x1_x1") * pl.col("new_x1_slope") ** 2,
+        )
+        .drop("new_x1_slope")
+    )
+
+
+def flag_weird_supernova(snia: pl.DataFrame) -> pl.DataFrame:
+    """Flags any supernova that have weird properties."""
+
+    snia = snia.with_columns(
+        h_resid=pl.col("mb")
+        + 19.1
+        + 0.13 * pl.col("x1")
+        - 3.0 * pl.col("color")
+        - (5 * (pl.col("z_cmb") * (1 + pl.col("z_heliocentric"))).log10() + 42.9)
+    ).with_columns(is_weird=(pl.col("h_resid").abs() > 2) | (pl.col("color") > 1.0) | (pl.col("color") < -0.3))
+
+    for row in snia.filter(pl.col("is_weird")).select("name", "x1", "color").to_dicts():
+        logger.warning(f"Flagged weird supernova: {row['name']} with stretch {row['x1']} and color {row['color']}")
+
+    return snia
+
+
+def load_calibration_uncertainties(config: Config) -> dict[str, float]:
+    calib_file = config.data_dir / config.calibration_uncertainties_file
+    calib_df = pl.read_csv(calib_file).with_columns(
+        key=(pl.col("type") + "_" + pl.col("subtype").fill_null("")).str.strip_chars("_")
+    )
+    logger.info(f"Loaded calibration uncertainties from {calib_file}, providing {calib_df.height} entries.")
+
+    # Unlike the other systematics which have an extra key on the supernova name,
+    # the calibration uncertainty files are generic and grouped by both type and subtype.
+    interim = dict(zip(calib_df["key"], calib_df["value"]))
+
+    # Following read_and_sample_H0.py line 135+, we add extra entries to this dictionary
+    extra = {
+        "MWEBV_multnorm": 1.0,
+        "MWEBV_addnorm": 1.0,
+        "electron_scattering": 1.0,
+        "IG_extinction": 1.0,
+        "lensing_bias": 1.0,
+    }
+
+    combined = {**interim, **extra}
+    logger.info(f"Calibration uncertainties are: {json.dumps(combined, indent=2)}")
+    return combined
+
+
+def add_lensing_bias(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
+    lensing_bias_file = config.data_dir / config.lensing_bias_file
+    if config.use_lensing_file:
+        lensing_df = pl.read_csv(lensing_bias_file)
+        logger.info(f"Loaded lensing bias from {lensing_bias_file}, providing {lensing_df.height} entries.")
+        redshifts = snia["z_cmb"].to_list()
+        lensing_bias = interp1d(lensing_df["redshift"].to_list(), lensing_df["mag"].to_list(), kind="linear")(redshifts)
+        snia = snia.with_columns(uncertainty_mB_lensing_bias=pl.Series(lensing_bias))
+    else:
+        logger.info(f"Adding lensing bias using dispersion 0.5*({config.lensing_dispersion}mag * redshift)**2.")
+        snia = snia.with_columns(uncertainty_mB_lensing_bias=0.5 * (config.lensing_dispersion * pl.col("z_cmb") ** 2))
+
+    return snia
+
+
+def add_photoz_errors(snia: pl.DataFrame) -> pl.DataFrame:
     if "photoz_mean" not in snia.columns:
         logger.info("No photo-z supernova found, skipping photo-z error addition.")
-        return snia, {}
+        return snia
 
     logger.info(
         f"Adding photo-z error terms for {snia.filter(pl.col("photoz_mean").is_not_null()).height} photo-z supernova."
     )
-    systematics: dict[str, dict[str, np.ndarray]] = defaultdict(dict)
-    for row in snia.filter(pl.col("photoz_mean").is_not_null()).iter_rows(named=True):
-        name: str = row["name"]  # type: ignore
-        systematics[name]["photoz_sys"] = np.array(
-            row["deriv_Redshift_dmB/dP"], row["deriv_Redshift_ds/dP"], row["deriv_Redshift_dc/dP"]
-        )  # type: ignore
-    return snia, systematics
+    return snia.with_columns(
+        uncertainty_mB_photoz_sys=pl.when(pl.col("photoz_mean").is_not_null())
+        .then(pl.col("deriv_Redshift_dmB/dP"))
+        .otherwise(None),
+        uncertainty_x1_photoz_sys=pl.when(pl.col("photoz_mean").is_not_null())
+        .then(pl.col("deriv_Redshift_ds/dP"))
+        .otherwise(None),
+        uncertainty_color_photoz_sys=pl.when(pl.col("photoz_mean").is_not_null())
+        .then(pl.col("deriv_Redshift_dc/dP"))
+        .otherwise(None),
+    )
 
 
-def determine_calibrators(snia: pl.DataFrame, config: Config) -> tuple[pl.DataFrame, dict[str, dict[str, np.ndarray]]]:
-    if config.distance_ladder is None:
-        return snia.with_columns(is_calibrator=pl.lit(False), distmod=pl.lit(0), has_distmod=pl.lit(0)), {}
+def determine_calibrators(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
+    if config.distance_ladder_file is None:
+        return snia.with_columns(is_calibrator=pl.lit(False), distmod=pl.lit(0), has_distmod=pl.lit(0))
 
     # The calibrators are determined from the distance ladder file, which has N columns, the first two being
     # the name and the distmod itself. The rest of the columns are the diag variance and then all the offdiag terms
-    dist_ladder_file = config.data_dir / config.distance_ladder
+    dist_ladder_file = config.data_dir / config.distance_ladder_file
     distance_ladder = (
         pl.read_csv(dist_ladder_file, has_header=False)
         .rename({"column_1": "name", "column_2": "distmod", "column_3": "distmod_err"})
@@ -111,18 +203,20 @@ def determine_calibrators(snia: pl.DataFrame, config: Config) -> tuple[pl.DataFr
         distmod=pl.col("distmod").fill_null(0),  # TODO: maybe we should do the awkward imputation right before stan?
     )
 
-    # The distmod systematics are really just the uncertainties on the distance moduli for each calibrator
-    systematics: dict[str, dict[str, np.ndarray]] = defaultdict(dict)
-    # Iterating over snia instead of distance_ladder because there may be entries in distance_ladder not in snia
-    for row in snia.filter(pl.col("is_calibrator")).select("name", cs.starts_with("distmod_err")).iter_rows(named=True):
-        name = row.pop("name")
-        for key, value in row.items():
-            systematics[name][key] = np.array([value, 0, 0])  # Only the mag component has nonzero entries
+    distmod_err_cols = [col for col in snia.columns if col.startswith("distmod_err")]
+    renamed = {
+        f"uncertainty_mB_distmod_{k.removeprefix('distmod_err_')}": pl.when(pl.col("is_calibrator"))
+        .then(pl.col(k))
+        .otherwise(pl.lit(0))
+        for k in distmod_err_cols
+    }
+    snia = snia.with_columns(**renamed)
 
-    return snia, systematics
+    return snia
 
 
 def add_mobs_cuts(snia: pl.DataFrame, data_dir: Path) -> pl.DataFrame:
+    """With the two cuts available for interpolation, we add them in as mobs_cut0 and mobs_cut1"""
     # Each row of this dataframe will have a the survey name, the k-correction file, and two numbers
     # characterising the selection effects: est_mobs_cuts and est_mobs_sigmas.
     k_corrections = {
@@ -154,9 +248,7 @@ def add_mobs_cuts(snia: pl.DataFrame, data_dir: Path) -> pl.DataFrame:
     ).unnest("mb_cuts")
 
 
-def add_pecv_and_bulk_flows(
-    snia: pl.DataFrame, config: Config
-) -> tuple[pl.DataFrame, dict[str, dict[str, np.ndarray]]]:
+def add_pecv_and_bulk_flows(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
     logger.info("Adding peculiar velocity dispersion and bulk flow data.")
     bulk_flows = load_bulk_flow_data(config.data_dir)
     bulk_df, eigenvectors = bulk_flows["redshifts"], bulk_flows["eigenvectors"]
@@ -176,7 +268,7 @@ def add_pecv_and_bulk_flows(
     # Each supernova has calibration/calibrator uncertainty, and we want to keep track of
     # the name of the SN and a key associated with each systematic name. In our case,
     # this will be the 100 bulk flow eigenvectors.
-    d_mBx1c_dcalib: dict[str, dict[str, np.ndarray]] = defaultdict(dict)
+    d_mBx1c_dcalib: dict[str, dict[str, str | float]] = defaultdict(dict)
     final_pecvs: dict[str, float] = {}
     if config.include_peculiar_velocity_covariance:
         for row in snia.filter(pl.col("z_cmb") < 0.1).iter_rows(named=True):
@@ -193,28 +285,32 @@ def add_pecv_and_bulk_flows(
 
             for bulk_i in range(len(eigenvector)):
                 key = f"BULK_{bulk_i:03d}"
-                d_mBx1c_dcalib[name][key] = np.array([eigenvector[bulk_i], 0, 0])
+                d_mBx1c_dcalib[name][key] = eigenvector[bulk_i]
 
             # Now that we've done the bulk flow eigenvector systematics, we also want to add in
             # the corr_redshift_sys, which I assume is either corrected or correlated redshift systematic.
-            d_mBx1c_dcalib[name]["corr_redshift_sys"] = np.array(
-                [(3.3e-5) * (5 / np.log(10)) * (1 + z) / (z * (1 + 0.5 * z)), 0, 0]
-            )
-
+            d_mBx1c_dcalib[name]["corr_redshift_sys"] = (3.3e-5) * (5 / np.log(10)) * (1.0 + z) / (z * (1 + 0.5 * z))
             # We also have
             total_bulk_quad = np.sum(eigenvector**2)
             total_pec_v_on_diag = np.clip(row["pec_vel_on_diag"] - total_bulk_quad, 0, 100)
             final_pecvs[name] = total_pec_v_on_diag
             logger.debug(f"SN {name}: {total_bulk_quad=}, {total_pec_v_on_diag=}")
 
+    # Turn d_mBx1c_dcalib into a dataframe to join back on
+    if d_mBx1c_dcalib:
+        systematics = pl.DataFrame(list(d_mBx1c_dcalib.values())).with_columns(
+            pl.all().name.prefix("uncertainty_mB_"), pl.Series(list(d_mBx1c_dcalib.keys())).alias("name")
+        )
+        snia = snia.join(systematics, on="name", how="left")
+
     # The pec_vel_on_diag needs to be overwritten with the final_pecvs values if theres a value for that row
     snia = snia.with_columns(
         pec_vel_on_diag=pl.when(pl.col("name").is_in(final_pecvs.keys()))
-        .then(pl.col("name").replace(final_pecvs))
+        .then(pl.col("name").replace_strict(final_pecvs, default=None).cast(pl.Float64))
         .otherwise(pl.col("pec_vel_on_diag"))
     ).with_columns(mbmb_var=pl.col("mbmb_var") + pl.col("pec_vel_on_diag"))
 
-    return snia, d_mBx1c_dcalib
+    return snia
 
 
 class BulkFlowData(TypedDict):
@@ -288,6 +384,11 @@ def _load_snia_lightcurve_fits(config: Config):
         {
             "restframemag_0_b": "mb",
             "restframemag_0_b_err": "mb_err",
+            "covrestframemag_0_bx1": "cov_mb_x1",
+            "covcolorrestframemag_0_b": "cov_mb_color",
+            "covx1x1": "cov_x1_x1",
+            "covcolorx1": "cov_color_x1",
+            "covcolorcolor": "cov_color_color",
             "mwebv": "MWEBV",
             "firstphase": "first_phase",
             "lastphase": "last_phase",
@@ -304,9 +405,13 @@ def _load_snia_lightcurve_fits(config: Config):
 
 
 def _filter_snia(df: pl.DataFrame, config: Config):
-    weird_sn_file = config.data_dir / "misc/weird_sn.yml"
-    assert weird_sn_file.exists(), f"Weird SN file not found at: {weird_sn_file}"
-    weird_sn = [str(x) for x in yaml.safe_load(weird_sn_file.read_text())["weird_sn_names"]]
+    if config.weird_sn_file is None:
+        weird_sn = []
+        logger.info("No weird SN file provided, skipping weird SN exclusion.")
+    else:
+        weird_sn_file = config.data_dir / config.weird_sn_file
+        weird_sn = [str(x) for x in yaml.safe_load(weird_sn_file.read_text())["weird_sn_names"]]
+        logger.info(f"Loaded {len(weird_sn)} weird SN names from {weird_sn_file}.")
 
     df_filtered = df.filter(
         pl.col("redshift").is_between(config.filters.min_redshift, config.filters.max_redshift)
@@ -324,7 +429,7 @@ def _filter_snia(df: pl.DataFrame, config: Config):
     return df_filtered
 
 
-def impute_snia(df: pl.DataFrame) -> pl.DataFrame:
+def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
     """Impute missing values in the SNe Ia dataframe.
 
     Currently, this function fills missing mass and mass_err values
@@ -362,4 +467,6 @@ def impute_snia(df: pl.DataFrame) -> pl.DataFrame:
             .otherwise(pl.col("mass")),
             mass_err=pl.when(pl.col("bad_mass")).then(0.1).otherwise(pl.col("mass_err")),
         )
+        # Add in mbmb_var from mb_err and the lensing dispersion
+        .with_columns(mbmb_var=pl.col("mb_err") ** 2 + (pl.col("z_cmb") * config.lensing_dispersion) ** 2)
     )
