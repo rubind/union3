@@ -142,7 +142,6 @@ def rescale_uncertainties(snia: pl.DataFrame, calibration_uncertainties: dict[st
 
 def add_landolt_smith_uncertainties(
     snia: pl.DataFrame,
-    config: Config,
     calibration: dict[str, Literal["L", "S", "P"]],
 ) -> pl.DataFrame:
     wavelength_df = pl.DataFrame(

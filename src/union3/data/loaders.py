@@ -26,6 +26,9 @@ class Data(BaseModel):
     all_supernova: pl.DataFrame = Field(exclude=True)
     filtered_supernova: pl.DataFrame = Field(exclude=True)
 
+    # Represent systematics in the order of the dataframes above (sorted by name)
+    systematics: list[np.ndarray] = Field(exclude=True)
+
     # Extra fields for applying simpsons rule on redshift integrations
     redshifts_sort_fill: list[float]
     unsort_inds: list[int]
@@ -49,29 +52,18 @@ class Data(BaseModel):
         mag_cut_file = pl.read_csv(config.data_dir / config.mag_cut_file, comment_prefix="#")
 
         # Calibration uncertainties can be scaled up or down, and this file is how we do so
-        calibration_uncertaintes, calibration_standards = load_calibration_uncertainties(config)
+        calib_uncert, calib_standards = load_calibration_uncertainties(config)
 
-        snia = (
-            impute_snia(all_supernova, config)
-            .pipe(_filter_snia, config)
-            .pipe(flag_weird_supernova)
-            .pipe(determine_calibrators, config)
-            .pipe(add_lensing_bias, config)
-            .pipe(add_photoz_errors)
-            .join(mag_cut_file, on="survey", how="left")
-            .pipe(add_mobs_cuts, config.data_dir)
-            .pipe(add_pecv_and_bulk_flow_uncertainties, config)
-            .pipe(add_MBEBV_uncertainties, config)
-            .pipe(add_intergalactic_extinction_uncertainties, config)
-            .pipe(add_electron_scattering_uncertainties, config)
-            .pipe(add_landolt_smith_uncertainties, config, calibration_standards)
-            # Now we rescale the uncerts based on the calibration uncertainty scaling factors
-            .pipe(rescale_uncertainties, calibration_uncertaintes)
-            .pipe(remap_x1, config)
-            # At this point we should be done with all the deriv_ columns, having
-            # processed them into uncertainty_ columns, and can drop them.
-            .drop(cs.starts_with("deriv_") | cs.starts_with("instrument|"))
-        )
+        # Apply a billion functions to filter, augment, and add uncertainties to the supernova data
+        snia = get_filtered_and_augmented_snia(all_supernova, config, mag_cut_file, calib_uncert, calib_standards)
+
+        # At this point we have a massive dataframe with all the supernova we want to use, their uncertainties,
+        # and a ton of computed systematics hidden under the `uncertainty_` prefix. We now need to prepare
+        # the data into something a bit more numerically friendly for Stan or whatever our fitting tool is.
+
+        # The stan model wants array[n_sne] matrix[3, n_calib] d_mBx1c_d_calib ;
+        # So each SN wants a 3 x n_calib matrix of derivatives. Those are found below
+        systematics = condense_systematics(snia)
 
         extra_redshifts = _get_redshifts(snia["z_cmb"].to_list())
         p_high_mass = 0.5 * (  # noqa: F841
@@ -83,8 +75,56 @@ class Data(BaseModel):
         return cls(
             all_supernova=all_supernova,
             filtered_supernova=snia,
+            systematics=systematics,
             **extra_redshifts,
         )
+
+
+def get_filtered_and_augmented_snia(
+    all_supernova: pl.DataFrame,
+    config: Config,
+    mag_cut_file: pl.DataFrame,
+    calibration_uncertainties: dict[str, float],
+    calibration_standards: dict[str, Literal["L", "S", "P"]],
+) -> pl.DataFrame:
+    return (
+        impute_snia(all_supernova, config)
+        .pipe(_filter_snia, config)
+        .pipe(flag_weird_supernova)
+        .pipe(determine_calibrators, config)
+        .pipe(add_lensing_bias, config)
+        .pipe(add_photoz_errors)
+        .join(mag_cut_file, on="survey", how="left")
+        .pipe(add_mobs_cuts, config.data_dir)
+        .pipe(add_pecv_and_bulk_flow_uncertainties, config)
+        .pipe(add_MBEBV_uncertainties, config)
+        .pipe(add_intergalactic_extinction_uncertainties, config)
+        .pipe(add_electron_scattering_uncertainties, config)
+        .pipe(add_landolt_smith_uncertainties, calibration_standards)
+        # Now we rescale the uncerts based on the calibration uncertainty scaling factors
+        .pipe(rescale_uncertainties, calibration_uncertainties)
+        .pipe(remap_x1, config)
+        # At this point we should be done with all the deriv_ columns, having
+        # processed them into uncertainty_ columns, and can drop them.
+        .drop(cs.starts_with("deriv_") | cs.starts_with("instrument|"))
+        .sort("name")
+    )
+
+
+def condense_systematics(snia: pl.DataFrame) -> list[np.ndarray]:
+    """Condenses the uncertainty_ columns so each row (supernova) has a new column d_mBx1c_d_calib which has a shape of (3, n_calib)
+    where n_calib is the number of calibration systematics we have. This is needed for Stan to process the data correctly."""
+    calib = []
+    cols = sorted(list(set([col.split("_", maxsplit=2)[-1] for col in snia.columns if col.startswith("uncertainty_")])))
+    num = len(cols)
+    for row in snia.iter_rows(named=True):
+        matrix = np.zeros((3, num))
+        for i, col in enumerate(cols):
+            matrix[0, i] = row.get(f"uncertainty_mB_{col}", 0.0) or 0.0
+            matrix[1, i] = row.get(f"uncertainty_x1_{col}", 0.0) or 0.0
+            matrix[2, i] = row.get(f"uncertainty_color_{col}", 0.0) or 0.0
+        calib.append(matrix)
+    return calib
 
 
 def remap_x1(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
