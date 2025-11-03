@@ -148,6 +148,8 @@ def load_derivatives(sn_path: Path):
             + pl.col("#Parameter")
             + "_"
             + pl.col("MagSys|Instrument|Band").str.replace(r"All\|All\|All", "")
+            + "_"
+            + pl.col("Phase")
         )
         .drop("#Parameter", "MagSys|Instrument|Band", "Phase")
         .unpivot(index="prefix")

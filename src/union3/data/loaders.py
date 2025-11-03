@@ -1,7 +1,7 @@
 from collections import defaultdict
 import json
 from pathlib import Path
-from typing import Self, TypedDict
+from typing import Literal, Self, TypedDict
 import polars as pl
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 import numpy as np
@@ -17,6 +17,7 @@ from union3.data.uncertainties import (
     add_electron_scattering_uncertainties,
     add_intergalactic_extinction_uncertainties,
     add_MBEBV_uncertainties,
+    add_landolt_smith_uncertainties,
     rescale_uncertainties,
 )
 
@@ -48,7 +49,7 @@ class Data(BaseModel):
         mag_cut_file = pl.read_csv(config.data_dir / config.mag_cut_file, comment_prefix="#")
 
         # Calibration uncertainties can be scaled up or down, and this file is how we do so
-        calibration_uncertaintes = load_calibration_uncertainties(config)
+        calibration_uncertaintes, calibration_standards = load_calibration_uncertainties(config)
 
         snia = (
             impute_snia(all_supernova, config)
@@ -63,7 +64,7 @@ class Data(BaseModel):
             .pipe(add_MBEBV_uncertainties, config)
             .pipe(add_intergalactic_extinction_uncertainties, config)
             .pipe(add_electron_scattering_uncertainties, config)
-            # TODO: add in Landolt Smith bins (get_dparam_dzps)
+            .pipe(add_landolt_smith_uncertainties, config, calibration_standards)
             # Now we rescale the uncerts based on the calibration uncertainty scaling factors
             .pipe(rescale_uncertainties, calibration_uncertaintes)
             .pipe(remap_x1, config)
@@ -124,7 +125,7 @@ def flag_weird_supernova(snia: pl.DataFrame) -> pl.DataFrame:
     return snia
 
 
-def load_calibration_uncertainties(config: Config) -> dict[str, float]:
+def load_calibration_uncertainties(config: Config) -> tuple[dict[str, float], dict[str, Literal["L", "S", "P"]]]:
     calib_file = config.data_dir / config.calibration_uncertainties_file
     calib_df = pl.read_csv(calib_file).with_columns(
         key=(pl.col("type") + "_" + pl.col("subtype").fill_null("")).str.strip_chars("_")
@@ -146,7 +147,11 @@ def load_calibration_uncertainties(config: Config) -> dict[str, float]:
 
     combined = {**interim, **extra}
     logger.info(f"Calibration uncertainties are: {json.dumps(combined, indent=2)}")
-    return combined
+
+    # We also want to return the calibration system, which is a dict from the name to L, S, P
+    calibs_with_standard = calib_df.filter(pl.col("standard").is_not_null())
+    standards = dict(zip(calibs_with_standard["key"], calibs_with_standard["standard"]))
+    return combined, standards
 
 
 def add_lensing_bias(snia: pl.DataFrame, config: Config) -> pl.DataFrame:

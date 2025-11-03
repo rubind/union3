@@ -1,9 +1,11 @@
+from typing import Literal
 import polars as pl
 from loguru import logger
 from union3.config import Config
 from astropy.io import fits
 from scipy.interpolate import RectBivariateSpline
 import numpy as np
+import polars.selectors as cs
 
 
 def add_MBEBV_uncertainties(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
@@ -12,20 +14,20 @@ def add_MBEBV_uncertainties(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
     sig_add = config.MWEBV_zeropoint_EBV  # E.g., 5 mmag E(B-V) additive uncertainty
 
     snia = snia.with_columns(
-        uncertainty_mB_MWEBV_multnorm=pl.col("deriv_MWEBV_dmB/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
-        uncertainty_x1_MWEBV_multnorm=pl.col("deriv_MWEBV_ds/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
-        uncertainty_color_MWEBV_multnorm=pl.col("deriv_MWEBV_dc/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
-        uncertainty_mB_MWEBV_addnorm=pl.col("deriv_MWEBV_dmB/dP") * sig_add,
-        uncertainty_x1_MWEBV_addnorm=pl.col("deriv_MWEBV_ds/dP") * sig_add,
-        uncertainty_color_MWEBV_addnorm=pl.col("deriv_MWEBV_dc/dP") * sig_add,
-        extra_cov_mBmB_MWEBV=(pl.col("deriv_MWEBV_dmB/dP") * sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_x1x1_MWEBV=(pl.col("deriv_MWEBV_ds/dP") * sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_cc_MWEBV=(pl.col("deriv_MWEBV_dc/dP") * sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_mBx1_MWEBV=(pl.col("deriv_MWEBV_dmB/dP") * pl.col("deriv_MWEBV_ds/dP"))
+        uncertainty_mB_MWEBV_multnorm=pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
+        uncertainty_x1_MWEBV_multnorm=pl.col("deriv_MWEBV_All_ds/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
+        uncertainty_color_MWEBV_multnorm=pl.col("deriv_MWEBV_All_dc/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
+        uncertainty_mB_MWEBV_addnorm=pl.col("deriv_MWEBV_All_dmB/dP") * sig_add,
+        uncertainty_x1_MWEBV_addnorm=pl.col("deriv_MWEBV_All_ds/dP") * sig_add,
+        uncertainty_color_MWEBV_addnorm=pl.col("deriv_MWEBV_All_dc/dP") * sig_add,
+        extra_cov_mBmB_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * sig_stat * pl.col("MWEBV")) ** 2,
+        extra_cov_x1x1_MWEBV=(pl.col("deriv_MWEBV_All_ds/dP") * sig_stat * pl.col("MWEBV")) ** 2,
+        extra_cov_cc_MWEBV=(pl.col("deriv_MWEBV_All_dc/dP") * sig_stat * pl.col("MWEBV")) ** 2,
+        extra_cov_mBx1_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("deriv_MWEBV_All_ds/dP"))
         * (sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_mBc_MWEBV=(pl.col("deriv_MWEBV_dmB/dP") * pl.col("deriv_MWEBV_dc/dP"))
+        extra_cov_mBc_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("deriv_MWEBV_All_dc/dP"))
         * (sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_x1c_MWEBV=(pl.col("deriv_MWEBV_ds/dP") * pl.col("deriv_MWEBV_dc/dP"))
+        extra_cov_x1c_MWEBV=(pl.col("deriv_MWEBV_All_ds/dP") * pl.col("deriv_MWEBV_All_dc/dP"))
         * (sig_stat * pl.col("MWEBV")) ** 2,
     )
 
@@ -68,7 +70,7 @@ def add_intergalactic_extinction_uncertainties(snia: pl.DataFrame, config: Confi
     # First, let us compute all the scales as a lookup from name to magsys/instrument/band
     long_data = (
         snia.unpivot(index=["name", "z_cmb"])
-        .filter(pl.col("variable").str.starts_with("deriv_Zeropoint"))
+        .filter(pl.col("variable").str.starts_with("deriv_Zeropoint") & ~pl.col("variable").str.contains("Phase"))
         .filter(pl.col("value").is_not_null())
         .with_columns(pl.col("value").cast(pl.Float64))
     )
@@ -136,3 +138,136 @@ def rescale_uncertainties(snia: pl.DataFrame, calibration_uncertainties: dict[st
         expressions.append(pl.col(col) * scaling_factor)
 
     return snia.with_columns(expressions)
+
+
+def add_landolt_smith_uncertainties(
+    snia: pl.DataFrame,
+    config: Config,
+    calibration: dict[str, Literal["L", "S", "P"]],
+) -> pl.DataFrame:
+    wavelength_df = pl.DataFrame(
+        [
+            {"systematic": "Fundamental_3000-4000", "start_lambda": 3000, "end_lambda": 4000},
+            {"systematic": "Fundamental_4000-5000", "start_lambda": 4000, "end_lambda": 5000},
+            {"systematic": "Fundamental_6000-8000", "start_lambda": 6000, "end_lambda": 8000},
+            {"systematic": "Fundamental_8000-100000", "start_lambda": 8000, "end_lambda": 100000},
+            {"systematic": "Fundamental_10000-100000", "start_lambda": 10000, "end_lambda": 100000},
+            {"systematic": "SALT_UV_CAL", "start_lambda": 0, "end_lambda": 3400},
+            {"systematic": "SALT_U_CAL", "start_lambda": 0, "end_lambda": 4000},
+            {"systematic": "SALT_B_CAL", "start_lambda": 4000, "end_lambda": 5000},
+            {"systematic": "SALT_I_CAL", "start_lambda": 7000, "end_lambda": 999999},
+        ]
+    )
+    landsolt_smith_df = pl.DataFrame(
+        [
+            {"standard": "L", "band": "LANDOLT_U", "start_lambda": 3000, "end_lambda": 4000},
+            {"standard": "L", "band": "LANDOLT_B", "start_lambda": 4000, "end_lambda": 5000},
+            {"standard": "L", "band": "LANDOLT_V", "start_lambda": 5000, "end_lambda": 6000},
+            {"standard": "L", "band": "LANDOLT_R", "start_lambda": 6000, "end_lambda": 7500},
+            {"standard": "L", "band": "LANDOLT_I", "start_lambda": 7500, "end_lambda": 9000},
+            {"standard": "S", "band": "SMITH_u", "start_lambda": 3000, "end_lambda": 4000},
+            {"standard": "S", "band": "SMITH_g", "start_lambda": 4000, "end_lambda": 5500},
+            {"standard": "S", "band": "SMITH_r", "start_lambda": 5500, "end_lambda": 7000},
+            {"standard": "S", "band": "SMITH_i", "start_lambda": 7000, "end_lambda": 8000},
+            {"standard": "S", "band": "SMITH_z", "start_lambda": 8000, "end_lambda": 10000},
+            {"standard": "P", "band": "PS1_g", "start_lambda": 4000, "end_lambda": 5500},
+            {"standard": "P", "band": "PS1_r", "start_lambda": 5500, "end_lambda": 7000},
+            {"standard": "P", "band": "PS1_i", "start_lambda": 7000, "end_lambda": 8000},
+            {"standard": "P", "band": "PS1_z", "start_lambda": 8000, "end_lambda": 10000},
+        ]
+    )
+    # In the original code (get_dparam_dzps.py), the deriv file is scanned for Zeropoint and Lambda rows with "All" in them (which has to be the phase)
+    # If the phase is not "All", an exception is raised.
+    bad_rows = snia.select((cs.starts_with("deriv_Zeropoint") | cs.starts_with("deriv_Lambda")) & ~cs.contains("_All_"))
+    if bad_rows.height > 0:
+        msg = (
+            f"Found deriv_Zeropoint or deriv_Lambda rows without 'All' phase in the data: {bad_rows["name"].to_list()}"
+        )
+        logger.error(msg)
+        raise ValueError(msg)
+
+    # With that out of the way, we need to construct a new key for the calibration uncertainties
+    # Which means that a source data column like deriv_Zeropoint_AB|DeCam|DECam_g_All_dmB/dP
+    # is transformed into a key which matches the calibration scalings, like ncertainty_mB_Zeropoint_DECam|DECam_g
+    # Except, if the calibration uncertainty dict has LSP in the standards column, we may also need to suffix
+    # the column with a _CAL or _LAM
+
+    redshifts = snia.select("name", "z_heliocentric")
+    long_data = (
+        snia.unpivot(index="name")
+        .filter(
+            pl.col("variable").str.starts_with("deriv_Zeropoint") | pl.col("variable").str.starts_with("deriv_Lambda")
+        )
+        .drop_nulls()
+        .with_columns(
+            pl.col("value").cast(pl.Float64),
+            join_key=pl.col("variable")
+            .str.split("_All_")
+            .list.get(0)
+            .str.replace_all(r"deriv_(Zeropoint_|Lambda_)[a-zA-Z0-9_]*\|", r"$1"),
+        )
+    )
+
+    observed_lambdas = (
+        long_data.filter(pl.col("variable").str.contains("RestLamb"))
+        .join(redshifts, on="name")
+        .select("name", "join_key", (pl.col("value") * (1 + pl.col("z_heliocentric"))).alias("observed_lambda"))
+    )
+    derivs = (
+        long_data.filter(pl.col("variable").str.contains("d(mB|s|color)/dP"))
+        .join(observed_lambdas, on=["name", "join_key"])
+        .with_columns(
+            variable=pl.col("variable")
+            .str.split("_d")
+            .list.get(-1)
+            .str.replace(r"/dP", "")
+            .str.replace("s", "x1")
+            .str.replace("c", "color"),
+        )
+        .join(pl.DataFrame([{"join_key": k, "standard": s} for k, s in calibration.items()]), on="join_key", how="left")
+        .join(landsolt_smith_df, on="standard", how="left")
+        .filter(
+            pl.col("standard").is_null()
+            | (pl.col("observed_lambda").is_between(pl.col("start_lambda"), pl.col("end_lambda"), closed="none"))
+        )
+        .drop("start_lambda", "end_lambda")
+    )
+
+    # At this point we have a dataframe with name (like SN1999aa), variable (mB, x1, color), value (the derivative),
+    # join key (Zeropoint_DECam|DECam_z), observed_lambda, and standard (L, S, P, or null)
+
+    # The original code seems to say, if theres a common standard system, try and slot in the wavelength bins from that system
+    # and if the observed_lambda is in one of the bins, make a new (or add to it) systematic column which has either _CAL
+    # for zeropoint calibration, or _LAM for lambda calibration uncertainties
+    extra_cal_systematics = (
+        derivs.filter(pl.col("band").is_not_null())
+        .with_columns(
+            join_key=pl.col("band")
+            + pl.when(pl.col("join_key").str.starts_with("Zeropoint")).then(pl.lit("_CAL")).otherwise(pl.lit("_LAM"))
+        )
+        .select("name", "variable", "value", "join_key")
+    )
+    extra_wavelength_systematics = (
+        derivs.filter(pl.col("join_key").str.starts_with("Zeropoint"))
+        .join(wavelength_df, how="cross")
+        .filter(pl.col("observed_lambda").is_between(pl.col("start_lambda"), pl.col("end_lambda")))
+        .with_columns(pl.col("systematic").alias("join_key"))
+        .select("name", "variable", "value", "join_key")
+    )
+
+    # Now we combine the three sources of systematics, and group by name and join_key to sum the uncertainty
+    all_systematics = (
+        pl.concat(
+            [
+                derivs.select("name", "variable", "value", "join_key"),
+                extra_cal_systematics,
+                extra_wavelength_systematics,
+            ]
+        )
+        .group_by("name", "variable", "join_key")
+        .agg(value=pl.col("value").sum())
+        .with_columns(column_name="uncertainty_" + pl.col("variable") + "_" + pl.col("join_key"))
+        .drop("variable", "join_key")
+        .pivot(on="column_name", index="name")
+    )
+    return snia.join(all_systematics, on="name", how="left")
