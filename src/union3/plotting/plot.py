@@ -19,11 +19,12 @@ def plot_approx_hubble_diagram(
     ax.errorbar(
         data["redshift"],
         data["mB"] - MB,
-        yerr=np.sqrt(data["mB_err"] ** 2 + (alpha * data["x1_err"]) ** 2 + (beta * data["color_err"]) ** 2),
+        yerr=np.sqrt(data["cov_mBmB"] + (alpha * data["x1_err"]) ** 2 + (beta * data["color_err"]) ** 2),
         fmt="o",
         markersize=4,
         alpha=0.5,
     )
+    ax.set_xscale("log")
     ax.set_xlabel("Redshift")
     ax.set_ylabel("Distance Modulus")
     ax.set_title("Hubble Diagram")

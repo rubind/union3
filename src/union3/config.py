@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Self
+from typing import Literal, Self
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
@@ -62,6 +62,10 @@ class Config(FileConfig):
         default="extinction/Azwave_grid.fits",
         description="File with intergalactic extinction data, relative to data directory.",
     )
+    bao_cmb_file: str = Field(
+        default="other_cosmology/BAOCMB_Omw0wa.json",
+        description="File with BAO+CMB constraints, relative to data directory.",
+    )
 
     #! Config to control what gets run
     cache_model_fitting: bool = Field(default=True, description="Use caching for stan model fitting if possible.")
@@ -108,6 +112,18 @@ class Config(FileConfig):
     remap_x1_intercept: float = Field(default=0.0, description="Remapping to apply to x1.")
     remap_x1_slope: float = Field(default=0.0, description="Remapping slope to apply to x1.")
 
+    redshift_coefficient_type: Literal["sample", "a"] = Field(
+        default="sample", description="Type of redshift coefficient to use, either 'sample' or 'a' (scale factor)."
+    )
+    redshift_coefficient_anchors: list[float] = Field(
+        default=[0.0, 0.4, 1.0],
+        min_length=1,
+        description="Redshift anchors for redshift coefficients when using 'sample' type.",
+    )
+    redshift_coefficient_steps: int = Field(
+        default=1, ge=1, description="Number of steps for redshift coefficients when using 'a' type."
+    )
+
     @property
     def model_path(self) -> Path:
         return self.model_dir() / self.model
@@ -150,4 +166,5 @@ class Config(FileConfig):
         self._check_file_exists(self.data_dir, self.lensing_bias_file)
         self._check_file_exists(self.data_dir, self.calibration_uncertainties_file)
         self._check_file_exists(self.data_dir, self.intergalactic_extinction_file)
+        self._check_file_exists(self.data_dir, self.bao_cmb_file)
         return self

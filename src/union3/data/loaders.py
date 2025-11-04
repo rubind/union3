@@ -22,6 +22,11 @@ from union3.data.uncertainties import (
 )
 
 
+class BAOCMB_Omw0wa(TypedDict):
+    mean: np.ndarray
+    cov: np.ndarray
+
+
 class Data(BaseModel):
     all_supernova: pl.DataFrame = Field(exclude=True)
     filtered_supernova: pl.DataFrame = Field(exclude=True)
@@ -34,12 +39,46 @@ class Data(BaseModel):
     unsort_inds: list[int]
     nzadd: int
 
+    redshift_coeffs: np.ndarray  # Redshift coefficients for each supernova
+    bao_cmb_omw0wa: BAOCMB_Omw0wa  # mean and covariance matrix for BAO+CMB Omw0wa constraints
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @computed_field
     @property
     def num_supernova(self) -> int:
         return self.filtered_supernova.height
+
+    @computed_field
+    @property
+    def obs_mBx1c(self) -> list[np.ndarray]:
+        """Returns the observed mB, x1, color in a vector, one element per supernova."""
+        return [np.array(x) for x in self.filtered_supernova.select(["mB", "x1", "color"]).to_numpy().tolist()]
+
+    @computed_field
+    @property
+    def obs_mBx1c_cov(self) -> list[np.ndarray]:
+        """Returns the observed covariance matrices as a 3x3 matrix, one per supernova."""
+        # Note that we have both the original columns (like cov_mBmB), plus the extra uncertainty
+        # that comes from cov_mBmB_* columns (etc). We need to sum these together.
+        snia = self.filtered_supernova
+        mBmB = snia.select(pl.sum_horizontal(cs.starts_with("cov_mBmB"))).to_numpy().flatten()
+        mBx1 = snia.select(pl.sum_horizontal(cs.starts_with("cov_mBx1"))).to_numpy().flatten()
+        mBc = snia.select(pl.sum_horizontal(cs.starts_with("cov_mBc"))).to_numpy().flatten()
+        x1x1 = snia.select(pl.sum_horizontal(cs.starts_with("cov_x1x1"))).to_numpy().flatten()
+        x1c = snia.select(pl.sum_horizontal(cs.starts_with("cov_x1c"))).to_numpy().flatten()
+        cc = snia.select(pl.sum_horizontal(cs.starts_with("cov_cc"))).to_numpy().flatten()
+        cov_mBx1c = []
+        for i in range(len(mBmB)):
+            cov_matrix = np.array(
+                [
+                    [mBmB[i], mBx1[i], mBc[i]],
+                    [mBx1[i], x1x1[i], x1c[i]],
+                    [mBc[i], x1c[i], cc[i]],
+                ]
+            )
+            cov_mBx1c.append(cov_matrix)
+        return cov_mBx1c
 
     @classmethod
     def from_config(cls, config: Config) -> Self:
@@ -66,18 +105,115 @@ class Data(BaseModel):
         systematics = condense_systematics(snia)
 
         extra_redshifts = _get_redshifts(snia["z_cmb"].to_list())
-        p_high_mass = 0.5 * (  # noqa: F841
-            1.0 + erf((np.array(snia["mass"]) - 10.0) / (np.sqrt(2.0) * np.array(snia["mass_err"])))
-        )
-        # TODO: p_high_mass
+        redshift_coeffs = _get_redshift_coeffs(snia, config)
+        bao_cmb_omw0wa = _get_bao_cmb_omw0wa(config)
 
-        # TODO: photoz_inds need to be determined.
-        return cls(
+        result = cls(
             all_supernova=all_supernova,
             filtered_supernova=snia,
             systematics=systematics,
+            redshift_coeffs=redshift_coeffs,
+            bao_cmb_omw0wa=bao_cmb_omw0wa,
             **extra_redshifts,
         )
+
+        # Invoke the model fields to ensure they generate without error
+        result.obs_mBx1c
+        result.obs_mBx1c_cov
+
+        return result
+
+
+def _get_bao_cmb_omw0wa(config: Config) -> BAOCMB_Omw0wa:
+    if config.fix_omega_m:
+        logger.info("Omega_m is fixed, skipping BAO+CMB loading.")
+        return {
+            "mean": np.array([0.3, -1, 0]),
+            "cov": np.diag([100.0, 100.0, 100.0]),
+        }
+    file = config.data_dir / config.bao_cmb_file
+    logger.info(f"Loading BAO+CMB Omw0wa data from {file}.")
+    content = json.loads(file.read_text())
+    return {
+        "mean": np.array(content["mean"]),
+        "cov": np.array(content["cov"]),
+    }
+
+
+def _get_redshift_coeffs(snia: pl.DataFrame, config: Config) -> np.ndarray:
+    redshifts = np.array(snia["z_cmb"].to_list())
+    p_high_mass = np.array(snia["p_high_mass"].to_list())
+
+    n_z = (
+        len(config.redshift_coefficient_anchors)
+        if config.redshift_coefficient_type == "sample"
+        else config.redshift_coefficient_steps
+    )
+    # This is the number of parameters we need for the latent variables,
+    # which doubles if we have separate poluations
+    actual_n_x1c_star = n_z
+    if config.separate_mass_x1c:
+        actual_n_x1c_star *= 2
+
+    redshift_coeffs = np.zeros((len(redshifts), actual_n_x1c_star), dtype=np.float64)
+
+    # If we only have one redshift coefficient, then there's no variation and
+    # the coefficients are constant.
+    if n_z == 1:
+        logger.info("Only one redshift coefficient specified, using constant coefficients.")
+        if config.separate_mass_x1c:
+            redshift_coeffs[:, 0] = p_high_mass
+            redshift_coeffs[:, 1] = 1 - p_high_mass
+        else:
+            redshift_coeffs[:, :] = 1.0
+        return redshift_coeffs
+
+    if config.redshift_coefficient_type == "a":
+        logger.info("Using scale-factor based redshift coefficients.")
+        a_list = 1.0 / (1.0 + redshifts)
+        a_nodes = np.linspace(min(a_list) - 1e-5, max(a_list) + 1e-5, n_z)
+
+        for i in range(len(redshifts)):
+            for j in range(n_z):
+                coeffs = np.zeros(n_z, dtype=np.float64)
+                coeffs[j] = 1
+
+                ifn = interp1d(a_nodes, coeffs, kind="linear")
+
+                if config.separate_mass_x1c:
+                    redshift_coeffs[i, j] = ifn(a_list[i]) * p_high_mass[i]
+                    redshift_coeffs[i, n_z + j] = ifn(a_list[i]) * (1.0 - p_high_mass[i])
+                else:
+                    redshift_coeffs[i, j] = ifn(a_list[i])
+        return redshift_coeffs
+
+    # Otherwise we're using sample based coefficients
+    logger.info("Using sample-based redshift coefficients.")
+    zs_to_match = np.array(config.redshift_coefficient_anchors)
+
+    # It seems that the way the sample works is that we use each surveys mean redshift
+    # to then we find which anchor it's closest to. For example, if we dont have separate_mass_x1c,
+    # and we have three anchors at [0.0, 0.4, 1.0] with 100 SNIa, then we have a (100,3) array
+    # and the p_high_mass is put in the column corresponding to the closest anchor.
+    samples = (
+        snia.group_by("survey")
+        .agg(mean_z=pl.col("z_cmb").mean())
+        .sort("mean_z")
+        .with_columns(
+            pl.col("mean_z")
+            .map_elements(lambda z: np.argmin(np.abs(float(z) - zs_to_match)), return_dtype=pl.Int16)
+            .alias("anchor_index")
+        )
+    )
+    logger.info(f"Surveys and their mean redshifts: {json.dumps(samples.to_dicts(), indent=4)}")
+    snia = snia.join(samples.select(["survey", "anchor_index"]), on="survey", how="left")
+    for i, anchor in enumerate(snia["anchor_index"]):
+        if config.separate_mass_x1c:
+            redshift_coeffs[i, anchor] = p_high_mass[i]
+            redshift_coeffs[i, n_z + anchor] = 1 - p_high_mass[i]
+        else:
+            redshift_coeffs[i, anchor] = 1.0
+    return redshift_coeffs
 
 
 def get_filtered_and_augmented_snia(
@@ -93,6 +229,7 @@ def get_filtered_and_augmented_snia(
         .pipe(flag_weird_supernova)
         .pipe(determine_calibrators, config)
         .pipe(add_lensing_bias, config)
+        .pipe(add_prob_high_mass)
         .pipe(add_photoz_errors)
         .join(mag_cut_file, on="survey", how="left")
         .pipe(add_mobs_cuts, config.data_dir)
@@ -111,6 +248,12 @@ def get_filtered_and_augmented_snia(
     )
 
 
+def add_prob_high_mass(snia: pl.DataFrame) -> pl.DataFrame:
+    """Adds the probability that each supernova is in a high mass host galaxy."""
+    p_high_mass = 0.5 * (1.0 + erf((pl.col("mass") - 10.0) / (np.sqrt(2.0) * pl.col("mass_err"))))
+    return snia.with_columns(p_high_mass=p_high_mass)
+
+
 def condense_systematics(snia: pl.DataFrame) -> list[np.ndarray]:
     """Condenses the uncertainty_ columns so each row (supernova) has a new column d_mBx1c_d_calib which has a shape of (3, n_calib)
     where n_calib is the number of calibration systematics we have. This is needed for Stan to process the data correctly."""
@@ -124,6 +267,8 @@ def condense_systematics(snia: pl.DataFrame) -> list[np.ndarray]:
             matrix[1, i] = row.get(f"uncertainty_x1_{col}", 0.0) or 0.0
             matrix[2, i] = row.get(f"uncertainty_color_{col}", 0.0) or 0.0
         calib.append(matrix)
+    logger.info(f"Condensed systematics into {num} calibration terms for {len(calib)} supernova.")
+    logger.info(f"Calibration terms are: {json.dumps(cols, indent=2)}")
     return calib
 
 
@@ -140,9 +285,9 @@ def remap_x1(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
             new_x1_slope=1 + 2 * intercept * x1 + 3 * slope * x1**2,
         )
         .with_columns(
-            cov_mb_x1=pl.col("cov_mb_x1") * pl.col("new_x1_slope"),
-            cov_x1_color=pl.col("cov_x1_color") * pl.col("new_x1_slope"),
-            cov_x1_x1=pl.col("cov_x1_x1") * pl.col("new_x1_slope") ** 2,
+            cov_mBx1=pl.col("cov_mBx1") * pl.col("new_x1_slope"),
+            cov_x1c=pl.col("cov_x1c") * pl.col("new_x1_slope"),
+            cov_x1x1=pl.col("cov_x1x1") * pl.col("new_x1_slope") ** 2,
         )
         .drop("new_x1_slope")
     )
@@ -354,7 +499,7 @@ def add_pecv_and_bulk_flow_uncertainties(snia: pl.DataFrame, config: Config) -> 
         pec_vel_on_diag=pl.when(pl.col("name").is_in(final_pecvs.keys()))
         .then(pl.col("name").replace_strict(final_pecvs, default=None).cast(pl.Float64))
         .otherwise(pl.col("pec_vel_on_diag"))
-    ).with_columns(mbmb_var=pl.col("mbmb_var") + pl.col("pec_vel_on_diag"))
+    ).with_columns(cov_mBmB=pl.col("cov_mBmB") + pl.col("pec_vel_on_diag"))
 
     return snia
 
@@ -430,11 +575,11 @@ def _load_snia_lightcurve_fits(config: Config):
         {
             "restframemag_0_b": "mB",
             "restframemag_0_b_err": "mB_err",
-            "covrestframemag_0_bx1": "cov_mb_x1",
-            "covcolorrestframemag_0_b": "cov_mb_color",
-            "covx1x1": "cov_x1_x1",
-            "covcolorx1": "cov_color_x1",
-            "covcolorcolor": "cov_color_color",
+            "covrestframemag_0_bx1": "cov_mBx1",
+            "covcolorrestframemag_0_b": "cov_mBc",
+            "covx1x1": "cov_x1x1",
+            "covcolorx1": "cov_x1c",
+            "covcolorcolor": "cov_cc",
             "mwebv": "MWEBV",
             "firstphase": "first_phase",
             "lastphase": "last_phase",
@@ -513,6 +658,7 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
             .otherwise(pl.col("mass")),
             mass_err=pl.when(pl.col("bad_mass")).then(0.1).otherwise(pl.col("mass_err")),
         )
-        # Add in mbmb_var from mb_err and the lensing dispersion
-        .with_columns(mbmb_var=pl.col("mB_err") ** 2 + (pl.col("z_cmb") * config.lensing_dispersion) ** 2)
+        # Add in cov_mBmB from mb_err and the lensing dispersion
+        .with_columns(cov_mBmB=pl.col("mB_err") ** 2 + (pl.col("z_cmb") * config.lensing_dispersion) ** 2)
+        .drop("mB_err")  # Drop the mB_err column so it cant be used instead of cov_mBmB
     )

@@ -20,14 +20,14 @@ def add_MBEBV_uncertainties(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
         uncertainty_mB_MWEBV_addnorm=pl.col("deriv_MWEBV_All_dmB/dP") * sig_add,
         uncertainty_x1_MWEBV_addnorm=pl.col("deriv_MWEBV_All_ds/dP") * sig_add,
         uncertainty_color_MWEBV_addnorm=pl.col("deriv_MWEBV_All_dc/dP") * sig_add,
-        extra_cov_mBmB_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_x1x1_MWEBV=(pl.col("deriv_MWEBV_All_ds/dP") * sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_cc_MWEBV=(pl.col("deriv_MWEBV_All_dc/dP") * sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_mBx1_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("deriv_MWEBV_All_ds/dP"))
+        cov_mBmB_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * sig_stat * pl.col("MWEBV")) ** 2,
+        cov_x1x1_MWEBV=(pl.col("deriv_MWEBV_All_ds/dP") * sig_stat * pl.col("MWEBV")) ** 2,
+        cov_cc_MWEBV=(pl.col("deriv_MWEBV_All_dc/dP") * sig_stat * pl.col("MWEBV")) ** 2,
+        cov_mBx1_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("deriv_MWEBV_All_ds/dP"))
         * (sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_mBc_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("deriv_MWEBV_All_dc/dP"))
+        cov_mBc_MWEBV=(pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("deriv_MWEBV_All_dc/dP"))
         * (sig_stat * pl.col("MWEBV")) ** 2,
-        extra_cov_x1c_MWEBV=(pl.col("deriv_MWEBV_All_ds/dP") * pl.col("deriv_MWEBV_All_dc/dP"))
+        cov_x1c_MWEBV=(pl.col("deriv_MWEBV_All_ds/dP") * pl.col("deriv_MWEBV_All_dc/dP"))
         * (sig_stat * pl.col("MWEBV")) ** 2,
     )
 
@@ -131,10 +131,10 @@ def rescale_uncertainties(snia: pl.DataFrame, calibration_uncertainties: dict[st
     for col in cols:
         _, _, key = col.split("_", maxsplit=2)
         scaling_factor = calibration_uncertainties.get(key)
-        if scaling_factor is None:
+        if scaling_factor is None and "BULK" not in key:
             logger.warning(f"No calibration uncertainty found for key {key}, skipping rescaling for {col}.")
             continue
-        logger.info(f"Rescaling {col} by calibration uncertainty {scaling_factor} for key {key}.")
+        logger.info(f"Rescaling {col} with factor {scaling_factor}")
         expressions.append(pl.col(col) * scaling_factor)
 
     return snia.with_columns(expressions)
