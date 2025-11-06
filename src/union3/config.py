@@ -82,7 +82,7 @@ class Config(FileConfig):
     do_plotting: bool = Field(default=True, description="Generate plots after running.")
 
     #! Cosmology model config
-    model: str = Field(default="unity_stan_1.8.txt", description="Stan model file in the models directory.")
+    model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
     iterations: int = Field(default=2500, ge=1, description="Number of iterations for MCMC.")
     num_jobs: int = Field(default=4, ge=1, description="Number of parallel jobs for MCMC.")
     num_chains: int = Field(default=4, ge=1, description="Number of chains for MCMC.")
@@ -144,7 +144,7 @@ class Config(FileConfig):
 
     @field_validator("model")
     def validate_stan_model(cls, v: str) -> str:
-        names = [p.name for p in cls.model_dir().glob("*.txt")]
+        names = [p.name for p in cls.model_dir().glob("*")]
         assert v in names, f"Model {v} not found in models directory, options are {names}"
         return v
 

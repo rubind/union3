@@ -139,7 +139,7 @@ def rescale_uncertainties(snia: pl.DataFrame, calibration_uncertainties: dict[st
                 f"No calibration uncertainty found for key {key} used by {supernovae}, skipping rescaling for {col}."
             )
             continue
-        logger.info(f"Rescaling {col} with factor {scaling_factor}")
+        logger.debug(f"Rescaling {col} with factor {scaling_factor}")
         expressions.append(pl.col(col) * scaling_factor)
 
     return snia.with_columns(expressions)

@@ -105,16 +105,16 @@ class Data(BaseModel):
         systematics = condense_systematics(snia)
 
         # TODO: REMOVE TEMP CODE
-        from union3.data.validation import expected_names
+        # from union3.data.validation import expected_names
 
-        missing_supernova = sorted(list(set(expected_names) - set(snia["name"].to_list())))
-        if missing_supernova:
-            logger.warning(f"The following expected supernova are missing after filtering: {missing_supernova}")
-        snia_which_should_be_dropped = sorted(list(set(snia["name"].to_list()) - set(expected_names)))
-        if snia_which_should_be_dropped:
-            logger.warning(
-                f"The following supernova are present but not expected and will be dropped: {snia_which_should_be_dropped}"
-            )
+        # missing_supernova = sorted(list(set(expected_names) - set(snia["name"].to_list())))
+        # if missing_supernova:
+        #     logger.warning(f"The following expected supernova are missing after filtering: {missing_supernova}")
+        # snia_which_should_be_dropped = sorted(list(set(snia["name"].to_list()) - set(expected_names)))
+        # if snia_which_should_be_dropped:
+        #     logger.warning(
+        #         f"The following supernova are present but not expected and will be dropped: {snia_which_should_be_dropped}"
+        #     )
 
         extra_redshifts = _get_redshifts(snia["z_cmb"].to_list())
         redshift_coeffs = _get_redshift_coeffs(snia, config)
@@ -217,7 +217,7 @@ def _get_redshift_coeffs(snia: pl.DataFrame, config: Config) -> np.ndarray:
             .alias("anchor_index")
         )
     )
-    logger.info(f"Surveys and their mean redshifts: {json.dumps(samples.to_dicts(), indent=4)}")
+    logger.debug(f"Surveys and their mean redshifts: {json.dumps(samples.to_dicts(), indent=4)}")
     snia = snia.join(samples.select(["survey", "anchor_index"]), on="survey", how="left")
     for i, anchor in enumerate(snia["anchor_index"]):
         if config.separate_mass_x1c:
@@ -280,7 +280,7 @@ def condense_systematics(snia: pl.DataFrame) -> list[np.ndarray]:
             matrix[2, i] = row.get(f"uncertainty_color_{col}", 0.0) or 0.0
         calib.append(matrix)
     logger.info(f"Condensed systematics into {num} calibration terms for {len(calib)} supernova.")
-    logger.info(f"Calibration terms are: {json.dumps(cols, indent=2)}")
+    logger.debug(f"Calibration terms are: {json.dumps(cols, indent=2)}")
     return calib
 
 
