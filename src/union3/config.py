@@ -1,9 +1,19 @@
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal, Self
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 from union3.utils.base_config import FileConfig
+
+
+class CosmologyModel(StrEnum):
+    OM = "om"
+    BINNED_MU = "binned_mu"
+    OM_W = "om_w"
+    Q0_J0 = "q0_j0"
+    OM_W0_WA = "om_w0_wa"
+    BINNED_MU_COMOVING_INTERPOLATION = "binned_mu_comoving_interpolation"
 
 
 class FilterConfig(BaseSettings):

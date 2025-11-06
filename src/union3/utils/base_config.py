@@ -1,3 +1,4 @@
+from enum import StrEnum
 from pathlib import Path
 from pydantic_settings import (
     BaseSettings,
@@ -9,6 +10,10 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
 )
+
+# class StrEnumWithIndex(StrEnum):
+#     def __new__(cls, value: str, index: int):
+#         obj.__
 
 
 class DeferredYamlConfigSettingsSource(YamlConfigSettingsSource):

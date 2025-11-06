@@ -1,3 +1,4 @@
+from collections import defaultdict
 from io import StringIO
 import re
 from pydantic import computed_field
@@ -20,7 +21,7 @@ def count(func):
 
 
 class LCFitExtractionConfig(BaseSettings):
-    union3_dir: str = "tmp"
+    union3_dir: str = "tmp_dropbox"
 
     @property
     def union3_path(self) -> Path:
@@ -34,12 +35,20 @@ class LCFitExtractionConfig(BaseSettings):
 
 def process_survey(survey_path: Path, config: LCFitExtractionConfig) -> int:
     logger.info(f"Processing directory: {survey_path.name}")
+
+    # There should be a survey_name_v1.txt file in the survey directory which contains the
+    # list of supernovae which passed light curve fitting cuts.
+    pass_file = survey_path.parent / f"{survey_path.name}_v1.txt"
+    assert pass_file.exists(), f"Pass file {pass_file} does not exist."
+    passed_sn_dirs = {line.strip().split("/")[-1] for line in pass_file.read_text().strip().splitlines()}
+
     data = []
     for sn_dir in sorted(survey_path.iterdir()):
         if sn_dir.is_dir():
             sn_data = process_supernova(sn_dir, survey_path.name)
+            passed = sn_dir.name in passed_sn_dirs
             if sn_data is not None:
-                data.append(sn_data)
+                data.append(sn_data | {"lcfit_passed": passed})
 
     if not data:
         logger.warning(f"No data found for survey {survey_path.name}")
@@ -58,10 +67,10 @@ def process_supernova(sn_path: Path, survey: str):
     logger.info(f"\tProcessing SN: {sn_name}")
     try:
         data = (
-            {"name": sn_name, "survey": survey}
-            | load_light_file(sn_path)
+            load_light_file(sn_path)
             | load_results(sn_path)
             | load_derivatives(sn_path)
+            | {"name": sn_name, "survey": survey}
         )
         if len(data) <= 5:  # name, survey + few more
             logger.warning(f"\tNo useful data found for {sn_name} in {survey}, skipping.")
@@ -160,6 +169,16 @@ def load_derivatives(sn_path: Path):
     )
     result = df.to_dicts()[0]
     return {k: maybe_float(v) for k, v in result.items()}
+
+
+def read_lcfit_failures(failures_file: Path) -> dict[str, set[str]]:
+    """Returns a dictionary mapping survey names to lists of failed supernova names."""
+    assert failures_file.exists(), f"LCFit failure file {failures_file} does not exist."
+    results = defaultdict(set)
+    lines = [x.split("/") for x in failures_file.read_text().strip().splitlines()]
+    for survey, sn_name, *_ in lines:
+        results[survey].add(sn_name)
+    return results
 
 
 def main():

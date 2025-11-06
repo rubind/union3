@@ -104,6 +104,18 @@ class Data(BaseModel):
         # So each SN wants a 3 x n_calib matrix of derivatives. Those are found below
         systematics = condense_systematics(snia)
 
+        # TODO: REMOVE TEMP CODE
+        from union3.data.validation import expected_names
+
+        missing_supernova = sorted(list(set(expected_names) - set(snia["name"].to_list())))
+        if missing_supernova:
+            logger.warning(f"The following expected supernova are missing after filtering: {missing_supernova}")
+        snia_which_should_be_dropped = sorted(list(set(snia["name"].to_list()) - set(expected_names)))
+        if snia_which_should_be_dropped:
+            logger.warning(
+                f"The following supernova are present but not expected and will be dropped: {snia_which_should_be_dropped}"
+            )
+
         extra_redshifts = _get_redshifts(snia["z_cmb"].to_list())
         redshift_coeffs = _get_redshift_coeffs(snia, config)
         bao_cmb_omw0wa = _get_bao_cmb_omw0wa(config)
@@ -225,7 +237,7 @@ def get_filtered_and_augmented_snia(
 ) -> pl.DataFrame:
     return (
         impute_snia(all_supernova, config)
-        .pipe(_filter_snia, config)
+        .pipe(filter_snia, config)
         .pipe(flag_weird_supernova)
         .pipe(determine_calibrators, config)
         .pipe(add_lensing_bias, config)
@@ -595,7 +607,7 @@ def _load_snia_lightcurve_fits(config: Config):
     ).sort("name")
 
 
-def _filter_snia(df: pl.DataFrame, config: Config):
+def filter_snia(df: pl.DataFrame, config: Config):
     if config.weird_sn_file is None:
         weird_sn = []
         logger.info("No weird SN file provided, skipping weird SN exclusion.")
@@ -605,7 +617,8 @@ def _filter_snia(df: pl.DataFrame, config: Config):
         logger.info(f"Loaded {len(weird_sn)} weird SN names from {weird_sn_file}.")
 
     df_filtered = df.filter(
-        pl.col("redshift").is_between(config.filters.min_redshift, config.filters.max_redshift)
+        pl.col("lcfit_passed")
+        & pl.col("redshift").is_between(config.filters.min_redshift, config.filters.max_redshift)
         & pl.col("mB").is_between(0, 50)
         & pl.col("color").is_between(config.filters.min_color, config.filters.max_color)
         & pl.col("color_err").is_between(0, config.filters.max_color_uncertainty)
@@ -616,6 +629,8 @@ def _filter_snia(df: pl.DataFrame, config: Config):
         & pl.col("x1_err").is_not_null()
         & ((pl.col("x1").abs() + pl.col("x1_err")) < 5)
     )
+    # Drop columns which are all null after filtering
+    df_filtered = df_filtered[[s.name for s in df_filtered if not (s.null_count() == df_filtered.height)]]
     logger.info(f"Filtered to {df_filtered.height} SNe Ia")
     return df_filtered
 
@@ -661,4 +676,6 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
         # Add in cov_mBmB from mb_err and the lensing dispersion
         .with_columns(cov_mBmB=pl.col("mB_err") ** 2 + (pl.col("z_cmb") * config.lensing_dispersion) ** 2)
         .drop("mB_err")  # Drop the mB_err column so it cant be used instead of cov_mBmB
+        # And to make my life easier, I'm going to rename the supernova to put their survey in the name
+        .with_columns(original_name=pl.col("name"), name=pl.col("survey") + "_" + pl.col("name"))
     )

@@ -131,8 +131,13 @@ def rescale_uncertainties(snia: pl.DataFrame, calibration_uncertainties: dict[st
     for col in cols:
         _, _, key = col.split("_", maxsplit=2)
         scaling_factor = calibration_uncertainties.get(key)
-        if scaling_factor is None and "BULK" not in key:
-            logger.warning(f"No calibration uncertainty found for key {key}, skipping rescaling for {col}.")
+        if scaling_factor is None:
+            if "BULK" in key or "distmod" in key or "corr_redshift_sys" in key:
+                continue
+            supernovae = snia.filter(pl.col(col).is_not_null())["name"].to_list()
+            logger.warning(
+                f"No calibration uncertainty found for key {key} used by {supernovae}, skipping rescaling for {col}."
+            )
             continue
         logger.info(f"Rescaling {col} with factor {scaling_factor}")
         expressions.append(pl.col(col) * scaling_factor)
@@ -153,7 +158,6 @@ def add_landolt_smith_uncertainties(
             {"systematic": "Fundamental_10000-100000", "start_lambda": 10000, "end_lambda": 100000},
             {"systematic": "SALT_UV_CAL", "start_lambda": 0, "end_lambda": 3400},
             {"systematic": "SALT_U_CAL", "start_lambda": 0, "end_lambda": 4000},
-            {"systematic": "SALT_B_CAL", "start_lambda": 4000, "end_lambda": 5000},
             {"systematic": "SALT_I_CAL", "start_lambda": 7000, "end_lambda": 999999},
         ]
     )
