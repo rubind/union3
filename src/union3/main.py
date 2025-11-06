@@ -11,7 +11,7 @@ def main():
     data = Data.from_config(config)
 
     model = Model.from_config(config)
-    model.initialise_from_data(data)
+    model.initialise(data)
 
     # plot_approx_hubble_diagram(data.filtered_supernova, config)
 

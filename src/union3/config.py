@@ -133,6 +133,8 @@ class Config(FileConfig):
     redshift_coefficient_steps: int = Field(
         default=1, ge=1, description="Number of steps for redshift coefficients when using 'a' type."
     )
+    threeD_unexplained: bool = Field(default=True, description="TODO: ask david")
+    do_two_alpha_beta: bool = Field(default=True, description="Whether to fit for two alpha and beta values.")
 
     @property
     def model_path(self) -> Path:

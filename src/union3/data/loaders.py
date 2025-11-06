@@ -46,7 +46,7 @@ class Data(BaseModel):
 
     @computed_field
     @property
-    def num_supernova(self) -> int:
+    def num_supernovae(self) -> int:
         return self.filtered_supernova.height
 
     @computed_field
@@ -79,6 +79,14 @@ class Data(BaseModel):
             )
             cov_mBx1c.append(cov_matrix)
         return cov_mBx1c
+
+    @computed_field
+    @property
+    def photoz_uncertainty_dz(self) -> list[np.ndarray]:
+        cols = ["dz_uncertainty_photoz_mB", "dz_uncertainty_photoz_x1", "dz_uncertainty_photoz_c"]
+        if cols[0] not in self.filtered_supernova.columns:
+            return []
+        return [np.array(x) for x in self.filtered_supernova.select(cols).to_numpy().tolist()]
 
     @classmethod
     def from_config(cls, config: Config) -> Self:
@@ -239,6 +247,8 @@ def get_filtered_and_augmented_snia(
         impute_snia(all_supernova, config)
         .pipe(filter_snia, config)
         .pipe(flag_weird_supernova)
+        .pipe(add_sample_index)
+        .pipe(add_supernova_index)
         .pipe(determine_calibrators, config)
         .pipe(add_lensing_bias, config)
         .pipe(add_prob_high_mass)
@@ -258,6 +268,19 @@ def get_filtered_and_augmented_snia(
         .drop(cs.starts_with("deriv_") | cs.starts_with("instrument|"))
         .sort("name")
     )
+
+
+def add_supernova_index(snia: pl.DataFrame) -> pl.DataFrame:
+    """Adds a supernova_index column to the supernova dataframe, which is an integer index for each supernova."""
+    logger.info(f"Adding supernova index for {snia.height} supernova.")
+    return snia.with_row_index("supernova_index")
+
+
+def add_sample_index(snia: pl.DataFrame) -> pl.DataFrame:
+    """Adds a sample_index column to the supernova dataframe, which is an integer index for each unique survey."""
+    samples = snia.select("survey").unique().sort("survey").with_row_index("sample_index")
+    logger.info(f"Identified {samples.height} unique supernova samples/surveys. Adding their index.")
+    return snia.join(samples, on="survey", how="left")
 
 
 def add_prob_high_mass(snia: pl.DataFrame) -> pl.DataFrame:
@@ -375,15 +398,16 @@ def add_photoz_errors(snia: pl.DataFrame) -> pl.DataFrame:
         f"Adding photo-z error terms for {snia.filter(pl.col("photoz_mean").is_not_null()).height} photo-z supernova."
     )
     return snia.with_columns(
-        uncertainty_mB_photoz_sys=pl.when(pl.col("photoz_mean").is_not_null())
+        dz_uncertainty_photoz_mB=pl.when(pl.col("photoz_mean").is_not_null())
         .then(pl.col("deriv_Redshift_dmB/dP"))
         .otherwise(None),
-        uncertainty_x1_photoz_sys=pl.when(pl.col("photoz_mean").is_not_null())
+        dz_uncertainty_photoz_x1=pl.when(pl.col("photoz_mean").is_not_null())
         .then(pl.col("deriv_Redshift_ds/dP"))
         .otherwise(None),
-        uncertainty_color_photoz_sys=pl.when(pl.col("photoz_mean").is_not_null())
+        dz_uncertainty_photoz_c=pl.when(pl.col("photoz_mean").is_not_null())
         .then(pl.col("deriv_Redshift_dc/dP"))
         .otherwise(None),
+        photoz_index=pl.when(pl.col("photoz_mean").is_not_null()).then(pl.col("supernova_index")).otherwise(0),
     )
 
 
@@ -632,7 +656,7 @@ def filter_snia(df: pl.DataFrame, config: Config):
     # Drop columns which are all null after filtering
     df_filtered = df_filtered[[s.name for s in df_filtered if not (s.null_count() == df_filtered.height)]]
     logger.info(f"Filtered to {df_filtered.height} SNe Ia")
-    return df_filtered
+    return df_filtered.sort("name")
 
 
 def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
