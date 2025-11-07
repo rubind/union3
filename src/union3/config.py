@@ -86,9 +86,8 @@ class Config(FileConfig):
         default=CosmologyModel.OM_W0_WA, description="Cosmology model to use for fitting."
     )
     fit_model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
-    iterations: int = Field(default=2500, ge=1, description="Number of iterations for MCMC.")
-    num_jobs: int = Field(default=4, ge=1, description="Number of parallel jobs for MCMC.")
-    num_chains: int = Field(default=4, ge=1, description="Number of chains for MCMC.")
+    iterations: int = Field(default=2, ge=1, description="Number of iterations for MCMC.")
+    num_chains: int = Field(default=2, ge=1, description="Number of chains for MCMC.")
     max_params_to_save: int = Field(default=1000, ge=1, description="Maximum number of parameters to save from MCMC.")
     do_host_mass: bool = Field(default=True, description="Whether to include host mass step correction.")
     fix_omega_m: bool = Field(default=False, description="Whether to fix Omega_m during fitting to 0.3.")
@@ -147,7 +146,7 @@ class Config(FileConfig):
     def model_dir(cls):
         return Path(__file__).parent / "models"
 
-    @field_validator("model")
+    @field_validator("fit_model")
     def validate_stan_model(cls, v: str) -> str:
         names = [p.name for p in cls.model_dir().glob("*")]
         assert v in names, f"Model {v} not found in models directory, options are {names}"

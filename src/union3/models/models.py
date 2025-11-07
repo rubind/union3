@@ -1,7 +1,7 @@
 from pathlib import Path
 import polars as pl
 import numpy as np
-from union3 import Config, Data, logger
+from union3 import Config, Data, logger, CosmologyModel
 
 
 class Model:
@@ -38,12 +38,21 @@ class StanModel(Model):
     def initialise(self, data: Data) -> None:
         self._raw_data = data
         snia = data.filtered_supernova
+        cosmo_model_mapping = {
+            CosmologyModel.OM: 1,
+            CosmologyModel.BINNED_MU: 2,
+            CosmologyModel.OM_W: 3,
+            CosmologyModel.Q0_J0: 4,
+            CosmologyModel.OM_W0_WA: 5,
+            CosmologyModel.BINNED_MU_COMOVING_INTERPOLATION: 6,
+        }
         self.data = {
+            "cosmo_model": cosmo_model_mapping[self.config.cosmology_model],
             "n_sne": data.num_supernovae,
-            "nz_add": data.redshift_simps["nzadd"],
+            "nzadd": data.redshift_simps["nzadd"],
             "n_samples": snia["survey"].n_unique(),
             "redshift_coeffs": data.redshift_coeffs,
-            "n_calib": len(data.systematics[0].shape[1]),
+            "n_calib": data.systematics[0].shape[1],
             "d_mBx1c_d_calib": data.systematics,
             "n_x1c_star": len(data.redshift_coeffs[0]),
             "threeD_unexplained": int(self.config.threeD_unexplained),
@@ -67,12 +76,12 @@ class StanModel(Model):
             "do_twoalphabeta": int(self.config.do_two_alpha_beta),
             "outl_frac_prior_lnmean": np.log(self.config.outlier_fraction),
             "outl_frac_prior_lnwidth": 0.5,
-            "n_photoz": snia.filter(pl.col("photoz_mean").is_not_null()).height,
+            "n_photoz": snia.filter(pl.col("photo_z0").is_not_null()).height,
             "d_mBx1c_dz_list": data.photoz_uncertainty_dz,
-            "photo_z0": snia["photo_z0"].to_numpy(),
-            "photo_sigz": snia["photo_sigz"].to_numpy(),
-            "photo_spikez": snia["photo_spikez"].to_numpy(),
-            "spike_redshift_prob": snia["photo_pspike"].to_numpy(),
+            "photo_z0": snia["photo_z0"].drop_nulls().to_numpy(),
+            "photo_sigz": snia["photo_sigz"].drop_nulls().to_numpy(),
+            "photo_spikez": snia["photo_spikez"].drop_nulls().to_numpy(),
+            "spike_redshift_prob": snia["photo_pspike"].drop_nulls().to_numpy(),
             "photoz_inds": snia["photoz_index"].to_numpy(),
             "est_mobs_cuts": snia["est_mobs_cuts"].to_numpy(),
             "est_mobs_sigmas": snia["est_mobs_sigmas"].to_numpy(),
@@ -80,6 +89,12 @@ class StanModel(Model):
             "mobs_cut1": snia["mobs_cut1"].to_numpy(),
             "BAOCMB_Om_w0_wa_mean": data.bao_cmb_omw0wa["mean"],
             "BAOCMB_Om_w0_wa_covmatrix": data.bao_cmb_omw0wa["cov"],
+            "n_zbins": len(data.redshift_bins["zbins"]),
+            "zbins": data.redshift_bins["zbins"],
+            "dmu_dbin": data.redshift_bins["dmu_dbin"],
+            "dmudz_dbin": data.redshift_bins["dmudz_dbin"],
+            "mu_const": snia["mu_const"].to_numpy(),
+            "dmu_const_dz": snia["dmu_const_dz"].to_numpy(),
         }
         logger.info("Stan model initialised with data for fitting.")
 
@@ -135,3 +150,20 @@ class StanModel(Model):
             "mobs_cut_sigmas": [0.5] * n_samples,
             "dz": rng.normal(size=data["n_photoz"]) * 0.01,
         }
+
+    def fit(self) -> pl.DataFrame:
+        import stan
+
+        stan_model = stan.build(self.model_text, data=self.data)
+        init = [self.get_initial_position() for _ in range(self.config.num_chains)]
+        fit = stan_model.sample(
+            num_chains=self.config.num_chains,
+            init=init,
+            num_samples=self.config.iterations,
+        )
+        df = pl.DataFrame(fit.to_frame())
+        cols = df.columns
+        logger.info(
+            f"Completed MCMC fitting with {self.config.num_chains} chains and {self.config.iterations} iterations."
+        )
+        return df.select(cols[: self.config.max_params_to_save])

@@ -479,12 +479,18 @@ def add_lensing_bias(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
 
 
 def add_photoz_errors(snia: pl.DataFrame) -> pl.DataFrame:
-    if "photoz_mean" not in snia.columns:
+    if "photo_z0" not in snia.columns:
         logger.info("No photo-z supernova found, skipping photo-z error addition.")
-        return snia
+        return snia.with_columns(
+            photo_z0=pl.lit(None),
+            photo_sigz=pl.lit(None),
+            photo_spikez=pl.lit(None),
+            photoz_index=pl.lit(0),
+            photo_pspike=pl.lit(None),
+        )
 
     logger.info(
-        f"Adding photo-z error terms for {snia.filter(pl.col("photoz_mean").is_not_null()).height} photo-z supernova."
+        f"Adding photo-z error terms for {snia.filter(pl.col("photo_z0").is_not_null()).height} photo-z supernova."
     )
     return snia.with_columns(
         dz_uncertainty_photoz_mB=pl.when(pl.col("photoz_mean").is_not_null())
@@ -784,5 +790,9 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
         .with_columns(cov_mBmB=pl.col("mB_err") ** 2 + (pl.col("z_cmb") * config.lensing_dispersion) ** 2)
         .drop("mB_err")  # Drop the mB_err column so it cant be used instead of cov_mBmB
         # And to make my life easier, I'm going to rename the supernova to put their survey in the name
-        .with_columns(original_name=pl.col("name"), name=pl.col("survey") + "_" + pl.col("name"))
+        .with_columns(
+            original_name=pl.col("name"),
+            name=pl.col("survey") + "_" + pl.col("name"),
+            in_cluster=pl.col("in_cluster").cast(pl.Int8),
+        )
     )

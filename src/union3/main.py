@@ -13,6 +13,9 @@ def main():
     model = Model.from_config(config)
     model.initialise(data)
 
+    samples = model.fit()
+
+    print(samples.describe())
     # plot_approx_hubble_diagram(data.filtered_supernova, config)
 
 
