@@ -174,6 +174,7 @@ class StanModel(Model):
             df = pl.DataFrame({p: fit[p].flatten() for p in params})
 
         logger.info(
-            f"Completed MCMC fitting with {self.config.num_chains} chains and {self.config.iterations} iterations."
+            f"Completed MCMC fitting with {self.config.num_chains} chains, "
+            f"warmup {self.config.warmup_iterations}, and {self.config.iterations} iterations."
         )
         return df

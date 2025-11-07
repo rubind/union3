@@ -86,9 +86,9 @@ class Config(FileConfig):
         default=CosmologyModel.OM_W0_WA, description="Cosmology model to use for fitting."
     )
     fit_model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
-    iterations: int = Field(default=200, ge=1, description="Number of iterations for MCMC.")
-    warmup_iterations: int = Field(default=100, ge=1, description="Number of warmup iterations for MCMC.")
-    num_chains: int = Field(default=8, ge=1, description="Number of chains for MCMC.")
+    iterations: int = Field(default=20, ge=1, description="Number of iterations for MCMC.")
+    warmup_iterations: int = Field(default=10, ge=1, description="Number of warmup iterations for MCMC.")
+    num_chains: int = Field(default=4, ge=1, description="Number of chains for MCMC.")
     extra_single_dimension_parameters_only: bool = Field(
         default=True, description="Whether to only save extra single-dimension parameters."
     )

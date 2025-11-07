@@ -14,6 +14,7 @@ def main():
     model.initialise(data)
 
     samples = model.fit()
+    samples.write_parquet(config.output_dir / "mcmc_samples.parquet")
 
     print(samples.describe())
     # plot_approx_hubble_diagram(data.filtered_supernova, config)
