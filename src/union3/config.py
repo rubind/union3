@@ -86,8 +86,12 @@ class Config(FileConfig):
         default=CosmologyModel.OM_W0_WA, description="Cosmology model to use for fitting."
     )
     fit_model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
-    iterations: int = Field(default=2, ge=1, description="Number of iterations for MCMC.")
-    num_chains: int = Field(default=2, ge=1, description="Number of chains for MCMC.")
+    iterations: int = Field(default=200, ge=1, description="Number of iterations for MCMC.")
+    warmup_iterations: int = Field(default=100, ge=1, description="Number of warmup iterations for MCMC.")
+    num_chains: int = Field(default=8, ge=1, description="Number of chains for MCMC.")
+    extra_single_dimension_parameters_only: bool = Field(
+        default=True, description="Whether to only save extra single-dimension parameters."
+    )
     max_params_to_save: int = Field(default=1000, ge=1, description="Maximum number of parameters to save from MCMC.")
     do_host_mass: bool = Field(default=True, description="Whether to include host mass step correction.")
     fix_omega_m: bool = Field(default=False, description="Whether to fix Omega_m during fitting to 0.3.")
