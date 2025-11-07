@@ -158,11 +158,13 @@ class StanModel(Model):
         stan_model = stan.build(self.model_text, data=self.data)
         init = [self.get_initial_position() for _ in range(self.config.num_chains)]
         logger.info(f"Starting {self.config.num_chains} Stan samplers, each for {self.config.iterations} iterations...")
+        # See https://mc-stan.org/docs/cmdstan-guide/mcmc_config.html for possible arguments
         fit = stan_model.sample(
             num_chains=self.config.num_chains,
             init=init,
             num_samples=self.config.iterations,
             num_warmup=self.config.warmup_iterations,
+            refresh=self.config.refresh_iterations,
         )
 
         logger.info("Stan MCMC sampling complete. Extracting samples.")

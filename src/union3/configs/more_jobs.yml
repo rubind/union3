@@ -1,0 +1,4 @@
+iterations: 100
+warmup_iterations: 50
+refresh_iterations: 5
+num_chains: 8
