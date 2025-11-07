@@ -82,7 +82,10 @@ class Config(FileConfig):
     do_plotting: bool = Field(default=True, description="Generate plots after running.")
 
     #! Cosmology model config
-    model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
+    cosmology_model: CosmologyModel = Field(
+        default=CosmologyModel.OM_W0_WA, description="Cosmology model to use for fitting."
+    )
+    fit_model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
     iterations: int = Field(default=2500, ge=1, description="Number of iterations for MCMC.")
     num_jobs: int = Field(default=4, ge=1, description="Number of parallel jobs for MCMC.")
     num_chains: int = Field(default=4, ge=1, description="Number of chains for MCMC.")
@@ -138,7 +141,7 @@ class Config(FileConfig):
 
     @property
     def model_path(self) -> Path:
-        return self.model_dir() / self.model
+        return self.model_dir() / self.fit_model
 
     @classmethod
     def model_dir(cls):
@@ -179,4 +182,8 @@ class Config(FileConfig):
         self._check_file_exists(self.data_dir, self.calibration_uncertainties_file)
         self._check_file_exists(self.data_dir, self.intergalactic_extinction_file)
         self._check_file_exists(self.data_dir, self.bao_cmb_file)
+
+        assert (
+            self.cosmology_model != CosmologyModel.BINNED_MU_COMOVING_INTERPOLATION
+        ), "BINNED_MU_COMOVING_INTERPOLATION is deprecated for now."
         return self

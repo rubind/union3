@@ -31,14 +31,16 @@ class StanModel(Model):
         # This is the dictionary of data to be passed to Stan
         # Its different to the global Data obejct because this is transformed into numerical values
         # in arrays, as opposed to dataframes or other structures
+        self._raw_data: Data | None = None
         self.data = {}
         logger.info(f"Loaded Stan model from {model_path}.")
 
     def initialise(self, data: Data) -> None:
+        self._raw_data = data
         snia = data.filtered_supernova
         self.data = {
             "n_sne": data.num_supernovae,
-            "nz_add": data.nzadd,
+            "nz_add": data.redshift_simps["nzadd"],
             "n_samples": snia["survey"].n_unique(),
             "redshift_coeffs": data.redshift_coeffs,
             "n_calib": len(data.systematics[0].shape[1]),
@@ -57,8 +59,8 @@ class StanModel(Model):
             "distmod": snia["distmod"].to_numpy(),
             "zhelio": snia["z_heliocentric"].to_numpy(),
             "redshifts": snia["z_cmb"].to_numpy(),
-            "redshifts_sort_fill": data.redshifts_sort_fill,
-            "unsort_inds": data.unsort_inds,
+            "redshifts_sort_fill": data.redshift_simps["redshifts_sort_fill"],
+            "unsort_inds": data.redshift_simps["unsort_inds"],
             "obs_mBx1c": data.obs_mBx1c,
             "obs_mBx1c_cov": data.obs_mBx1c_cov,
             "do_blind": int(self.config.do_blinding),
@@ -81,4 +83,55 @@ class StanModel(Model):
         }
         logger.info("Stan model initialised with data for fitting.")
 
-    # TODO: init function
+    def get_initial_position(self) -> dict[str, int | float | np.ndarray]:
+        assert self.data and self._raw_data, "Model data not initialised. Call initialise() first."
+        raw, data, config = self._raw_data, self.data, self.config
+        n_sne, n_samples = data["n_sne"], data["n_samples"]
+        snia = raw.filtered_supernova
+
+        rng = np.random.default_rng()
+
+        return {
+            "MB": rng.random(size=n_samples if config.MB_by_sample else 1) * 0.2 - 19.1,
+            "MB_slow": rng.random(size=n_samples if config.MB_by_sample else 1) * 0.2 - 19.1,
+            "MB_fast_minus_slow": rng.random() * 0.1,
+            "Om": 0.3,
+            "H0": rng.random() * 5 + 70.0,
+            "wDE": -1.01,
+            "mu_zbins": rng.normal(size=len(raw.redshift_bins["zbins"])) * 0.05,
+            "alpha_angle": np.arctan(rng.random() * 0.2),
+            "alpha_angle_fast": np.arctan(rng.random() * 0.2),
+            "alpha_angle_slow": np.arctan(rng.random() * 0.2),
+            "beta_angle_blue": np.arctan(rng.random() * 0.5 + 2.5),
+            "beta_angle_blue_fast": np.arctan(rng.random() * 0.5 + 2.5),
+            "beta_angle_blue_slow": np.arctan(rng.random() * 0.5 + 2.5),
+            "beta_angle_red_low": np.arctan(rng.random() * 0.5 + 2.5),
+            "beta_angle_red_high": np.arctan(rng.random() * 0.5 + 2.5),
+            "beta_angle_red_fast": np.arctan(rng.random() * 0.5 + 2.5),
+            "beta_angle_red_slow": np.arctan(rng.random() * 0.5 + 2.5),
+            "mBx1c_int_variance": np.array([0.9, 0.05, 0.05]),
+            "delta_0": rng.random() * 0.05,
+            "delta_h": 0.5,
+            "step_mass": 10.0,
+            "step_width": 0.1,
+            "calibs": rng.normal(size=len(raw.systematics[0].shape[1])) * 0.01,
+            "true_cB": rng.random(size=n_sne) * 0.02 - 0.01 + np.clip(snia["color"].to_numpy() / 2.0, -0.2, 1.0),
+            "true_cR_unit": rng.random(size=n_sne) * 0.5 + 0.5,
+            "true_x1": rng.random(size=n_sne) * 0.2 - 0.1 + snia["x1"],
+            "x1_star": rng.random(size=data["n_x1c_star"]) * 0.5,
+            "tau_x1": -rng.random(size=data["n_x1c_star"]),
+            "R_x1": rng.random(size=data["n_x1c_star"]) * 0.5 + 0.25,
+            "x1_star_fast": rng.random() * 0.5 - 1.25,
+            "x1_star_slow": rng.random() * 0.5,
+            "R_x1_fast": rng.random() * 0.25 + 0.4,
+            "R_x1_slow": rng.random() * 0.25 + 0.4,
+            "c_star": -rng.random(size=data["n_x1c_star"]) * 0.05,
+            "c_star_fast": -rng.random() * 0.05,
+            "c_star_slow": -rng.random() * 0.05,
+            "tau_c": rng.random(size=data["n_x1c_star"]) * 0.05 + 0.02,
+            "R_c": rng.random(size=data["n_x1c_star"]) * 0.05 + 0.02,
+            "outl_frac": rng.random() * 0.02 + 0.01,
+            "mobs_cuts": data["est_mobs_cuts"] + rng.normal(size=n_samples) * 0.1,
+            "mobs_cut_sigmas": [0.5] * n_samples,
+            "dz": rng.normal(size=data["n_photoz"]) * 0.01,
+        }

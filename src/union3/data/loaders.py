@@ -5,13 +5,13 @@ from typing import Literal, Self, TypedDict
 import polars as pl
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 import numpy as np
-from union3.config import Config
-from union3 import logger
+from union3 import Config, CosmologyModel, logger
 from scipy.special import erf
 from scipy.interpolate import interp1d
 from astropy.io import fits
 import yaml
 import polars.selectors as cs
+from astropy.cosmology import FlatLambdaCDM
 
 from union3.data.uncertainties import (
     add_electron_scattering_uncertainties,
@@ -27,6 +27,18 @@ class BAOCMB_Omw0wa(TypedDict):
     cov: np.ndarray
 
 
+class RedshiftSimps(TypedDict):
+    redshifts_sort_fill: list[float]
+    unsort_inds: list[int]
+    nzadd: int
+
+
+class RedshiftBins(TypedDict):
+    zbins: np.ndarray  # 1D array of shape (n_bins,)
+    dmu_dbin: np.ndarray  # 2D array of shape (n_sne, n_bins)
+    dmudz_dbin: np.ndarray  # 2D array of shape (n_sne, n_bins)
+
+
 class Data(BaseModel):
     all_supernova: pl.DataFrame = Field(exclude=True)
     filtered_supernova: pl.DataFrame = Field(exclude=True)
@@ -35,9 +47,10 @@ class Data(BaseModel):
     systematics: list[np.ndarray] = Field(exclude=True)
 
     # Extra fields for applying simpsons rule on redshift integrations
-    redshifts_sort_fill: list[float]
-    unsort_inds: list[int]
-    nzadd: int
+    redshift_simps: RedshiftSimps
+
+    # For binned mu cosmology models
+    redshift_bins: RedshiftBins
 
     redshift_coeffs: np.ndarray  # Redshift coefficients for each supernova
     bao_cmb_omw0wa: BAOCMB_Omw0wa  # mean and covariance matrix for BAO+CMB Omw0wa constraints
@@ -124,9 +137,10 @@ class Data(BaseModel):
         #         f"The following supernova are present but not expected and will be dropped: {snia_which_should_be_dropped}"
         #     )
 
-        extra_redshifts = _get_redshifts(snia["z_cmb"].to_list())
+        redshift_simps = _get_redshifts(snia["z_cmb"].to_list())
         redshift_coeffs = _get_redshift_coeffs(snia, config)
         bao_cmb_omw0wa = _get_bao_cmb_omw0wa(config)
+        snia, redshift_bins = _get_redshift_bins(snia, config)
 
         result = cls(
             all_supernova=all_supernova,
@@ -134,7 +148,8 @@ class Data(BaseModel):
             systematics=systematics,
             redshift_coeffs=redshift_coeffs,
             bao_cmb_omw0wa=bao_cmb_omw0wa,
-            **extra_redshifts,
+            redshift_bins=redshift_bins,
+            redshift_simps=redshift_simps,
         )
 
         # Invoke the model fields to ensure they generate without error
@@ -142,6 +157,80 @@ class Data(BaseModel):
         result.obs_mBx1c_cov
 
         return result
+
+
+def _get_redshift_bins(snia: pl.DataFrame, config: Config) -> tuple[pl.DataFrame, RedshiftBins]:
+    n_sne = len(snia)
+    if snia["z_cmb"].max() == snia["z_cmb"].min() or config.cosmology_model not in [
+        CosmologyModel.BINNED_MU,
+        CosmologyModel.BINNED_MU_COMOVING_INTERPOLATION,
+    ]:
+        logger.info("No redshift bins needed for current cosmology model.")
+        redshift = snia["z_cmb"].first()
+
+        df = snia.with_columns(mu_const=pl.lit(0), dmu_const_dz=pl.lit(0))
+        res: RedshiftBins = {
+            "zbins": np.array([redshift]),
+            "dmu_dbin": np.ones((n_sne, 1)),
+            "dmudz_dbin": np.zeros((n_sne, 1)),
+        }
+        return df, res
+
+    logger.info(f"Cosmology model {config.cosmology_model} requires redshift bins, generating them now.")
+    zsort = np.sort(snia["z_cmb"].to_list())
+    zbins = [zsort[-1] * 1.001]
+    step = 10
+    minstepsize = 0.1
+    min_sn_bin = 10
+    ind = -1 - min_sn_bin
+    z_cutoff_for_05 = 0.8
+
+    while step > minstepsize:
+        step = zbins[0] - zsort[ind]
+        minstepsize = ((zbins[0] + zsort[ind]) * 0.5 > z_cutoff_for_05) * 0.05 + 0.05
+
+        if step > minstepsize:
+            zbins = [zsort[ind]] + zbins
+            ind -= min_sn_bin
+
+    logger.info(f"Generated high-z redshift bins: {zbins}")
+
+    zbins = np.concatenate(
+        (
+            np.linspace(0.05, z_cutoff_for_05, int(0 + np.around(z_cutoff_for_05 / 0.05))),
+            np.linspace(z_cutoff_for_05, zbins[0], int(np.around((zbins[0] - z_cutoff_for_05) / 0.1)) + 1)[1:-1],
+            zbins,
+        )
+    )
+
+    logger.info(f"Final redshift bins: {zbins.tolist()}")
+
+    dmu_dbin = np.zeros((n_sne, len(zbins)))
+    dmudz_dbin = np.zeros((n_sne, len(zbins)))
+    redshifts = np.array(snia["z_cmb"].to_list())
+    for j in range(len(zbins)):
+        nodes = np.zeros(len(zbins))
+        nodes[j] = 1.0
+
+        xvals = np.concatenate(([0.0], zbins))
+        yvals = np.concatenate(([-1], nodes))
+        ifn = interp1d(xvals, yvals, kind="quadratic")
+
+        dmu_dbin[:, j] = ifn(redshifts)
+        dmudz_dbin[:, j] = (ifn(redshifts + 1e-3) - ifn(redshifts)) / 1e-3
+
+    # TODO: get mu
+
+    cosmology = FlatLambdaCDM(H0=70, Om0=0.3)  # type: ignore
+    mu_const = cosmology.distmod(redshifts).value  # type: ignore
+    dmu_const_dz = 1000 * (cosmology.distmod(redshifts + 0.001).value - mu_const)  # type: ignore
+    snia = snia.with_columns(mu_const=pl.Series(mu_const), dmu_const_dz=pl.Series(dmu_const_dz))
+    res: RedshiftBins = {
+        "zbins": zbins,
+        "dmu_dbin": dmu_dbin,
+        "dmudz_dbin": dmudz_dbin,
+    }
+    return snia, res
 
 
 def _get_bao_cmb_omw0wa(config: Config) -> BAOCMB_Omw0wa:
@@ -562,13 +651,7 @@ def load_bulk_flow_data(data_dir: Path) -> BulkFlowData:
     }
 
 
-class RedshiftResults(TypedDict):
-    redshifts_sort_fill: list[float]
-    unsort_inds: list[int]
-    nzadd: int
-
-
-def _get_redshifts(redshifts: list[float]) -> RedshiftResults:
+def _get_redshifts(redshifts: list[float]) -> RedshiftSimps:
     """Create a redshift array using both data redshifts
     and appended redshift values to create a smooth array
     that can be used for simpson's rule integration.
