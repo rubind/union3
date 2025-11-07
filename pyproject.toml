@@ -30,6 +30,9 @@ union3 = "union3.main:main"
 requires = ["uv_build>=0.8.17,<0.9.0"]
 build-backend = "uv_build"
 
+[tool.uv]
+no-binary-package = ["pystan"]
+
 [tool.ruff]
 line-length = 120
 include = ["pyproject.toml", "src/**/*.py"]

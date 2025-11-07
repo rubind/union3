@@ -7,7 +7,10 @@ A package for performing supernova cosmology using Bayesian Hierarchical Models
 
 For convenience, many of the top-level administrative functions are collected into a Makefile. To install this repository, simply run `make install`. To then kick off a run with the default configuration, try `make run`.
 
+Please note that Stan 3 does not make it super easy to install on anything other than Linux. I've enabled the no-binary flag
+on the pystan dependency in the pyproject.toml file to try and force a rebuild, but I'm not sure if it will work.
 
+Please see [the Apple specific instructions](https://pystan.readthedocs.io/en/latest/faq.html#how-can-i-run-pystan-on-macos-with-apple-silicon-chips-apple-m1-m2-etc) if it fails.
 
 
 

@@ -23,7 +23,7 @@ test:
 	uv run pytest tests
 
 run:
-    uv run union3
+	uv run union3
 
 tests: test
 install: install_uv install_python install_deps install_precommit
