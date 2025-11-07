@@ -42,6 +42,7 @@ class RedshiftBins(TypedDict):
 class Data(BaseModel):
     all_supernova: pl.DataFrame = Field(exclude=True)
     filtered_supernova: pl.DataFrame = Field(exclude=True)
+    samples: pl.DataFrame = Field(exclude=True)
 
     # Represent systematics in the order of the dataframes above (sorted by name)
     systematics: list[np.ndarray] = Field(exclude=True)
@@ -66,7 +67,10 @@ class Data(BaseModel):
     @property
     def obs_mBx1c(self) -> list[np.ndarray]:
         """Returns the observed mB, x1, color in a vector, one element per supernova."""
-        return [np.array(x) for x in self.filtered_supernova.select(["mB", "x1", "color"]).to_numpy().tolist()]
+        return [
+            np.array(x).astype(np.float64)
+            for x in self.filtered_supernova.select(["mB", "x1", "color"]).to_numpy().tolist()
+        ]
 
     @computed_field
     @property
@@ -90,7 +94,7 @@ class Data(BaseModel):
                     [mBc[i], x1c[i], cc[i]],
                 ]
             )
-            cov_mBx1c.append(cov_matrix)
+            cov_mBx1c.append(cov_matrix.astype(np.float64))
         return cov_mBx1c
 
     @computed_field
@@ -99,7 +103,7 @@ class Data(BaseModel):
         cols = ["dz_uncertainty_photoz_mB", "dz_uncertainty_photoz_x1", "dz_uncertainty_photoz_c"]
         if cols[0] not in self.filtered_supernova.columns:
             return []
-        return [np.array(x) for x in self.filtered_supernova.select(cols).to_numpy().tolist()]
+        return [np.array(x).astype(np.float64) for x in self.filtered_supernova.select(cols).to_numpy().tolist()]
 
     @classmethod
     def from_config(cls, config: Config) -> Self:
@@ -136,7 +140,9 @@ class Data(BaseModel):
         #     logger.warning(
         #         f"The following supernova are present but not expected and will be dropped: {snia_which_should_be_dropped}"
         #     )
-
+        samples = (
+            snia.select("survey", "sample_index", "est_mobs_cuts", "est_mobs_sigmas").unique().sort("sample_index")
+        )
         redshift_simps = _get_redshifts(snia["z_cmb"].to_list())
         redshift_coeffs = _get_redshift_coeffs(snia, config)
         bao_cmb_omw0wa = _get_bao_cmb_omw0wa(config)
@@ -145,6 +151,7 @@ class Data(BaseModel):
         result = cls(
             all_supernova=all_supernova,
             filtered_supernova=snia,
+            samples=samples,
             systematics=systematics,
             redshift_coeffs=redshift_coeffs,
             bao_cmb_omw0wa=bao_cmb_omw0wa,
@@ -385,7 +392,7 @@ def condense_systematics(snia: pl.DataFrame) -> list[np.ndarray]:
     cols = sorted(list(set([col.split("_", maxsplit=2)[-1] for col in snia.columns if col.startswith("uncertainty_")])))
     num = len(cols)
     for row in snia.iter_rows(named=True):
-        matrix = np.zeros((3, num))
+        matrix = np.zeros((3, num), dtype=np.float64)
         for i, col in enumerate(cols):
             matrix[0, i] = row.get(f"uncertainty_mB_{col}", 0.0) or 0.0
             matrix[1, i] = row.get(f"uncertainty_x1_{col}", 0.0) or 0.0
