@@ -23,7 +23,7 @@ You can customise what runs in a few ways.
 
 1. If you have a config file with overrides in `src/union3/configs`, you can pass in the filename, like `uv run union3 base=union3.0.yml`
 2. If you want temporary overrides, you can pass them in, like `uv run union3 --filters.max_redshift 0.3` (see `config.py` for all the options)
-3. You can also configure what's run via environment variables:
+3. You can also configure what's run via environment variables, which is especially useful when running via an image.
 
 ```bash
 export FILTERS__MAX_REDSHIFT=0.3
