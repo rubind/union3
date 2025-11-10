@@ -33,6 +33,9 @@ build-backend = "uv_build"
 [tool.uv]
 no-binary-package = ["pystan"]
 
+[tool.uv_build]
+package-data = { "union3" = ["data/resources/**/*"]}
+
 [tool.ruff]
 line-length = 120
 include = ["pyproject.toml", "src/**/*.py"]

@@ -30,7 +30,7 @@ class LCFitExtractionConfig(BaseSettings):
     @computed_field
     @property
     def output_dir(self) -> Path:
-        return Path(__file__).parents[4] / "data"
+        return Path(__file__).parents[2] / "union3/data/resources/supernova_lc_fits"
 
 
 def process_survey(survey_path: Path, config: LCFitExtractionConfig) -> int:

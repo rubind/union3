@@ -42,7 +42,7 @@ class Config(FileConfig):
         default=None,
         description="Base config YAML file in the configs directory. If None, will use the defaults from config.py",
     )
-    data_dir: Path = Field(default=Path(__file__).parents[2] / "data")
+    data_dir: Path = Field(default=Path(__file__).parent / "data/resources")
     output_dir: Path = Field(default=Path(__file__).parents[2] / "output")
 
     filters: FilterConfig = Field(default_factory=FilterConfig)
