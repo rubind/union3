@@ -19,7 +19,6 @@ def plot_approx_hubble_diagram(
     color_iterator = colors.next_colour()
 
     cosmology = FlatLambdaCDM(H0=70, Om0=0.3)  # type: ignore
-
     surveys = sorted(data.filtered_supernova["survey"].unique().to_list())
 
     for survey in surveys:

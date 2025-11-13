@@ -1,7 +1,7 @@
 from union3 import logger
 from union3 import Config, Data, Model
 import polars as pl
-from union3.plotting import plot_approx_hubble_diagram
+from union3.plotting import plot_approx_hubble_diagram, plot_cosmology_constraints
 
 
 def fit_cosmology(config: Config | None = None) -> pl.DataFrame:
@@ -21,7 +21,9 @@ def fit_cosmology(config: Config | None = None) -> pl.DataFrame:
     samples.write_parquet(config.output_dir / "mcmc_samples.parquet")
 
     print(samples.describe())
-    plot_approx_hubble_diagram(data, config)
+    if config.do_plotting:
+        plot_approx_hubble_diagram(data, config)
+        plot_cosmology_constraints(config, samples)
     return samples
 
 
