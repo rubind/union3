@@ -55,7 +55,7 @@ def process_survey(survey_path: Path, config: LCFitExtractionConfig) -> int:
         return 0
 
     df = pl.DataFrame(data)
-    output_file = config.output_dir / f"supernova_lc_fits/{survey_path.name}.parquet"
+    output_file = config.output_dir / f"{survey_path.name}.parquet"
     df.write_parquet(output_file)
     logger.info(f"Written data to {output_file}")
     return len(data)
@@ -69,7 +69,8 @@ def process_supernova(sn_path: Path, survey: str):
         data = (
             load_light_file(sn_path)
             | load_results(sn_path)
-            | load_derivatives(sn_path)
+            | load_derivatives(sn_path, "model_deriv.dat")
+            | load_derivatives(sn_path, "result_deriv.dat")
             | {"name": sn_name, "survey": survey}
         )
         if len(data) <= 5:  # name, survey + few more
@@ -144,16 +145,17 @@ def load_results(sn_path: Path):
     return data
 
 
-def load_derivatives(sn_path: Path):
-    derivatives_file = sn_path / "result_deriv.dat"
+def load_derivatives(sn_path: Path, filename: str):
+    derivatives_file = sn_path / filename
     if not derivatives_file.exists():
         return {}
     content = re.sub(r" +", " ", derivatives_file.read_text().strip())
+    basename = derivatives_file.stem
     df = pl.read_csv(StringIO(content), separator=" ", has_header=True, skip_lines=1)
     df = df[[s.name for s in df if not (s.null_count() == df.height)]]
     df = (
         df.with_columns(
-            prefix="deriv_"
+            prefix=f"{basename}_"
             + pl.col("#Parameter")
             + "_"
             + pl.col("MagSys|Instrument|Band").str.replace(r"All\|All\|All", "")

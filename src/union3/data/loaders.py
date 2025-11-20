@@ -129,17 +129,6 @@ class Data(BaseModel):
         # So each SN wants a 3 x n_calib matrix of derivatives. Those are found below
         systematics = condense_systematics(snia)
 
-        # TODO: REMOVE TEMP CODE
-        # from union3.data.validation import expected_names
-
-        # missing_supernova = sorted(list(set(expected_names) - set(snia["name"].to_list())))
-        # if missing_supernova:
-        #     logger.warning(f"The following expected supernova are missing after filtering: {missing_supernova}")
-        # snia_which_should_be_dropped = sorted(list(set(snia["name"].to_list()) - set(expected_names)))
-        # if snia_which_should_be_dropped:
-        #     logger.warning(
-        #         f"The following supernova are present but not expected and will be dropped: {snia_which_should_be_dropped}"
-        #     )
         samples = (
             snia.select("survey", "sample_index", "est_mobs_cuts", "est_mobs_sigmas").unique().sort("sample_index")
         )
@@ -159,9 +148,47 @@ class Data(BaseModel):
             redshift_simps=redshift_simps,
         )
 
+        # TODO: REMOVE TEMP CODE
+        from union3.data.validation import get_the_data, expected_names
+
+        missing_supernova = sorted(list(set(expected_names) - set(snia["name"].to_list())))
+        if missing_supernova:
+            logger.warning(f"The following expected supernova are missing after filtering: {missing_supernova}")
+        snia_which_should_be_dropped = sorted(list(set(snia["name"].to_list()) - set(expected_names)))
+        if snia_which_should_be_dropped:
+            logger.warning(
+                f"The following supernova are present but not expected and will be dropped: {snia_which_should_be_dropped}"
+            )
+        # We should use this expected_names to sort the dataframe so we can do direct comparisons against the data vectors
+        snia = (
+            snia.with_columns(
+                pl.col("name")
+                .map_elements(lambda n: expected_names.index(n), return_dtype=pl.Int64)
+                .alias("expected_index")
+            )
+            .sort("expected_index")
+            .drop("expected_index")
+        )
+        result.filtered_supernova = snia
+
         # Invoke the model fields to ensure they generate without error
         result.obs_mBx1c
         result.obs_mBx1c_cov
+
+        the_data = get_the_data()
+        assert np.allclose(snia["mB"], the_data["mB_list"])
+        assert np.allclose(snia["x1"], the_data["x1_list"])
+        assert np.allclose(snia["color"], the_data["c_list"])
+        assert np.allclose(snia["z_cmb"], the_data["z_CMB_list"])
+        assert np.allclose(snia["z_heliocentric"], the_data["z_helio_list"])
+        assert np.allclose(snia["has_distmod"], the_data["has_distmod"])
+        covs = result.obs_mBx1c_cov
+        for sev in [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]:
+            logger.info(f"Checking covariances at sev={sev}")
+            for index in range(len(covs)):
+                assert np.allclose(covs[index], the_data["mBx1c_cov_list"][index], atol=sev)
+
+        # END TODO: REMOVE TEMP CODE
 
         return result
 
@@ -341,6 +368,7 @@ def get_filtered_and_augmented_snia(
 ) -> pl.DataFrame:
     return (
         impute_snia(all_supernova, config)
+        .pipe(pick_source_of_derivatives)
         .pipe(filter_snia, config)
         .pipe(flag_weird_supernova)
         .pipe(add_sample_index)
@@ -364,6 +392,35 @@ def get_filtered_and_augmented_snia(
         .drop(cs.starts_with("deriv_") | cs.starts_with("instrument|"))
         .sort("name")
     )
+
+
+def pick_source_of_derivatives(snia: pl.DataFrame) -> pl.DataFrame:
+    # In the original read_and_sample_H0.py:50, the derivatives from
+    # model_deriv.data were used by default. However, they were marked as
+    # failing their convergence check if the "Check" row has abs(log(dx/dP))>0.2
+    # for x in [mu, mB, x1, color]. We replicate this logic here, albeit in
+    # a vectorised fashion
+
+    # This column is our temp flag signalling we can use the model_deriv columns
+    snia = snia.with_columns(
+        model_derivs_good=pl.all_horizontal(
+            pl.col("model_deriv_Check_All_dmu/dP").log().abs().le(0.2),
+            pl.col("model_deriv_Check_All_dmB/dP").log().abs().le(0.2),
+            pl.col("model_deriv_Check_All_ds/dP").abs().le(0.2),
+            pl.col("model_deriv_Check_All_dc/dP").abs().le(0.2),
+        )
+    )
+    model_snia = (
+        snia.filter(pl.col("model_derivs_good"))
+        .drop(cs.starts_with("result_deriv_"))
+        .rename(lambda c: c.removeprefix("model_"))
+    )
+    result_snia = (
+        snia.filter(~pl.col("model_derivs_good") | pl.col("model_derivs_good").is_null())
+        .drop(cs.starts_with("model_deriv_"))
+        .rename(lambda c: c.removeprefix("result_"))
+    )
+    return pl.concat([model_snia, result_snia], how="diagonal_relaxed")
 
 
 def add_supernova_index(snia: pl.DataFrame) -> pl.DataFrame:
@@ -587,10 +644,13 @@ def add_pecv_and_bulk_flow_uncertainties(snia: pl.DataFrame, config: Config) -> 
         pec_vel_on_diag=pl.when(pl.col("is_calibrator"))
         .then(0.0)
         .otherwise(
-            config.peculiar_velocity_dispersion
-            * (5 / np.log(10))
-            * (pl.col("z_cmb") + 1)
-            / (pl.col("z_cmb") * (pl.col("z_cmb") * 0.5 + 1)) ** 2
+            (
+                config.peculiar_velocity_dispersion
+                * (5 / np.log(10))
+                * (pl.col("z_cmb") + 1)
+                / (pl.col("z_cmb") * (pl.col("z_cmb") * 0.5 + 1))
+            )
+            ** 2
         )
     )
 
@@ -620,10 +680,13 @@ def add_pecv_and_bulk_flow_uncertainties(snia: pl.DataFrame, config: Config) -> 
             # the corr_redshift_sys, which I assume is either corrected or correlated redshift systematic.
             d_mBx1c_dcalib[name]["corr_redshift_sys"] = (3.3e-5) * (5 / np.log(10)) * (1.0 + z) / (z * (1 + 0.5 * z))
             # We also have
-            total_bulk_quad = np.sum(eigenvector**2)
-            total_pec_v_on_diag = np.clip(row["pec_vel_on_diag"] - total_bulk_quad, 0, 100)
+            total_bulk_quad = float(np.sum(eigenvector**2))
+            total_pec_v_on_diag = float(np.clip(row["pec_vel_on_diag"] - total_bulk_quad, 0, 100))
             final_pecvs[name] = total_pec_v_on_diag
             logger.debug(f"SN {name}: {total_bulk_quad=}, {total_pec_v_on_diag=}")
+
+    # reclip pec_vel_on_diag to between 0 and 100
+    snia = snia.with_columns(pl.col("pec_vel_on_diag").clip(0, 100))
 
     # Turn d_mBx1c_dcalib into a dataframe to join back on
     if d_mBx1c_dcalib:
@@ -738,7 +801,7 @@ def filter_snia(df: pl.DataFrame, config: Config):
 
     df_filtered = df.filter(
         pl.col("lcfit_passed")
-        & pl.col("redshift").is_between(config.filters.min_redshift, config.filters.max_redshift)
+        & pl.col("z_cmb").is_between(config.filters.min_redshift, config.filters.max_redshift)
         & pl.col("mB").is_between(0, 50)
         & pl.col("color").is_between(config.filters.min_color, config.filters.max_color)
         & pl.col("color_err").is_between(0, config.filters.max_color_uncertainty)

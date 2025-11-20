@@ -4,7 +4,7 @@ import polars as pl
 from union3.plotting import plot_approx_hubble_diagram, plot_cosmology_constraints
 
 
-def fit_cosmology(config: Config | None = None) -> pl.DataFrame:
+def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
     if config is None:
         config = Config()
     logger.info(f"Running Unity with base config file: {config.base}")
@@ -12,19 +12,19 @@ def fit_cosmology(config: Config | None = None) -> pl.DataFrame:
 
     data = Data.from_config(config)
 
-    model = Model.from_config(config)
-    model.initialise(data)
+    # model = Model.from_config(config)
+    # model.initialise(data)
 
-    samples = model.fit()
+    # samples = model.fit()
 
-    # TODO: make this path configurable and part of the config
-    samples.write_parquet(config.output_dir / "mcmc_samples.parquet")
+    # # TODO: make this path configurable and part of the config
+    # samples.write_parquet(config.output_dir / "mcmc_samples.parquet")
 
-    print(samples.describe())
-    if config.do_plotting:
-        plot_approx_hubble_diagram(data, config)
-        plot_cosmology_constraints(config, samples)
-    return samples
+    # print(samples.describe())
+    # if config.do_plotting:
+    #     plot_approx_hubble_diagram(data, config)
+    #     plot_cosmology_constraints(config, samples)
+    # return samples
 
 
 if __name__ == "__main__":
