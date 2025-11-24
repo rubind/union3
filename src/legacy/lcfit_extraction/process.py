@@ -54,7 +54,7 @@ def process_survey(survey_path: Path, config: LCFitExtractionConfig) -> int:
         logger.warning(f"No data found for survey {survey_path.name}")
         return 0
 
-    df = pl.DataFrame(data)
+    df = pl.concat([pl.DataFrame(item) for item in data], how="diagonal_relaxed")
     output_file = config.output_dir / f"{survey_path.name}.parquet"
     df.write_parquet(output_file)
     logger.info(f"Written data to {output_file}")

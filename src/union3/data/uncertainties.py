@@ -14,9 +14,9 @@ def add_MBEBV_uncertainties(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
     sig_add = config.MWEBV_zeropoint_EBV  # E.g., 5 mmag E(B-V) additive uncertainty
 
     snia = snia.with_columns(
-        uncertainty_mB_MWEBV_multnorm=pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
-        uncertainty_x1_MWEBV_multnorm=pl.col("deriv_MWEBV_All_ds/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
-        uncertainty_color_MWEBV_multnorm=pl.col("deriv_MWEBV_All_dc/dP") * pl.col("MWEBV") * sig_norm * sig_stat,
+        uncertainty_mB_MWEBV_multnorm=pl.col("deriv_MWEBV_All_dmB/dP") * pl.col("MWEBV") * sig_norm,
+        uncertainty_x1_MWEBV_multnorm=pl.col("deriv_MWEBV_All_ds/dP") * pl.col("MWEBV") * sig_norm,
+        uncertainty_color_MWEBV_multnorm=pl.col("deriv_MWEBV_All_dc/dP") * pl.col("MWEBV") * sig_norm,
         uncertainty_mB_MWEBV_addnorm=pl.col("deriv_MWEBV_All_dmB/dP") * sig_add,
         uncertainty_x1_MWEBV_addnorm=pl.col("deriv_MWEBV_All_ds/dP") * sig_add,
         uncertainty_color_MWEBV_addnorm=pl.col("deriv_MWEBV_All_dc/dP") * sig_add,
@@ -52,14 +52,12 @@ def add_intergalactic_extinction_uncertainties(snia: pl.DataFrame, config: Confi
         effective_wavelength = wavelength_angrstroms / 10000.0  # Convert to microns
         return float(interpolation(redshift, effective_wavelength)[0, 0])
 
-    # The original get_IG_extinction_sys has a few checks here I blindly replicate
-    # TODO: ask David about these so I can put proper comments in
     # The further away you are, the more dust you've travelled through
     assert interp(1.0, 4400) > interp(0.5, 4400), "Extinction at z=1.0 should be greater than at z=0.5."
-    # Red wavelengths are more effected than blue ones
+    # Blue wavelengths get absorbed faster, which is why dust makes things red.
     assert interp(1.0, 4400) > interp(1.0, 5500), "Extinction at 4400A should be greater than at 5500A."
 
-    scale = config.intergalactic_extinction_coefficient
+    config_scale = config.intergalactic_extinction_coefficient
 
     # Each supernova has Zeropoint calibration uncertainty that give gradients
     # in mB, x1, and color. Each filter is parametrised by an effective rest wavelength.
@@ -72,19 +70,25 @@ def add_intergalactic_extinction_uncertainties(snia: pl.DataFrame, config: Confi
         snia.unpivot(index=["name", "z_cmb"])
         .filter(pl.col("variable").str.starts_with("deriv_Zeropoint") & ~pl.col("variable").str.contains("Phase"))
         .filter(pl.col("value").is_not_null())
-        .with_columns(pl.col("value").cast(pl.Float64))
+        .with_columns(
+            value=pl.col("value").cast(pl.Float64),
+            prefix=pl.col("variable").str.split("_").map_elements(lambda x: x[:-1]).list.join("_"),
+        )
     )
-    redshifts = long_data.filter(pl.col("variable").str.ends_with("RestLamb"))
+    scale = (
+        long_data.filter(pl.col("variable").str.ends_with("RestLamb"))
+        .with_columns(
+            scale=pl.struct("z_cmb", "value").map_elements(lambda x: interp(x["z_cmb"], x["value"]), pl.Float64)
+            * config_scale,
+        )
+        .select("name", "scale", "prefix")
+    )
 
-    # Add in the scaling factor
-    scale = redshifts.with_columns(
-        scale=pl.struct("z_cmb", "value").map_elements(lambda x: interp(x["z_cmb"], x["value"]), pl.Float64) * scale
-    ).select("name", "scale")
     # And now we need to turn these into IG_extinction uncertainties, which means columns that look like
     # uncertainty_mB_IG_extinction, uncertainty_x1_IG_extinction, uncertainty_color_IG_extinction
     ucertainties = (
         long_data.filter(pl.col("variable").str.contains("/dP"))
-        .join(scale, on="name")
+        .join(scale, on=["name", "prefix"])
         .with_columns(value=pl.col("value") * pl.col("scale"))
         .group_by("name")
         .agg(
@@ -149,13 +153,17 @@ def add_landolt_smith_uncertainties(
     snia: pl.DataFrame,
     calibration: dict[str, Literal["L", "S", "P"]],
 ) -> pl.DataFrame:
-    wavelength_df = pl.DataFrame(
+    fundamentals_df = pl.DataFrame(
         [
             {"systematic": "Fundamental_3000-4000", "start_lambda": 3000, "end_lambda": 4000},
             {"systematic": "Fundamental_4000-5000", "start_lambda": 4000, "end_lambda": 5000},
             {"systematic": "Fundamental_6000-8000", "start_lambda": 6000, "end_lambda": 8000},
             {"systematic": "Fundamental_8000-100000", "start_lambda": 8000, "end_lambda": 100000},
             {"systematic": "Fundamental_10000-100000", "start_lambda": 10000, "end_lambda": 100000},
+        ]
+    )
+    salt_band_df = pl.DataFrame(
+        [
             {"systematic": "SALT_UV_CAL", "start_lambda": 0, "end_lambda": 3400},
             {"systematic": "SALT_U_CAL", "start_lambda": 0, "end_lambda": 4000},
             {"systematic": "SALT_I_CAL", "start_lambda": 7000, "end_lambda": 999999},
@@ -197,10 +205,8 @@ def add_landolt_smith_uncertainties(
 
     redshifts = snia.select("name", "z_heliocentric")
     long_data = (
-        snia.unpivot(index="name")
-        .filter(
-            pl.col("variable").str.starts_with("deriv_Zeropoint") | pl.col("variable").str.starts_with("deriv_Lambda")
-        )
+        snia.select("name", cs.starts_with("deriv_Zeropoint") | cs.starts_with("deriv_Lambda"))
+        .unpivot(index="name")
         .drop_nulls()
         .with_columns(
             pl.col("value").cast(pl.Float64),
@@ -213,11 +219,17 @@ def add_landolt_smith_uncertainties(
 
     observed_lambdas = (
         long_data.filter(pl.col("variable").str.contains("RestLamb"))
+        .rename({"value": "rest_lambda"})
         .join(redshifts, on="name")
-        .select("name", "join_key", (pl.col("value") * (1 + pl.col("z_heliocentric"))).alias("observed_lambda"))
+        .select(
+            "name",
+            "join_key",
+            "rest_lambda",
+            (pl.col("rest_lambda") * (1 + pl.col("z_heliocentric"))).alias("observed_lambda"),
+        )
     )
     derivs = (
-        long_data.filter(pl.col("variable").str.contains("d(mB|s|color)/dP"))
+        long_data.filter(pl.col("variable").str.contains("d(mB|s|c)/dP"))
         .join(observed_lambdas, on=["name", "join_key"])
         .with_columns(
             variable=pl.col("variable")
@@ -227,8 +239,12 @@ def add_landolt_smith_uncertainties(
             .str.replace("s", "x1")
             .str.replace("c", "color"),
         )
-        .join(pl.DataFrame([{"join_key": k, "standard": s} for k, s in calibration.items()]), on="join_key", how="left")
-        .join(landsolt_smith_df, on="standard", how="left")
+    )
+    lsp = (
+        derivs.join(
+            pl.DataFrame([{"join_key": k, "standard": s} for k, s in calibration.items()]), on="join_key", how="left"
+        )
+        .join(landsolt_smith_df, on="standard", how="inner")
         .filter(
             pl.col("standard").is_null()
             | (pl.col("observed_lambda").is_between(pl.col("start_lambda"), pl.col("end_lambda"), closed="none"))
@@ -243,17 +259,24 @@ def add_landolt_smith_uncertainties(
     # and if the observed_lambda is in one of the bins, make a new (or add to it) systematic column which has either _CAL
     # for zeropoint calibration, or _LAM for lambda calibration uncertainties
     extra_cal_systematics = (
-        derivs.filter(pl.col("band").is_not_null())
+        lsp.filter(pl.col("band").is_not_null())
         .with_columns(
             join_key=pl.col("band")
             + pl.when(pl.col("join_key").str.starts_with("Zeropoint")).then(pl.lit("_CAL")).otherwise(pl.lit("_LAM"))
         )
         .select("name", "variable", "value", "join_key")
     )
-    extra_wavelength_systematics = (
+    fundamental_systematics = (
         derivs.filter(pl.col("join_key").str.starts_with("Zeropoint"))
-        .join(wavelength_df, how="cross")
+        .join(fundamentals_df, how="cross")
         .filter(pl.col("observed_lambda").is_between(pl.col("start_lambda"), pl.col("end_lambda")))
+        .with_columns(pl.col("systematic").alias("join_key"))
+        .select("name", "variable", "value", "join_key")
+    )
+    salt2_band_systematics = (
+        derivs.filter(pl.col("join_key").str.starts_with("Zeropoint"))
+        .join(salt_band_df, how="cross")
+        .filter(pl.col("rest_lambda").is_between(pl.col("start_lambda"), pl.col("end_lambda")))
         .with_columns(pl.col("systematic").alias("join_key"))
         .select("name", "variable", "value", "join_key")
     )
@@ -264,7 +287,8 @@ def add_landolt_smith_uncertainties(
             [
                 derivs.select("name", "variable", "value", "join_key"),
                 extra_cal_systematics,
-                extra_wavelength_systematics,
+                fundamental_systematics,
+                salt2_band_systematics,
             ]
         )
         .group_by("name", "variable", "join_key")

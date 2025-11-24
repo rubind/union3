@@ -45,6 +45,7 @@ class Data(BaseModel):
     samples: pl.DataFrame = Field(exclude=True)
 
     # Represent systematics in the order of the dataframes above (sorted by name)
+    systematic_names: list[str] = Field(exclude=True)
     systematics: list[np.ndarray] = Field(exclude=True)
 
     # Extra fields for applying simpsons rule on redshift integrations
@@ -127,7 +128,7 @@ class Data(BaseModel):
 
         # The stan model wants array[n_sne] matrix[3, n_calib] d_mBx1c_d_calib ;
         # So each SN wants a 3 x n_calib matrix of derivatives. Those are found below
-        systematics = condense_systematics(snia)
+        systematic_names, systematics = condense_systematics(snia)
 
         samples = (
             snia.select("survey", "sample_index", "est_mobs_cuts", "est_mobs_sigmas").unique().sort("sample_index")
@@ -142,6 +143,7 @@ class Data(BaseModel):
             filtered_supernova=snia,
             samples=samples,
             systematics=systematics,
+            systematic_names=systematic_names,
             redshift_coeffs=redshift_coeffs,
             bao_cmb_omw0wa=bao_cmb_omw0wa,
             redshift_bins=redshift_bins,
@@ -183,10 +185,73 @@ class Data(BaseModel):
         assert np.allclose(snia["z_heliocentric"], the_data["z_helio_list"])
         assert np.allclose(snia["has_distmod"], the_data["has_distmod"])
         covs = result.obs_mBx1c_cov
-        for sev in [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]:
+        for sev in [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8]:
             logger.info(f"Checking covariances at sev={sev}")
-            for index in range(len(covs)):
-                assert np.allclose(covs[index], the_data["mBx1c_cov_list"][index], atol=sev)
+            for davids_index in range(len(covs)):
+                assert np.allclose(covs[davids_index], the_data["mBx1c_cov_list"][davids_index], atol=sev)
+        for davids_index in range(snia.height):
+            if abs(snia["mass_err"][davids_index] - the_data["mass_err"][davids_index]) > 1e-6:
+                logger.error(
+                    f"mass_err mismatch for SN {snia['name'][davids_index]}: {snia['mass_err'][davids_index]} vs {the_data['mass_err'][davids_index]}"
+                )
+        assert np.allclose(snia["mass"], the_data["mass"])
+        assert np.allclose(snia["mass_err"], the_data["mass_err"])
+        assert np.allclose(snia["in_cluster"], the_data["in_cluster"])
+        assert np.allclose(snia["mobs_cut0"], the_data["mobs_cut0"])
+        assert np.allclose(snia["mobs_cut1"], the_data["mobs_cut1"])
+
+        # Reorder my samples to match Davids ordering
+        sample_names = [x.split("//")[-1].split("_v1")[0].lower() for x in the_data["sample_names"]]
+        samples2 = samples.sort(
+            pl.col("survey").map_elements(lambda n: sample_names.index(n.lower()), return_dtype=pl.Int64)
+        )
+        assert np.allclose(samples2["est_mobs_cuts"], the_data["est_mobs_cuts"])
+        assert np.allclose(samples2["est_mobs_sigmas"], the_data["est_mobs_sigmas"])
+
+        systematic_names, systematics = condense_systematics(snia)
+
+        # Check the number of systematics agree
+        davids_sys = []
+        for name in the_data["calib_names"]:
+            if isinstance(name, list):
+                for i, elem in enumerate(name):
+                    if isinstance(elem, list):
+                        elem = "-".join([str(int(x)) for x in elem])
+                    name[i] = str(elem)
+                davids_sys.append("_".join(name))
+            else:
+                davids_sys.append(name)
+        my_sys = systematic_names
+        missing = set(davids_sys) - set(my_sys)
+        extra = set(my_sys) - set(davids_sys)
+        assert not missing, f"Missing systematics compared to David's data: {missing}"
+        assert not extra, f"Extra systematics compared to David's data: {extra}"
+
+        # calib = "electron_scattering"
+        # david_index = the_data["calib_names"].index(calib)
+        # sys_index = systematic_names.index(calib)
+        # assert np.allclose(
+        #     np.array(systematics)[:, 0, sys_index],
+        #     np.array(the_data["d_mBx1c_dcalib_list"])[:, 0, david_index],
+        #     atol=1e-6,
+        # )
+
+        for davids_index, name in enumerate(the_data["calib_names"]):
+            if name in ["lensing_bias"]:  # , "IG_extinction"]:
+                continue  # i know its different because I dont do linear interpolation
+
+            for sev in [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8]:
+                logger.info(f"Checking systematics at sev={sev} for {name}")
+                if isinstance(name, list):
+                    name = "_".join(name)
+                sys_index = systematic_names.index(name)
+                for i in range(snia.height):
+                    my_systematic = systematics[i][:, sys_index]
+                    davids_systematic = np.array(the_data["d_mBx1c_dcalib_list"][i])[:, davids_index]
+                    assert np.allclose(
+                        my_systematic, davids_systematic, atol=sev
+                    ), f"Mismatch in systematic {name} for event {snia['name'][i]}"
+                # TODO: lensing bias should be simple and only mB, so use this to check
 
         # END TODO: REMOVE TEMP CODE
 
@@ -403,7 +468,7 @@ def pick_source_of_derivatives(snia: pl.DataFrame) -> pl.DataFrame:
 
     # This column is our temp flag signalling we can use the model_deriv columns
     snia = snia.with_columns(
-        model_derivs_good=pl.all_horizontal(
+        using_model_derivs=pl.all_horizontal(
             pl.col("model_deriv_Check_All_dmu/dP").log().abs().le(0.2),
             pl.col("model_deriv_Check_All_dmB/dP").log().abs().le(0.2),
             pl.col("model_deriv_Check_All_ds/dP").abs().le(0.2),
@@ -411,12 +476,12 @@ def pick_source_of_derivatives(snia: pl.DataFrame) -> pl.DataFrame:
         )
     )
     model_snia = (
-        snia.filter(pl.col("model_derivs_good"))
+        snia.filter(pl.col("using_model_derivs"))
         .drop(cs.starts_with("result_deriv_"))
         .rename(lambda c: c.removeprefix("model_"))
     )
     result_snia = (
-        snia.filter(~pl.col("model_derivs_good") | pl.col("model_derivs_good").is_null())
+        snia.filter(~pl.col("using_model_derivs") | pl.col("using_model_derivs").is_null())
         .drop(cs.starts_with("model_deriv_"))
         .rename(lambda c: c.removeprefix("result_"))
     )
@@ -442,7 +507,7 @@ def add_prob_high_mass(snia: pl.DataFrame) -> pl.DataFrame:
     return snia.with_columns(p_high_mass=p_high_mass)
 
 
-def condense_systematics(snia: pl.DataFrame) -> list[np.ndarray]:
+def condense_systematics(snia: pl.DataFrame) -> tuple[list[str], list[np.ndarray]]:
     """Condenses the uncertainty_ columns so each row (supernova) has a new column d_mBx1c_d_calib which has a shape of (3, n_calib)
     where n_calib is the number of calibration systematics we have. This is needed for Stan to process the data correctly."""
     calib = []
@@ -457,7 +522,7 @@ def condense_systematics(snia: pl.DataFrame) -> list[np.ndarray]:
         calib.append(matrix)
     logger.info(f"Condensed systematics into {num} calibration terms for {len(calib)} supernova.")
     logger.debug(f"Calibration terms are: {json.dumps(cols, indent=2)}")
-    return calib
+    return cols, calib
 
 
 def remap_x1(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
@@ -537,7 +602,7 @@ def add_lensing_bias(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
         snia = snia.with_columns(uncertainty_mB_lensing_bias=pl.Series(lensing_bias))
     else:
         logger.info(f"Adding lensing bias using dispersion 0.5*({config.lensing_dispersion}mag * redshift)**2.")
-        snia = snia.with_columns(uncertainty_mB_lensing_bias=0.5 * (config.lensing_dispersion * pl.col("z_cmb") ** 2))
+        snia = snia.with_columns(uncertainty_mB_lensing_bias=0.5 * (config.lensing_dispersion * pl.col("z_cmb")) ** 2)
 
     return snia
 
@@ -852,9 +917,9 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
         )
         .with_columns(
             mass=pl.when(pl.col("bad_mass"))
-            .then(pl.when(pl.col("z_cmb") < 0.1).then(10.0).otherwise(11.0))
+            .then(pl.when(pl.col("z_cmb") > 0.1).then(10.0).otherwise(11.0))
             .otherwise(pl.col("mass")),
-            mass_err=pl.when(pl.col("bad_mass")).then(0.1).otherwise(pl.col("mass_err")),
+            mass_err=pl.when(pl.col("bad_mass")).then(1).otherwise(pl.col("mass_err")),
         )
         # Add in cov_mBmB from mb_err and the lensing dispersion
         .with_columns(cov_mBmB=pl.col("mB_err") ** 2 + (pl.col("z_cmb") * config.lensing_dispersion) ** 2)

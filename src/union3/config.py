@@ -52,7 +52,7 @@ class Config(FileConfig):
         default="mapping/mag_cut.csv", description="Mag cut mapping file relative to data directory."
     )
     distance_ladder_file: str | None = Field(
-        default="distance_ladder/dist_ladder_R22.csv",
+        default=None,  # "distance_ladder/dist_ladder_R22.csv",
         description="Distance ladder file relative to data directory, used to determine calibrators.",
         examples=["distance_ladder/dist_ladder_R22.csv"],
     )
