@@ -149,113 +149,42 @@ class Data(BaseModel):
             redshift_bins=redshift_bins,
             redshift_simps=redshift_simps,
         )
-
-        # TODO: REMOVE TEMP CODE
-        from union3.data.validation import get_the_data, expected_names
-
-        missing_supernova = sorted(list(set(expected_names) - set(snia["name"].to_list())))
-        if missing_supernova:
-            logger.warning(f"The following expected supernova are missing after filtering: {missing_supernova}")
-        snia_which_should_be_dropped = sorted(list(set(snia["name"].to_list()) - set(expected_names)))
-        if snia_which_should_be_dropped:
-            logger.warning(
-                f"The following supernova are present but not expected and will be dropped: {snia_which_should_be_dropped}"
-            )
-        # We should use this expected_names to sort the dataframe so we can do direct comparisons against the data vectors
-        snia = (
-            snia.with_columns(
-                pl.col("name")
-                .map_elements(lambda n: expected_names.index(n), return_dtype=pl.Int64)
-                .alias("expected_index")
-            )
-            .sort("expected_index")
-            .drop("expected_index")
-        )
-        result.filtered_supernova = snia
-
-        # Invoke the model fields to ensure they generate without error
-        result.obs_mBx1c
-        result.obs_mBx1c_cov
-
-        the_data = get_the_data()
-        assert np.allclose(snia["mB"], the_data["mB_list"])
-        assert np.allclose(snia["x1"], the_data["x1_list"])
-        assert np.allclose(snia["color"], the_data["c_list"])
-        assert np.allclose(snia["z_cmb"], the_data["z_CMB_list"])
-        assert np.allclose(snia["z_heliocentric"], the_data["z_helio_list"])
-        assert np.allclose(snia["has_distmod"], the_data["has_distmod"])
-        covs = result.obs_mBx1c_cov
-        for sev in [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8]:
-            logger.info(f"Checking covariances at sev={sev}")
-            for davids_index in range(len(covs)):
-                assert np.allclose(covs[davids_index], the_data["mBx1c_cov_list"][davids_index], atol=sev)
-        for davids_index in range(snia.height):
-            if abs(snia["mass_err"][davids_index] - the_data["mass_err"][davids_index]) > 1e-6:
-                logger.error(
-                    f"mass_err mismatch for SN {snia['name'][davids_index]}: {snia['mass_err'][davids_index]} vs {the_data['mass_err'][davids_index]}"
-                )
-        assert np.allclose(snia["mass"], the_data["mass"])
-        assert np.allclose(snia["mass_err"], the_data["mass_err"])
-        assert np.allclose(snia["in_cluster"], the_data["in_cluster"])
-        assert np.allclose(snia["mobs_cut0"], the_data["mobs_cut0"])
-        assert np.allclose(snia["mobs_cut1"], the_data["mobs_cut1"])
-
-        # Reorder my samples to match Davids ordering
-        sample_names = [x.split("//")[-1].split("_v1")[0].lower() for x in the_data["sample_names"]]
-        samples2 = samples.sort(
-            pl.col("survey").map_elements(lambda n: sample_names.index(n.lower()), return_dtype=pl.Int64)
-        )
-        assert np.allclose(samples2["est_mobs_cuts"], the_data["est_mobs_cuts"])
-        assert np.allclose(samples2["est_mobs_sigmas"], the_data["est_mobs_sigmas"])
-
-        systematic_names, systematics = condense_systematics(snia)
-
-        # Check the number of systematics agree
-        davids_sys = []
-        for name in the_data["calib_names"]:
-            if isinstance(name, list):
-                for i, elem in enumerate(name):
-                    if isinstance(elem, list):
-                        elem = "-".join([str(int(x)) for x in elem])
-                    name[i] = str(elem)
-                davids_sys.append("_".join(name))
-            else:
-                davids_sys.append(name)
-        my_sys = systematic_names
-        missing = set(davids_sys) - set(my_sys)
-        extra = set(my_sys) - set(davids_sys)
-        assert not missing, f"Missing systematics compared to David's data: {missing}"
-        assert not extra, f"Extra systematics compared to David's data: {extra}"
-
-        # calib = "electron_scattering"
-        # david_index = the_data["calib_names"].index(calib)
-        # sys_index = systematic_names.index(calib)
-        # assert np.allclose(
-        #     np.array(systematics)[:, 0, sys_index],
-        #     np.array(the_data["d_mBx1c_dcalib_list"])[:, 0, david_index],
-        #     atol=1e-6,
-        # )
-
-        for davids_index, name in enumerate(the_data["calib_names"]):
-            if name in ["lensing_bias"]:  # , "IG_extinction"]:
-                continue  # i know its different because I dont do linear interpolation
-
-            for sev in [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8]:
-                logger.info(f"Checking systematics at sev={sev} for {name}")
-                if isinstance(name, list):
-                    name = "_".join(name)
-                sys_index = systematic_names.index(name)
-                for i in range(snia.height):
-                    my_systematic = systematics[i][:, sys_index]
-                    davids_systematic = np.array(the_data["d_mBx1c_dcalib_list"][i])[:, davids_index]
-                    assert np.allclose(
-                        my_systematic, davids_systematic, atol=sev
-                    ), f"Mismatch in systematic {name} for event {snia['name'][i]}"
-                # TODO: lensing bias should be simple and only mB, so use this to check
-
-        # END TODO: REMOVE TEMP CODE
-
         return result
+
+
+def get_filtered_and_augmented_snia(
+    all_supernova: pl.DataFrame,
+    config: Config,
+    mag_cut_file: pl.DataFrame,
+    calibration_uncertainties: dict[str, float],
+    calibration_standards: dict[str, Literal["L", "S", "P"]],
+) -> pl.DataFrame:
+    return (
+        impute_snia(all_supernova, config)
+        .pipe(pick_source_of_derivatives)
+        .pipe(filter_snia, config)
+        .pipe(flag_weird_supernova)
+        .pipe(add_sample_index)
+        .pipe(add_supernova_index)
+        .pipe(determine_calibrators, config)
+        .pipe(add_lensing_bias, config)
+        .pipe(add_prob_high_mass)
+        .pipe(add_photoz_errors)
+        .join(mag_cut_file, on="survey", how="left")
+        .pipe(add_mobs_cuts, config.data_dir)
+        .pipe(add_pecv_and_bulk_flow_uncertainties, config)
+        .pipe(add_MBEBV_uncertainties, config)
+        .pipe(add_intergalactic_extinction_uncertainties, config)
+        .pipe(add_electron_scattering_uncertainties, config)
+        .pipe(add_landolt_smith_uncertainties, calibration_standards)
+        # Now we rescale the uncerts based on the calibration uncertainty scaling factors
+        .pipe(rescale_uncertainties, calibration_uncertainties)
+        .pipe(remap_x1, config)
+        # At this point we should be done with all the deriv_ columns, having
+        # processed them into uncertainty_ columns, and can drop them.
+        .drop(cs.starts_with("deriv_") | cs.starts_with("instrument|"))
+        .sort("name")
+    )
 
 
 def _get_redshift_bins(snia: pl.DataFrame, config: Config) -> tuple[pl.DataFrame, RedshiftBins]:
@@ -422,41 +351,6 @@ def _get_redshift_coeffs(snia: pl.DataFrame, config: Config) -> np.ndarray:
         else:
             redshift_coeffs[i, anchor] = 1.0
     return redshift_coeffs
-
-
-def get_filtered_and_augmented_snia(
-    all_supernova: pl.DataFrame,
-    config: Config,
-    mag_cut_file: pl.DataFrame,
-    calibration_uncertainties: dict[str, float],
-    calibration_standards: dict[str, Literal["L", "S", "P"]],
-) -> pl.DataFrame:
-    return (
-        impute_snia(all_supernova, config)
-        .pipe(pick_source_of_derivatives)
-        .pipe(filter_snia, config)
-        .pipe(flag_weird_supernova)
-        .pipe(add_sample_index)
-        .pipe(add_supernova_index)
-        .pipe(determine_calibrators, config)
-        .pipe(add_lensing_bias, config)
-        .pipe(add_prob_high_mass)
-        .pipe(add_photoz_errors)
-        .join(mag_cut_file, on="survey", how="left")
-        .pipe(add_mobs_cuts, config.data_dir)
-        .pipe(add_pecv_and_bulk_flow_uncertainties, config)
-        .pipe(add_MBEBV_uncertainties, config)
-        .pipe(add_intergalactic_extinction_uncertainties, config)
-        .pipe(add_electron_scattering_uncertainties, config)
-        .pipe(add_landolt_smith_uncertainties, calibration_standards)
-        # Now we rescale the uncerts based on the calibration uncertainty scaling factors
-        .pipe(rescale_uncertainties, calibration_uncertainties)
-        .pipe(remap_x1, config)
-        # At this point we should be done with all the deriv_ columns, having
-        # processed them into uncertainty_ columns, and can drop them.
-        .drop(cs.starts_with("deriv_") | cs.starts_with("instrument|"))
-        .sort("name")
-    )
 
 
 def pick_source_of_derivatives(snia: pl.DataFrame) -> pl.DataFrame:
