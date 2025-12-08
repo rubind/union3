@@ -155,6 +155,7 @@ class StanModel(Model):
     def fit(self) -> pl.DataFrame:
         import stan
 
+        logger.info(f"Imported Stan version: {stan.__version__}")
         stan_model = stan.build(self.model_text, data=self.data)
         init = [self.get_initial_position() for _ in range(self.config.num_chains)]
         logger.info(f"Starting {self.config.num_chains} Stan samplers, each for {self.config.iterations} iterations...")
