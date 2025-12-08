@@ -32,4 +32,4 @@ run_image:
 	docker run --rm -e warmup_iterations=1 -e iterations=2 -e LOGURU_LEVEL=INFO -it union3:latest
 
 tests: test
-install: install_uv install_python install_deps install_precommit
+install: install_uv install_python install_deps
