@@ -86,8 +86,8 @@ class Config(FileConfig):
         default=CosmologyModel.OM_W0_WA, description="Cosmology model to use for fitting."
     )
     fit_model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
-    iterations: int = Field(default=20, ge=1, description="Number of iterations for MCMC.")
-    warmup_iterations: int = Field(default=10, ge=1, description="Number of warmup iterations for MCMC.")
+    iterations: int = Field(default=200, ge=1, description="Number of iterations for MCMC.")
+    warmup_iterations: int = Field(default=100, ge=1, description="Number of warmup iterations for MCMC.")
     refresh_iterations: int = Field(
         default=5, ge=0, description="Number of iterations between progress updates for MCMC. 0 to turn off."
     )

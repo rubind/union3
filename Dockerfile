@@ -20,6 +20,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
       uv sync --all-extras --frozen --no-dev --no-install-project
 
+# Install cmdstan
+RUN python -c "import cmdstanpy; cmdstanpy.install_cmdstan()"
+
 WORKDIR /src
 COPY . .
 
@@ -28,5 +31,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
       uv sync --all-extras --frozen --no-dev --no-install-project
+
+
 
 CMD ["uv", "run", "union3"]

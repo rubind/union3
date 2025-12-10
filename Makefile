@@ -5,6 +5,9 @@ install_uv:
 install_python:
 	uv python install
 
+install_stan:
+	uv run python -c "import cmdstanpy; cmdstanpy.install_cmdstan()"
+
 install_deps:
 	uv sync --all-extras
 

@@ -25,7 +25,6 @@ class StanModel(Model):
     def __init__(self, model_path: Path, config: Config):
         assert model_path.exists(), f"Model file {model_path} does not exist."
         self.model_path = model_path
-        self.model_text = self.model_path.read_text()
         self.config = config
 
         # This is the dictionary of data to be passed to Stan
@@ -153,31 +152,33 @@ class StanModel(Model):
         return position
 
     def fit(self) -> pl.DataFrame:
-        import stan
+        from cmdstanpy import CmdStanModel
 
-        logger.info(f"Imported Stan version: {stan.__version__}", flush=True)
-        stan_model = stan.build(self.model_text, data=self.data)
-        init = [self.get_initial_position() for _ in range(self.config.num_chains)]
+        logger.info(f"Loading Stan model from {self.model_path} for MCMC sampling.")
+        stan_model = CmdStanModel(stan_file=self.model_path)
+        inits = [self.get_initial_position() for _ in range(self.config.num_chains)]
         logger.info(f"Starting {self.config.num_chains} Stan samplers, each for {self.config.iterations} iterations...")
-        # See https://mc-stan.org/docs/cmdstan-guide/mcmc_config.html for possible arguments
         fit = stan_model.sample(
-            num_chains=self.config.num_chains,
-            init=init,
-            num_samples=self.config.iterations,
-            num_warmup=self.config.warmup_iterations,
+            data=self.data,
+            chains=self.config.num_chains,
+            parallel_chains=self.config.num_chains,
+            inits=inits,  # type: ignore
+            iter_warmup=self.config.warmup_iterations,
+            iter_sampling=self.config.iterations,
             refresh=self.config.refresh_iterations,
         )
 
         logger.info("Stan MCMC sampling complete. Extracting samples.")
-        params = [param for param, dim in zip(fit.param_names, fit.dims) if not dim or dim == [1]]
-        if not self.config.extra_single_dimension_parameters_only:
-            df_full = fit.to_frame()
-            df = pl.from_pandas(df_full[df_full.columns[: self.config.max_params_to_save]])
-        else:
-            df = pl.DataFrame({p: fit[p].flatten() for p in params})
+        columns = list(fit.column_names)
+        if self.config.extra_single_dimension_parameters_only:
+            columns = [c for c in columns if "[" not in c]
+            logger.info(
+                f"Saving only single-dimension parameters: {len(columns)} out of {len(fit.column_names)} total parameters."
+            )
+        df = fit.draws_pd(vars=columns)
 
         logger.info(
             f"Completed MCMC fitting with {self.config.num_chains} chains, "
             f"warmup {self.config.warmup_iterations}, and {self.config.iterations} iterations."
         )
-        return df
+        return pl.from_pandas(df)
