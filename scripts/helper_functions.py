@@ -245,6 +245,7 @@ def get_MWEBV_uncs(lightfl, res_der_fl, params):
         MWEBV = read_param(lightfl, "MWEBV")
 
     dparam_dzps = {"MWEBV_multnorm": MWEBV*sig_norm*d_dMWEBV, "MWEBV_addnorm": sig_add*d_dMWEBV}
+
     extra_cmat = outer(MWEBV*sig_stat*d_dMWEBV, MWEBV*sig_stat*d_dMWEBV) # Has the same mB, x1, c order as LC covariance matrices
 
     return dparam_dzps, extra_cmat

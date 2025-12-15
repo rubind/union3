@@ -436,6 +436,7 @@ def read_data(params):
                                                                                               [mBx1, x1x1, x1c],
                                                                                               [mBc, x1c, cc]]], dtype=float64) + extra_cmat   ), axis = 0)
 
+
                 dparam_dzps = helper_functions.get_dparam_dzps(deriv_file_to_use, this_redshift_helio, calibration_paths = calibration_paths)
                 
                 the_data = helper_functions.merge_calib(the_data = the_data, dparam_dzps = dparam_dzps, current_sn_ind = current_sn_ind,
@@ -818,7 +819,8 @@ def init_fn():
             "beta_angle_red_slow": arctan(random.random()*0.5 + 2.5),
             
             #"log10_sigma_int": log10(random.random(size = n_samples)*0.1 + 0.1),
-            "mBx1c_int_variance": [0.9, 0.05, 0.05],
+            "mBx1c_int_variance": [0.5, 0.05, 0.45],
+            "sigma_int_fast": 0.08,
             #"mass_0": 10,
             "delta_0": random.random()*0.05,
             "delta_h": 0.5,

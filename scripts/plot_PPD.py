@@ -6,10 +6,13 @@ import sys
 from scipy.stats import percentileofscore, scoreatpercentile, gamma, poisson, norm
 import tqdm
 import time
+from FileRead import readcol, writecol
 from helper_functions import bin_samples_in_redshift
 import matplotlib.colors as mcolors
 from matplotlib import cm
+import subprocess
 
+pwd = subprocess.getoutput("pwd")
 
 def do_bin(xvals, yvals):
     bins = np.linspace(xvals.min(), xvals.max(), 10)
@@ -94,19 +97,32 @@ for observed in np.arange(95, 106, 1):
 def bin_by_color(all_processed_data, bin_par, n_bins, standard_alpha, standard_beta):
     plt.figure(figsize = (12, 4))
 
-    bins = scoreatpercentile(all_processed_data[bin_par]["tmp_c_PPD_found"], np.linspace(0, 100, n_bins + 1))
-    bins[0] -= 0.0001
-    bins[-1] += 0.0001
 
     xlim = [0,0]
     
     for highz in [0, 1]:
+        if 1 - highz:
+            z_mask = all_processed_data[bin_par]["per_z"] <= 0.1
+        else:
+            z_mask = all_processed_data[bin_par]["per_z"] > 0.1
+        z_mask2d = np.outer(z_mask, np.ones(1000, dtype=np.float64))
+
+        inds_by_z = np.where(z_mask)
+
+        bin_fl_name = "HR_bin_by_" + bin_par + "_bins=%02i_highz=%i.txt" % (n_bins, highz)
+        
+        if read_or_write == "write":
+            #bins = scoreatpercentile(all_processed_data[bin_par]["tmp_c_PPD_found"][inds_by_z], np.linspace(0, 100, n_bins + 1))
+            bins = scoreatpercentile(all_processed_data[bin_par]["tmp_c_obs"][inds_by_z], np.linspace(0, 100, n_bins + 1))
+            bins[0] -= 1
+            bins[-1] += 1
+            writecol(bin_fl_name, [bins])
+        else:
+            [bins] = readcol(bin_fl_name, 'f')
+            
+            
+            
         for i in range(n_bins):
-            if 1 - highz:
-                z_mask = all_processed_data[bin_par]["per_z"] <= 0.1
-            else:
-                z_mask = all_processed_data[bin_par]["per_z"] > 0.1
-            z_mask2d = np.outer(z_mask, np.ones(1000, dtype=np.float64))
             plt.subplot(1,2,1+highz)
 
             print('all_processed_data[bin_par]["tmp_c_PPD_found"]', all_processed_data[bin_par]["tmp_c_PPD_found"].shape)
@@ -117,7 +133,7 @@ def bin_by_color(all_processed_data, bin_par, n_bins, standard_alpha, standard_b
             mean_c = np.mean(all_processed_data[bin_par]["tmp_c_PPD_found"][inds])
             mean_dmu = np.mean(all_processed_data["mBstandard"]["tmp_c_PPD_found"][inds])
             
-            plt.plot(mean_c, mean_dmu, '.', color = 'b', label = "PPD"*(i == 0))
+            plt.plot(mean_c, mean_dmu, '.', color = 'b', label = ("PPD %s" % pwd.split("/")[-1])*(i == 0))
             
             
             inds = np.where((all_processed_data[bin_par]["tmp_c_obs"] >= bins[i])*
@@ -156,7 +172,7 @@ def bin_by_color(all_processed_data, bin_par, n_bins, standard_alpha, standard_b
 def bin_into_panels(all_processed_data):
     plt.figure(figsize = (9, 15))
     
-    for mBx1c_ind in [0, 1, 2]:
+    for mBx1c_ind in tqdm.tqdm([0, 1, 2]):
         label = ["Magnitude", "Light-Curve Shape", "Color"][mBx1c_ind]
         x1cname = ["mB", "x1", "c"][mBx1c_ind]
         bins = get_mBx1cbins(mBx1c_ind = mBx1c_ind, observed_vals = all_processed_data[x1cname]["tmp_c_obs"])
@@ -185,7 +201,7 @@ def bin_into_panels(all_processed_data):
 
             
             #plt.hist(PPD1D_found_or_not, bins = bins, label = "PPD", density=True, color = 'b', histtype = "step")
-            plt.hist(PPD1D, bins = bins, label = "PPD", density=True, color = 'k', histtype = "step")
+            ppd_hist_counts, NA, NA = plt.hist(PPD1D, bins = bins, label = "PPD", density=True, color = 'k', histtype = "step")
             #plt.title(the_data["sample_names"][dataset_match_ind - 1].split("/")[-1].split("_v1")[0])
             #plt.title(samp_bins["short_labels"][samp_bins["inds"].index(dataset_match_ind - 1)])# + the_data["sample_names"][dataset_match_ind - 1].split("/")[-1].split("_v1")[0])
 
@@ -255,12 +271,313 @@ def bin_into_panels(all_processed_data):
 
 
 
+
+
+
+def bin_by_percentile_compute(all_processed_data,
+                              key_to_bin,
+                              percentile_edges,
+                              ylabel,
+                              yfmt,
+                              x1cname_to_bin,
+                              plot_best_measured,
+                              indiv_chi2):
+    """
+    Do ALL the numerical work and save a pickle with everything needed for plotting.
+    Returns the pickle filename.
+    """
+    n_bins = len(percentile_edges) - 1
+
+    # base name for outputs
+    flbase = "PPD_by_%s_%s%s%s" % (
+        x1cname_to_bin,
+        key_to_bin,
+        "_best_measured" * plot_best_measured,
+        "_indiv_chi2" * indiv_chi2,
+    )
+
+    plot_data = {
+        "meta": {
+            "n_bins": n_bins,
+            "percentile_edges": np.array(percentile_edges),
+            "ylabel": ylabel,
+            "yfmt": yfmt,
+            "x1cname_to_bin": x1cname_to_bin,
+            "key_to_bin": key_to_bin,
+            "plot_best_measured": bool(plot_best_measured),
+            "indiv_chi2": bool(indiv_chi2),
+            "flbase": flbase,
+        },
+        # keep the old all_vals structure in case you use it elsewhere
+        "all_vals": {},
+        # full plotting info
+        "labels": ["Magnitude", "Light-Curve Shape", "Color"],
+        "per_label": {},  # filled below
+    }
+
+    # bin edges in the (key_to_bin) dimension, same for all mBx1c_ind
+    bin_edges = scoreatpercentile(
+        all_processed_data[x1cname_to_bin][key_to_bin],
+        percentile_edges
+    )
+    bin_edges[0] -= 0.00001
+    bin_edges[-1] += 0.00001
+    plot_data["meta"]["bin_edges"] = bin_edges
+
+    # Loop over mB/x1/c
+    for mBx1c_ind in tqdm.tqdm([0, 1, 2]):
+        label = plot_data["labels"][mBx1c_ind]
+        x1cname = ["mB", "x1", "c"][mBx1c_ind]
+
+        # store the old all_vals entries
+        plot_data["all_vals"][label] = []
+
+        # bins along the c/x1/mB axis
+        bins = get_mBx1cbins(
+            mBx1c_ind=mBx1c_ind,
+            observed_vals=all_processed_data[x1cname]["tmp_c_obs"]
+        )
+
+        per_label_entry = {
+            "x1cname": x1cname,
+            "bins": bins,
+            "subplots": [],  # one per percentile bin
+        }
+
+        tmp_c_obs = all_processed_data[x1cname]["tmp_c_obs"] * 1.0
+
+        # loop over percentile bins in key_to_bin
+        for tmp_ind in range(n_bins):
+            subplot_info = {
+                "tmp_ind": tmp_ind,
+                "PPD_hist_y": None,    # normalized PPD histogram (len(bins)-1)
+                "obs_x": None,         # x positions of points
+                "obs_y": None,         # y values of points
+                "sigma": None,         # |zscore| per bin
+                "err_lower": None,     # lower bound curve
+                "err_upper": None,     # upper bound curve
+                "chi2_sum": None,
+                "chi2_N": None,
+            }
+
+            # these correspond to the old all_vals[label][-1]
+            all_vals_entry = {"xs": [], "ppds": [], "obs": []}
+
+            # indices in this percentile bin (only in key_to_bin dimension)
+            in_bin = ((all_processed_data[x1cname_to_bin][key_to_bin] >= bin_edges[tmp_ind])
+                      * (all_processed_data[x1cname_to_bin][key_to_bin] <
+                         bin_edges[tmp_ind + 1]))
+            inds_in_bin = np.where(in_bin)
+
+            # choose best-measured subset
+            if plot_best_measured:
+                tmp_median = np.median(all_processed_data[x1cname]["median_dc"][inds_in_bin])
+            else:
+                tmp_median = (np.max(all_processed_data[x1cname]["median_dc"][inds_in_bin])
+                              + 100)
+
+            # final indices used for both PPD and normalization
+            inds = np.where(
+                (all_processed_data[x1cname_to_bin][key_to_bin] >= bin_edges[tmp_ind]) *
+                (all_processed_data[x1cname_to_bin][key_to_bin] < bin_edges[tmp_ind + 1]) *
+                (all_processed_data[x1cname]["median_dc"] <= tmp_median)
+            )
+
+            PPD1D = (all_processed_data[x1cname]["tmp_c_PPD_found"][inds]).flatten()
+
+            # normalization factors
+            dx = (bins[1] - bins[0])
+            the_norm_PPD1D = 1.0 / (dx * len(PPD1D))
+            the_norm = 1.0 / (dx * len(inds[0]))
+            the_gain = len(inds[0]) / float(len(PPD1D))
+
+            # == Build PPD histogram (numerically, no plotting here) ==
+            PPD_counts, _ = np.histogram(PPD1D, bins=bins)
+            PPD_hist_y = PPD_counts * the_norm_PPD1D  # same as hist with weights
+
+            chi2s = []
+            all_plot_x = []
+            all_plot_y = []
+            all_plot_sigma = []
+            err_lower = []
+            err_upper = []
+
+            for i in range(len(bins) - 1):
+                in_this_bin_obs = (
+                    (tmp_c_obs >= bins[i]) *
+                    (tmp_c_obs < bins[i + 1]) *
+                    (all_processed_data[x1cname_to_bin][key_to_bin] >= bin_edges[tmp_ind]) *
+                    (all_processed_data[x1cname_to_bin][key_to_bin] < bin_edges[tmp_ind + 1]) *
+                    (all_processed_data[x1cname]["median_dc"] <= tmp_median)
+                )
+
+                the_count = np.sum(in_this_bin_obs)
+                in_this_bin_PPD = ((PPD1D >= bins[i]) * (PPD1D < bins[i + 1]))
+                the_count_PPD = np.sum(in_this_bin_PPD) * the_gain
+
+                x_center = 0.5 * (bins[i] + bins[i + 1])
+                y_val = the_count * the_norm
+
+                lower_bound = poisson.ppf(0.158655, the_count_PPD)
+                upper_bound = poisson.ppf(0.841345, the_count_PPD)
+
+                err_lower.append(lower_bound * the_norm)
+                err_upper.append(upper_bound * the_norm)
+
+                all_plot_x.append(x_center)
+                all_plot_y.append(y_val)
+
+                if the_count_PPD > 0:
+                    zscore = poisson_zscore(observed=the_count, expected=the_count_PPD)
+                    chi2s.append(zscore ** 2.0)
+                    all_plot_sigma.append(np.abs(zscore))
+
+                    all_vals_entry["xs"].append(x_center)
+                    all_vals_entry["ppds"].append(the_count_PPD)
+                    all_vals_entry["obs"].append(the_count)
+                else:
+                    all_plot_sigma.append(0.0)
+
+            subplot_info["PPD_hist_y"] = np.array(PPD_hist_y)
+            subplot_info["obs_x"] = np.array(all_plot_x)
+            subplot_info["obs_y"] = np.array(all_plot_y)
+            subplot_info["sigma"] = np.array(all_plot_sigma)
+            subplot_info["err_lower"] = np.array(err_lower)
+            subplot_info["err_upper"] = np.array(err_upper)
+            subplot_info["chi2_sum"] = float(np.sum(chi2s))
+            subplot_info["chi2_N"] = int(len(chi2s))
+
+            per_label_entry["subplots"].append(subplot_info)
+            plot_data["all_vals"][label].append(all_vals_entry)
+
+        plot_data["per_label"][label] = per_label_entry
+
+    # write pickle
+    pickle_filename = "PPD_by_%s_%s%s%s" % (x1cname_to_bin, key_to_bin, "_best_measured"*plot_best_measured, "_indiv_chi2"*indiv_chi2) + ".pickle"
+
+    #pickle_filename = plot_data["meta"]["flbase"] + ".pickle"
+    with open(pickle_filename, "wb") as f:
+        pickle.dump(plot_data, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return pickle_filename
+
+
+def bin_by_percentile_plot(pickle_filename):
+    """
+    Load precomputed plot data from pickle and do all the Matplotlib plotting.
+    """
+    with open(pickle_filename, "rb") as f:
+        plot_data = pickle.load(f)
+
+    meta = plot_data["meta"]
+    n_bins = meta["n_bins"]
+    bin_edges = meta["bin_edges"]
+    ylabel = meta["ylabel"]
+    yfmt = meta["yfmt"]
+    plot_best_measured = meta["plot_best_measured"]
+    indiv_chi2 = meta["indiv_chi2"]
+    flbase = meta["flbase"]
+
+    labels = plot_data["labels"]
+
+    plt.figure(figsize=(9, 2 * n_bins))
+
+    for mBx1c_ind, label in enumerate(labels):
+        per_label = plot_data["per_label"][label]
+        bins = per_label["bins"]
+
+        for subplot_info in per_label["subplots"]:
+            tmp_ind = subplot_info["tmp_ind"]
+            PPD_hist_y = subplot_info["PPD_hist_y"]
+            obs_x = subplot_info["obs_x"]
+            obs_y = subplot_info["obs_y"]
+            sigma = subplot_info["sigma"]
+            err_lower = subplot_info["err_lower"]
+            err_upper = subplot_info["err_upper"]
+            chi2_sum = subplot_info["chi2_sum"]
+            chi2_N = subplot_info["chi2_N"]
+
+            # subplot index (same layout as original)
+            ax_index = (n_bins - 1 - tmp_ind) * 3 + mBx1c_ind + 1
+            plt.subplot(n_bins, 3, ax_index)
+
+            # Recreate the PPD histogram as a step function
+            centers = 0.5 * (bins[:-1] + bins[1:])
+            plt.step(centers, PPD_hist_y, where="mid",
+                     label="PPD", color="k")
+
+            # error bars
+            for x_c, y_lo, y_hi in zip(centers, err_lower, err_upper):
+                plt.plot([x_c, x_c], [y_lo, y_hi], color="k", zorder=0)
+
+            # scatter of observed counts
+            sc = plt.scatter(
+                obs_x,
+                obs_y,
+                marker=".",
+                c=sigma,
+                label=r"$\chi^2/N_{\mathrm{bins}}$" + "\n= %.1f/%i" % (chi2_sum, chi2_N),
+                zorder=5,
+                vmin=0,
+                vmax=4.0,
+                cmap=truncate_colormap(cm.get_cmap("inferno"),
+                                       minval=0.0, maxval=0.9),
+                clip_on=False,
+            )
+
+            if mBx1c_ind == 2:
+                plt.colorbar(sc, label=r"$Z$-Score ($\sigma$)",
+                             shrink=0.6, anchor=(0, 0.0))
+
+            legend = plt.legend(
+                loc="upper right",
+                fontsize=8,
+                bbox_to_anchor=(1.4, 1.05)
+            )
+
+            plt.xlim(bins[0], bins[-1])
+            plt.yticks([])
+
+            # Titles and labels (same logic as before)
+            col_suffix = [" $m_B - \mu(z)$", " $x_1$", " $c$"][mBx1c_ind]
+
+            if tmp_ind != 0:
+                plt.xticks(visible=False)
+
+            if tmp_ind == n_bins - 1:
+                plt.title(label + col_suffix, fontsize=12)
+
+            if mBx1c_ind == 0:
+                plt.ylabel(
+                    ("$" + yfmt + " < " + ylabel + " < " + yfmt + "$")
+                    % (bin_edges[tmp_ind], bin_edges[tmp_ind + 1]),
+                    fontsize=9,
+                )
+
+            if tmp_ind == 0:
+                plt.xlabel(label + col_suffix, fontsize=12)
+
+    plt.tight_layout(h_pad=0.3)
+
+    pdf_filename = flbase + ".pdf"
+    plt.savefig(pdf_filename, bbox_inches="tight")
+    plt.close()
+
+    # return filenames in case you want to know
+    return pdf_filename
+
+
+
+
+
 def bin_by_percentile(all_processed_data, key_to_bin, percentile_edges, ylabel, yfmt, x1cname_to_bin, plot_best_measured, indiv_chi2):
     n_bins = len(percentile_edges) - 1
     plt.figure(figsize = (9, 2*n_bins))
+    all_vals = {}
 
-    for mBx1c_ind in [0, 1, 2]:
+    for mBx1c_ind in tqdm.tqdm([0, 1, 2]):
         label = ["Magnitude", "Light-Curve Shape", "Color"][mBx1c_ind]
+        all_vals[label] = []
         x1cname = ["mB", "x1", "c"][mBx1c_ind]
         bins = get_mBx1cbins(mBx1c_ind = mBx1c_ind, observed_vals = all_processed_data[x1cname]["tmp_c_obs"])
 
@@ -272,6 +589,7 @@ def bin_by_percentile(all_processed_data, key_to_bin, percentile_edges, ylabel, 
         
         for tmp_ind in range(n_bins):
             set_color = 'b'
+            all_vals[label].append(dict(xs = [], ppds = [], obs = []))
             
             inds_in_bin = np.where((all_processed_data[x1cname_to_bin][key_to_bin] >= bin_edges[tmp_ind])*(all_processed_data[x1cname_to_bin][key_to_bin] < bin_edges[tmp_ind+1]))
             if plot_best_measured:
@@ -324,6 +642,9 @@ def bin_by_percentile(all_processed_data, key_to_bin, percentile_edges, ylabel, 
                     zscore = poisson_zscore(observed = the_count, expected = the_count_PPD)
                     chi2s.append(zscore**2.) #(the_count - the_count_PPD)**2./the_count_PPD)
                     all_plot_sigma.append(np.abs(zscore))
+                    all_vals[label][-1]["xs"].append(0.5*(bins[i] + bins[i+1]))
+                    all_vals[label][-1]["ppds"].append(the_count_PPD)
+                    all_vals[label][-1]["obs"].append(the_count)
                     
                     if indiv_chi2:
                         plt.text(0.5*(bins[i] + bins[i+1]), upper_bound*the_norm, "%.1f" % chi2s[-1], size = 6, ha = 'center', va = 'bottom')
@@ -364,21 +685,21 @@ def bin_by_percentile(all_processed_data, key_to_bin, percentile_edges, ylabel, 
 
 
     plt.tight_layout(h_pad = 0.3)
-    plt.savefig("PPD_by_%s_%s%s%s.pdf" % (x1cname_to_bin, key_to_bin, "_best_measured"*plot_best_measured, "_indiv_chi2"*indiv_chi2), bbox_inches = 'tight')
+
+    flname = "PPD_by_%s_%s%s%s_original" % (x1cname_to_bin, key_to_bin, "_best_measured"*plot_best_measured, "_indiv_chi2"*indiv_chi2)
+    plt.savefig(flname + ".pdf" , bbox_inches = 'tight')
     plt.close()
 
-
-
-
-
-
-
-
+    pickle.dump(all_vals, open(flname + ".pickle", 'wb'))
 
 
     
 
 input_fl = sys.argv[1]
+read_or_write = sys.argv[2] # For binning, write to file, or read from file
+
+assert ["read", "write"].count(read_or_write) == 1
+
 
 (the_data, stan_data, params) = pickle.load(gzip.open(input_fl, 'rb'))
 
@@ -451,7 +772,7 @@ random_choice_inds_found = []
 random_choice_inds_found_or_not = []
 
 
-for mBx1c_ind in [0, 1, 2]:
+for mBx1c_ind in tqdm.tqdm([0, 1, 2]):
     label = ["Magnitude", "Light-Curve Shape", "Color"][mBx1c_ind]
     second_label = ["\n$\leftarrow$ Fainter          Brighter $\\rightarrow$", "\n$\leftarrow$ Lower $x_1$          Higher $x_1$ $\\rightarrow$", "\n$\leftarrow$ Bluer          Redder $\\rightarrow$"][mBx1c_ind]
     x1cname = ["mB", "x1", "c"][mBx1c_ind]
@@ -660,10 +981,26 @@ for n_bins in [10, 20, 30]:
 
 for plot_best_measured in [0]:
     for indiv_chi2 in [0]:
-        bin_by_percentile(all_processed_data, key_to_bin = "per_z", percentile_edges = np.linspace(0, 100., 6), ylabel = "z", yfmt = "%.2f", x1cname_to_bin = "mB", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
-        bin_by_percentile(all_processed_data, key_to_bin = "per_sel", percentile_edges = [0., 5., 10., 17.5, 25., 50., 100], ylabel = "P_{\mathrm{sel}}", yfmt = "%.2f", x1cname_to_bin = "mB", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
-        bin_by_percentile(all_processed_data, key_to_bin = "per_sel", percentile_edges = [0., 5., 10., 17.5, 25., 50., 100], ylabel = "P_{\mathrm{sel}}", yfmt = "%.2f", x1cname_to_bin = "c", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
-        bin_by_percentile(all_processed_data, key_to_bin = "tmp_c_obs", percentile_edges = np.linspace(0, 100., 6), ylabel = "c", yfmt = "%.2f", x1cname_to_bin = "c", plot_best_measured = plot_best_measured, indiv_chi2 = 0)
+
+
+        bin_by_percentile(all_processed_data, key_to_bin = "per_z", percentile_edges = np.linspace(0, 100., 6),
+                          ylabel = "z", yfmt = "%.2f", x1cname_to_bin = "mB", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
+        
+        pickle_filename = bin_by_percentile_compute(all_processed_data, key_to_bin = "per_z", percentile_edges = np.linspace(0, 100., 6),
+                                                    ylabel = "z", yfmt = "%.2f", x1cname_to_bin = "mB", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
+        bin_by_percentile_plot(pickle_filename)
+        
+        pickle_filename = bin_by_percentile_compute(all_processed_data, key_to_bin = "per_sel", percentile_edges = [0., 5., 10., 17.5, 25., 50., 100],
+                                                    ylabel = "P_{\mathrm{sel}}", yfmt = "%.2f", x1cname_to_bin = "mB", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
+        bin_by_percentile_plot(pickle_filename)
+
+        pickle_filename = bin_by_percentile_compute(all_processed_data, key_to_bin = "per_sel", percentile_edges = [0., 5., 10., 17.5, 25., 50., 100],
+                                                    ylabel = "P_{\mathrm{sel}}", yfmt = "%.2f", x1cname_to_bin = "c", plot_best_measured = plot_best_measured, indiv_chi2 = indiv_chi2)
+        bin_by_percentile_plot(pickle_filename)
+
+        pickle_filename = bin_by_percentile_compute(all_processed_data, key_to_bin = "tmp_c_obs", percentile_edges = np.linspace(0, 100., 6),
+                                                    ylabel = "c", yfmt = "%.2f", x1cname_to_bin = "c", plot_best_measured = plot_best_measured, indiv_chi2 = 0)
+        bin_by_percentile_plot(pickle_filename)
 
 
 

@@ -6,6 +6,7 @@
 // Version 1.7 (Oct-2024). Adding capability for distance ladder.
 // Version 1.71 (May-2025). Adding cluster mass-relation evolution.
 // Version 1.8 (July-2025). Adding two-Gaussian x1 model.
+// Version 1.81 (Dec-2025). sigma_int_fast upper limit changed from 0.1 to 0.15.
 
 
 data {
@@ -82,7 +83,7 @@ transformed data {
     // vector [n_gauss] exp_approx_pos = [0.16913558, 0.68695591, 1.9434773]';
     // vector [n_gauss] exp_approx_width = [0.11070724, 0.330062, 0.96505958]';
 
-    print ("Version 1.8");
+    print ("Version 1.81");
 
     // locs [ 0.16913558  0.68695591  1.9434773 ]
     // sigs [ 0.11070724  0.330062    0.96505958]
@@ -118,7 +119,7 @@ parameters {
     vector [n_zbins] mu_zbins;
 
     real <lower=0.01, upper = 0.3> sigma_int[n_samples];
-    real <lower=0.01, upper = 0.1> sigma_int_fast; // Extra sigma_int for low-x1 SNe
+    real <lower=0.01, upper = 0.15> sigma_int_fast; // Extra sigma_int for low-x1 SNe
     real <lower=0.01, upper = 0.3> sigma_int_calibrator;
     simplex [3] mBx1c_int_variance;
 

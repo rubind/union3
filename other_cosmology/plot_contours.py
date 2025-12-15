@@ -7,11 +7,24 @@ import pickle
 from matplotlib import rcParams
 from cosmo_functions import no_big_bang, get_colors, get_DETF
 from DavidsNM import miniNM_new
+from scipy.special import erfinv
 rcParams['font.family'] = 'serif'
 rcParams['text.usetex'] = True
 
 
+def new_command(cmd_name, vals, fmt):
+    try:
+        vals[2]
+        return ("\\newcommand{" + cmd_name + "}{\ensuremath{" + fmt + "^{+" + fmt +"}_{" + fmt + "}}\\xspace}\n") % tuple(vals)
+    except:
+        return ("\\newcommand{" + cmd_name + "}{\ensuremath{" + fmt + "}\\xspace}\n") % vals
 
+
+def twoD_chi2_to_sigma(x):
+    return np.sqrt(2) * erfinv(1 - np.exp(-x / 2.0))
+
+assert np.abs(twoD_chi2_to_sigma(2.29575) - 1.) < 1e-4
+assert np.abs(twoD_chi2_to_sigma(6.18007) - 2.) < 1e-4
 
 def find_three_sigma(all_grids, key, top_not_bottom, chi2_val = 11.8292):
     no_nan = all_grids[key][2]
@@ -72,9 +85,9 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0, sigm
 
     if "BAO" in all_grids:
         BAO_key = "BAO" + "_Omh2"*BAO_Omh2
-        plt.contourf(all_grids[BAO_key][0], all_grids[BAO_key][1], all_grids[BAO_key][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("green"), zorder = 0 + 2.5*(all_grids["model"] == "LCDM"))
         plt.contourf(all_grids["CMB"][0], all_grids["CMB"][1], all_grids["CMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("orange"), zorder = 1)
         plt.contourf(all_grids["SNe"][0], all_grids["SNe"][1], all_grids["SNe"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("blue"), zorder = 2)
+        plt.contourf(all_grids[BAO_key][0], all_grids[BAO_key][1], all_grids[BAO_key][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("green"), zorder = 2.5)
         plt.contourf(all_grids["SNeBAOCMB"][0], all_grids["SNeBAOCMB"][1], all_grids["SNeBAOCMB"][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = get_colors("gray"), zorder = 3)
         
         
@@ -166,7 +179,7 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0, sigm
             optimize_label_positions(label_dict)
             
             plt.text(-1.75, -2.5, [None, "1", "2"][show_H0s] + "$\sigma$ Contours ($\chi^2 - \chi^2_{\mathrm{min}} < %.2f)$" % level_for_four, va = 'center', ha = 'left')
-        elif combined_and_SNe:
+        elif combined_and_SNe and "SNe" in all_grids:
             for gridkey in ["SNe", "SNeBAOCMB"]:
                 plt.contour(all_grids[gridkey][0], all_grids[gridkey][1], all_grids[gridkey][2], levels = [0, 2.29575, 6.18007, 11.8292], colors = 'k', linewidths = 0.25, zorder = 5)
                 if gridkey == "SNeBAOCMB":
@@ -217,7 +230,8 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0, sigm
         plt.fill_between(early_x, -0.174851 - 1.16638*early_x, [3]*len(early_x), color = (0.7, 0.7, 0.7), zorder = 0.1)
         plt.xlim([-2, 0])
         plt.ylim([-3, 2])
-        plt.text(-0.75, 1.7, "Early Matter Domination Violated", color = 'k', ha = 'center', va = 'center')#, bbox=dict(facecolor='w', edgecolor = 'w'))
+        plt.text(-0.75, 1.8, "Early Matter Domination Violated", color = 'k', ha = 'center', va = 'center')#, bbox=dict(facecolor='w', edgecolor = 'w'))
+        plt.text(-1.75, -2.8, "Flat Universe Assumed"*(all_grids["model"].count("flat")) + "Curvature Allowed"*(all_grids["model"].count("flat") == 0), color = 'k', ha = 'left', va = 'center')#, bbox=dict(facecolor='w', edgecolor = 'w'))
 
         plt.plot(-1, 0., '.', color = 'k')
 
@@ -255,7 +269,7 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0, sigm
     all_txt += "BAO+CMB: " + str(all_grids["BAOCMB_fit"]) + " " + str(np.sqrt(np.diag(all_grids["BAOCMB_cmat"])))
     all_txt += DETF_FoM_txt
 
-    plt_name = plt_name.replace(".pdf", "_" + fl.split(".")[0] + ".pdf")
+    plt_name = plt_name.replace(".pdf", "_" + fl.split(".pickle")[0] + ".pdf")
     plt.savefig(plt_name, bbox_inches = 'tight', metadata=dict(Keywords = all_txt))
     plt.close()
     
@@ -335,6 +349,10 @@ model_labels = dict(flatLCDM = "Flat $\Lambda$CDM",
 
 all_latex_lines = ""
 
+some_commands = ""
+chi2s = {}
+oneD_sigmas = []
+
 for fl in sys.argv[1:]:
     all_grids = pickle.load(open(fl, 'rb'))
 
@@ -343,12 +361,43 @@ for fl in sys.argv[1:]:
     all_latex_lines += "\hline\n \multicolumn{8}{c}{" + model_labels[all_grids["model"]] + "}\\\\ \n \hline\n"
     all_latex_lines += make_latex_table(all_grids)
     
-    #make_contours(all_grids, BAO_Omh2 = 0)
-    #make_contours(all_grids, BAO_Omh2 = 1)
-    #make_contours(all_grids, show_all_four = 1)
-    #make_contours(all_grids, show_all_four = 2)
-    #make_contours(all_grids, show_H0s = 1)
-    #make_contours(all_grids, show_H0s = 2)
-    #make_contours(all_grids, combined_and_SNe = 1)
+    make_contours(all_grids, BAO_Omh2 = 0)
+    make_contours(all_grids, BAO_Omh2 = 1)
+    make_contours(all_grids, show_all_four = 1)
+    make_contours(all_grids, show_all_four = 2)
+    make_contours(all_grids, show_H0s = 1)
+    make_contours(all_grids, show_H0s = 2)
+    make_contours(all_grids, combined_and_SNe = 1)
+
+
+    for cosmo_comb in ["BAOCMB", "SNeBAOCMB", "SNeBAOCMBH0T"]:
+        chi2s[all_grids["model"] + "_" + cosmo_comb] = all_grids[cosmo_comb + "_chi2"]
+
+    if all_grids["model"] == "flatw0waEDE":
+        some_commands += new_command(cmd_name = "\wOSNBAOCMB", vals = tuple(all_grids["SNeBAOCMB_minos"]["w0"]), fmt = "%.3f")
+        some_commands += new_command(cmd_name = "\waSNBAOCMB", vals = tuple(all_grids["SNeBAOCMB_minos"]["wa"]), fmt = "%.2f")
+
+        if "flatLCDM_BAOCMB" in chi2s and "flatw0waEDE_BAOCMB" in chi2s:
+            some_commands += new_command(cmd_name = "\DeltaChiSqBAOCMB", vals = chi2s["flatLCDM_BAOCMB"] - chi2s["flatw0waEDE_BAOCMB"], fmt = "%.1f")
+            some_commands += new_command(cmd_name = "\DeltaChiSqSNeBAOCMB", vals = chi2s["flatLCDM_SNeBAOCMB"] - chi2s["flatw0waEDE_SNeBAOCMB"], fmt = "%.1f")
+            some_commands += new_command(cmd_name = "\DeltaChiSqSNeBAOCMBHOT", vals = chi2s["flatLCDM_SNeBAOCMBH0T"] - chi2s["flatw0waEDE_SNeBAOCMBH0T"], fmt = "%.1f")
+
+            some_commands += new_command(cmd_name = "\SigmaTwoDBAOCMB", vals = twoD_chi2_to_sigma(chi2s["flatLCDM_BAOCMB"] - chi2s["flatw0waEDE_BAOCMB"]), fmt = "%.1f")
+            some_commands += new_command(cmd_name = "\SigmaTwoDSNeBAOCMB", vals = twoD_chi2_to_sigma(chi2s["flatLCDM_SNeBAOCMB"] - chi2s["flatw0waEDE_SNeBAOCMB"]), fmt = "%.1f")
+            some_commands += new_command(cmd_name = "\SigmaTwoDSNeBAOCMBHOT", vals = twoD_chi2_to_sigma(chi2s["flatLCDM_SNeBAOCMBH0T"] - chi2s["flatw0waEDE_SNeBAOCMBH0T"]), fmt = "%.1f")
+
+        oneD_sigmas.append(   (all_grids["SNeBAOCMB_minos"]["w0"][0] -- 1)/all_grids["SNeBAOCMB_minos"]["w0"][2]   )
+        oneD_sigmas.append(   (all_grids["SNeBAOCMB_minos"]["wa"][0] -- 0)/all_grids["SNeBAOCMB_minos"]["wa"][2]   )
+        
+        
+    if all_grids["model"] == "flatLCDM":
+        some_commands += new_command(cmd_name = "\\flatLCDMOmSNe", vals = tuple(all_grids["SNe_minos"]["Om"]), fmt = "%.3f")
+
+
 
 print(all_latex_lines)
+
+print()
+print(some_commands)
+print("oneD_sigmas", oneD_sigmas)
+
