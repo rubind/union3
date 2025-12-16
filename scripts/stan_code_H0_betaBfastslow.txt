@@ -119,7 +119,7 @@ parameters {
     vector [n_zbins] mu_zbins;
 
     real <lower=0.01, upper = 0.3> sigma_int[n_samples];
-    real <lower=0.01, upper = 0.1> sigma_int_fast; // Extra sigma_int for low-x1 SNe
+    real <lower=0.01, upper = 0.15> sigma_int_fast; // Extra sigma_int for low-x1 SNe
     real <lower=0.01, upper = 0.3> sigma_int_calibrator;
     simplex [3] mBx1c_int_variance;
 

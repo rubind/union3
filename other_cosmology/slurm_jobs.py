@@ -13,11 +13,16 @@ for cosmo in """6 1 flatLCDM
 4 1 flatw0waOmh
 4 1 flatw0waOmhEDE""".split('\n'):
 
+    if cosmo.count("w0wa"):
+        days = 3
+    else:
+        days = 2
+
     f = open("tmp.sh", 'w')
     f.write("""#!/bin/bash
 #SBATCH --job-name=cosmo
 #SBATCH --partition=shared
-#SBATCH --time=02-00:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=""" + str(days) + """-00:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G # Memory per node my job requires

@@ -29,10 +29,19 @@ for prefix in unique_prefixes:
     print("sample_file", sample_file)
     the_size = os.path.getsize(sample_file)
     print(sample_file, the_size)
+    n_files = len(unique_prefixes[prefix])
+
+    print("n_files", n_files)
 
     if the_size > 100e6:
         # Looks like all parameters saved. Must be for PPD. But also want unthinned for uncertainty analysis.
-        thins = [0, 47]
+        # How much to thin? for 100 runs, 47. For 20 runs, 11.
+
+        if n_files > 50:
+            thins = [0, 47]
+        else:
+            thins = [0, 11]
+            
         max_params = [1000, 10000]
     else:
         thins = [0]

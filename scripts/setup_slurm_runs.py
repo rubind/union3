@@ -102,7 +102,7 @@ for i in range(n_copy):
             f = open(wd + "/run.sh", 'w')
             f.write("""#!/bin/bash
 #SBATCH --job-name=example
-#SBATCH --partition=shared
+#SBATCH --partition=shared,kill-shared
 #SBATCH --time=""" + time_limit + """ ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
