@@ -61,7 +61,7 @@ grepout = getoutput("squeue | grep " + whoami + " | grep -v ' R ' | grep -v ' CG
 assert grepout.strip() == "", "Some jobs are still queued"
 
 if len(sys.argv) == 2:
-    logfls = glob.glob("UNITY*/log.txt")
+    logfls = glob.glob("*UNITY*/log.txt")
 else:
     logfls = sys.argv[2:]
 
