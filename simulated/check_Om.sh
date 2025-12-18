@@ -20,3 +20,5 @@ do
     
     sleep 900
 done
+
+sbatch check_Om.sh
