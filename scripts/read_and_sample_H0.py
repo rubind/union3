@@ -747,7 +747,7 @@ def add_zbins(stan_data, cosmo_model):
         else:
             assert cosmo_model == 2
             ifn = interp1d(np.concatenate(([0], stan_data["zbins"])),
-                           np.concatenate(([-1], nodes)), kind = 'quadratic')
+                           np.concatenate(([-1], nodes)), kind = 'quadratic') # z=0 node is -(sum of all other nodes)
             
         for i in range(stan_data["n_sne"]):
             stan_data["dmu_dbin"][i, j] = ifn(stan_data["redshifts"][i])

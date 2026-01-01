@@ -104,6 +104,7 @@ parameters {
     real <lower = -1.4, upper = 1.4> beta_angle_blue;
     real <lower = 0, upper = 1.4> beta_angle_red_low;
     real <lower = 0, upper = 1.4> beta_angle_red_high;
+    real <lower = 0, upper = 1.4> beta_angle_red_fast;
     real <lower = 9.0, upper = 10.5> step_mass;
     // real <lower = 0.02, upper = 0.5> step_width;
     real delta_0;
@@ -175,6 +176,7 @@ transformed parameters {
     real beta_B;
     real beta_R_high;
     real beta_R_low;
+    real beta_R_fast;
 
     real beta_eff;
     real p_high_mass;
@@ -323,10 +325,12 @@ transformed parameters {
         beta_B = tan(beta_angle_red_low);
         beta_R_low = tan(beta_angle_red_low);
         beta_R_high = tan(beta_angle_red_low);
+	beta_R_fast = tan(beta_angle_red_low);
     } else {
         beta_B = tan(beta_angle_blue);
         beta_R_low = tan(beta_angle_red_low);
         beta_R_high = tan(beta_angle_red_high);
+	beta_R_fast = tan(beta_angle_red_fast);
     }
 
     for (i in 1:n_samples) {
@@ -402,7 +406,7 @@ transformed parameters {
                                       	  + (alpha_slow*R_x1_slow)^2 + ((beta_B + mobs_cut1[i])*R_c_slow)^2;
 
 
-        model_mBx1c_fast[i][1] = this_MB_slow + MB_fast_minus_slow + model_mu[i] - alpha_fast*(true_x1[i] - x1_star_fast) + beta_B*true_cB[i] + (beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff)*true_cR[i] - delta_0*p_high_mass_eff;
+        model_mBx1c_fast[i][1] = this_MB_slow + MB_fast_minus_slow + model_mu[i] - alpha_fast*(true_x1[i] - x1_star_fast) + beta_B*true_cB[i] + beta_R_fast*true_cR[i] - delta_0*p_high_mass_eff;
         model_mBx1c_fast[i][2] = true_x1[i];
         model_mBx1c_fast[i][3] = true_cB[i] + true_cR[i];
 
@@ -436,10 +440,10 @@ transformed parameters {
 	//for (g_indx in 1:n_gauss) {
 	for (g_indc in 1:n_gauss) {
             this_norm_LL_fast += exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]], //  + d_mBx1c_d_calib[i][1] * calibs
-											      mobs_by_SN_except_c_R_fast[i] + ((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i],
+											      mobs_by_SN_except_c_R_fast[i] + (beta_R_fast + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i],
 											   
                                                       	                                      sqrt(mobs_var_by_SN_except_c_R_fast[i]
-											      + (((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2
+											      + ((beta_R_fast + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2
 											      )   );
             this_norm_LL_slow += exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]], //  + d_mBx1c_d_calib[i][1] * calibs
 											      mobs_by_SN_except_c_R_slow[i] + ((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i],
