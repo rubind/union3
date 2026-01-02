@@ -278,7 +278,12 @@ for matchstr in matchstrs:
         #("UNITY" + suffix + "_1D_???/log.txt", "UNITY1.5, 1D Unexplained"),
         #("UNITY" + suffix + "_nocal_???/log.txt", "UNITY1.5, No $\Delta$sys")
 
-    sampfls = glob.glob(matchstr + "???/*samples*pickle")
+    globstr = matchstr + "???/*samples*pickle"
+    sampfls = glob.glob(globstr)
+    print("sampfls", sampfls)
+    print(glob.glob(globstr))
+    
+    assert len(sampfls) > 0, globstr
     description = dir_labels[matchstr]
 
     all_pars = {}
@@ -333,6 +338,7 @@ for matchstr in matchstrs:
             
                     
         true_outl_frac = verify_filenamelist(sampfl)
+
             
         for par in pars:
             if par.count("[") == 1:
@@ -570,6 +576,7 @@ for i in range(len(pars)):
         print("\hline % &")
 
 
+    
     for valunc in range(1):
         try:
             float(true_vals[pars[i]])
