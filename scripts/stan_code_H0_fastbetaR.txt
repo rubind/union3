@@ -102,9 +102,9 @@ parameters {
     real <lower = 0, upper = 0.35> alpha_angle_fast;
     real <lower = 0, upper = 0.35> alpha_angle_slow;
     real <lower = -1.4, upper = 1.4> beta_angle_blue;
-    real <lower = 0, upper = 1.4> beta_angle_red_low;
-    real <lower = 0, upper = 1.4> beta_angle_red_high;
-    real <lower = 0, upper = 1.4> beta_angle_red_fast;
+    real <lower = beta_angle_blue, upper = 1.4> beta_angle_red_low;
+    real <lower = beta_angle_blue, upper = 1.4> beta_angle_red_high;
+    real <lower = beta_angle_blue, upper = 1.4> beta_angle_red_fast;
     real <lower = 9.0, upper = 10.5> step_mass;
     // real <lower = 0.02, upper = 0.5> step_width;
     real delta_0;
