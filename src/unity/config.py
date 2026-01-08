@@ -25,6 +25,12 @@ class FilterConfig(BaseSettings):
     min_color: float = Field(default=-0.3, description="Cut on minimum color.")
     max_color: float = Field(default=0.3, description="Cut on maximum color.")
     max_MWEBV: float = Field(default=0.3, description="Cut on maximum Milky Way E(B-V).")
+    include_samples: list[str] | None = Field(
+        default=None, description="List of sample names to include. If None, include all."
+    )
+    exclude_samples: list[str] | None = Field(
+        default=None, description="List of sample names to exclude. If None, exclude none."
+    )
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
@@ -34,6 +40,13 @@ class FilterConfig(BaseSettings):
         assert (
             self.min_color < self.max_color
         ), f"min_color ({self.min_color}) must be less than max_color ({self.max_color})"
+
+        # To stop capitalisation getting in the way, let's ensure that the sample names are all lowercase
+        if self.include_samples is not None:
+            self.include_samples = [s.lower() for s in self.include_samples]
+        if self.exclude_samples is not None:
+            self.exclude_samples = [s.lower() for s in self.exclude_samples]
+
         return self
 
 

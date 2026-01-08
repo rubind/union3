@@ -771,6 +771,15 @@ def filter_snia(df: pl.DataFrame, config: Config):
         & pl.col("x1_err").is_not_null()
         & ((pl.col("x1").abs() + pl.col("x1_err")) < 5)
     )
+
+    # We can filter down our sample/surveys if either the include_samples or exclude_samples is set
+    if config.filters.include_samples:
+        logger.info(f"Including only samples: {config.filters.include_samples}")
+        df_filtered = df_filtered.filter(pl.col("survey").str.to_lowercase().is_in(config.filters.include_samples))
+    if config.filters.exclude_samples:
+        logger.info(f"Excluding samples: {config.filters.exclude_samples}")
+        df_filtered = df_filtered.filter(~pl.col("survey").str.to_lowercase().is_in(config.filters.exclude_samples))
+
     # Drop columns which are all null after filtering
     df_filtered = df_filtered[[s.name for s in df_filtered if not (s.null_count() == df_filtered.height)]]
     logger.info(f"Filtered to {df_filtered.height} SNe Ia")
