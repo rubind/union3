@@ -26,13 +26,13 @@ test:
 	uv run pytest tests
 
 run:
-	uv run union3
+	uv run unity
 
 image:
-	docker buildx build -t union3:latest .
+	docker buildx build -t unity:latest .
 
 run_image:
-	docker run --rm -e warmup_iterations=1 -e iterations=2 -e LOGURU_LEVEL=INFO -it union3:latest
+	docker run --rm -e warmup_iterations=1 -e iterations=2 -e LOGURU_LEVEL=INFO -it unity:latest
 
 tests: test
 install: install_uv install_python install_deps

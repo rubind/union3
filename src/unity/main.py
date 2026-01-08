@@ -1,8 +1,7 @@
-from union3 import logger
-from union3 import Config, Data, Model
+from unity import logger, Config, Data, Model
 import polars as pl
 
-from union3.plotting import plot_approx_hubble_diagram, plot_cosmology_constraints
+from unity.plotting import plot_approx_hubble_diagram, plot_cosmology_constraints
 
 
 def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:

@@ -1,10 +1,10 @@
 from pathlib import Path
-from union3.data import Data
-from union3.config import Config
+from unity.data import Data
+from unity.config import Config
 from loguru import logger
 import polars as pl
 
-from union3.plotting import plot_cosmology_constraints
+from unity.plotting import plot_cosmology_constraints
 
 if __name__ == "__main__":
     from rich.logging import RichHandler

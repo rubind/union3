@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import polars as pl
 from chainconsumer import ChainConsumer, Chain
 
-from union3.config import Config, CosmologyModel
+from unity.config import Config, CosmologyModel
 
 main_cosmo_parameters = {
     CosmologyModel.OM: ["Om"],

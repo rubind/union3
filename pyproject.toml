@@ -1,5 +1,5 @@
 [project]
-name = "union3"
+name = "unity"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.scripts]
-union3 = "union3.main:fit_cosmology"
+unity = "unity.main:fit_cosmology"
 
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]
@@ -36,7 +36,7 @@ build-backend = "uv_build"
 no-binary-package = ["pystan"]
 
 [tool.uv_build]
-package-data = { "union3" = ["data/resources/**/*"]}
+package-data = { "unity" = ["data/resources/**/*"]}
 
 [tool.ruff]
 line-length = 120

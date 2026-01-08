@@ -4,7 +4,7 @@ import re
 from pydantic import computed_field
 from pydantic_settings import BaseSettings
 from pathlib import Path
-from union3 import logger
+from unity import logger
 import polars as pl
 from astropy.coordinates import SkyCoord
 from astropy import units as u

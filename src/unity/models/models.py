@@ -1,7 +1,7 @@
 from pathlib import Path
 import polars as pl
 import numpy as np
-from union3 import Config, Data, logger, CosmologyModel
+from unity import Config, Data, logger, CosmologyModel
 
 
 class Model:

@@ -4,7 +4,7 @@ from typing import Literal, Self
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
-from union3.utils.base_config import FileConfig
+from unity.utils.base_config import FileConfig
 
 
 class CosmologyModel(StrEnum):
@@ -86,12 +86,12 @@ class Config(FileConfig):
         default=CosmologyModel.OM_W0_WA, description="Cosmology model to use for fitting."
     )
     fit_model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
-    iterations: int = Field(default=200, ge=1, description="Number of iterations for MCMC.")
-    warmup_iterations: int = Field(default=100, ge=1, description="Number of warmup iterations for MCMC.")
+    iterations: int = Field(default=250, ge=1, description="Number of iterations for MCMC.")
+    warmup_iterations: int = Field(default=250, ge=1, description="Number of warmup iterations for MCMC.")
     refresh_iterations: int = Field(
         default=5, ge=0, description="Number of iterations between progress updates for MCMC. 0 to turn off."
     )
-    num_chains: int = Field(default=4, ge=1, description="Number of chains for MCMC.")
+    num_chains: int = Field(default=6, ge=1, description="Number of chains for MCMC.")
     extra_single_dimension_parameters_only: bool = Field(
         default=True, description="Whether to only save extra single-dimension parameters."
     )

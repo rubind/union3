@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import polars as pl
 
-from union3.config import Config
-from union3 import logger
-from union3.data import Data
+from unity.config import Config
+from unity import logger
+from unity.data import Data
 from chainconsumer.color_finder import colors
 from astropy.cosmology import FlatLambdaCDM
 

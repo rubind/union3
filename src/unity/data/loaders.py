@@ -5,7 +5,7 @@ from typing import Literal, Self, TypedDict
 import polars as pl
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 import numpy as np
-from union3 import Config, CosmologyModel, logger
+from unity import Config, CosmologyModel, logger
 from scipy.special import erf
 from scipy.interpolate import interp1d
 from astropy.io import fits
@@ -13,7 +13,7 @@ import yaml
 import polars.selectors as cs
 from astropy.cosmology import FlatLambdaCDM
 
-from union3.data.uncertainties import (
+from unity.data.uncertainties import (
     add_electron_scattering_uncertainties,
     add_intergalactic_extinction_uncertainties,
     add_MBEBV_uncertainties,
