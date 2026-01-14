@@ -20,7 +20,6 @@ likelihood:
     lmax: 4000
     variant: actplanck_baseline
     version: v1.2
-    python_path: /Users/drubin/anaconda3/envs/cobaya_w0wa/lib/python3.11/site-packages/act_dr6_lenslike/
   bao.desi_dr2: null
   planck_2018_lowl.EE: null
   planck_2018_lowl.TT: null
@@ -181,5 +180,4 @@ sampler:
     proposal_scale: 1.9
     seed: null
     temperature: 1
-output: chain_U31_18
 packages_path: /Users/drubin/cobaya_packages
