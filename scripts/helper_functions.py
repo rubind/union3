@@ -470,9 +470,10 @@ def write_latent_variables(the_data, stan_data, fit_params):
                      np.std(fit_params["true_cB"], axis = 0, ddof=1),
                      np.median(fit_params["true_cR"], axis = 0),
                      np.std(fit_params["true_cR"], axis = 0, ddof=1),
+                     np.std(fit_params["true_cR"] - fit_params["true_cB"], axis = 0, ddof=1),
                      np.median(fit_params["model_mu"], axis = 0)]
 
-    headings = ["SN", "Phigh", "true_x1", "dtrue_x1", "true_cB", "dtrue_cB", "true_cR", "dtrue_cR", "model_mu"]
+    headings = ["SN", "Phigh", "true_x1", "dtrue_x1", "true_cB", "dtrue_cB", "true_cR", "dtrue_cR", "dtrue_cR_minus_cB", "model_mu"]
     
     for key in fit_params:
         if key.count("loglike_by_SN") == 1:
