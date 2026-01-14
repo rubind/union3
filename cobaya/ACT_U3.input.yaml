@@ -1,0 +1,185 @@
+theory:
+  camb:
+    extra_args:
+      AccuracyBoost: 1
+      bbn_predictor: PArthENoPE_880.2_standard.dat
+      dark_energy_model: ppf
+      halofit_version: mead2016
+      lAccuracyBoost: 1
+      lSampleBoost: 1
+      lens_margin: 1250
+      lens_potential_accuracy: 4
+      lmax: 4000
+      num_massive_neutrinos: 1
+      theta_H0_range:
+      - 20
+      - 100
+likelihood:
+  act_dr6_lenslike.ACTDR6LensLike:
+    lens_only: false
+    lmax: 4000
+    variant: actplanck_baseline
+    version: v1.2
+    python_path: /Users/drubin/anaconda3/envs/cobaya_w0wa/lib/python3.11/site-packages/act_dr6_lenslike/
+  bao.desi_dr2: null
+  planck_2018_lowl.EE: null
+  planck_2018_lowl.TT: null
+  planck_NPIPE_highl_CamSpec.TTTEEE: null
+  sn.union3: null
+params:
+  A:
+    derived: 'lambda As: 1e9*As'
+    latex: 10^9 A_\mathrm{s}
+  As:
+    latex: A_\mathrm{s}
+    value: 'lambda logA: 1e-10*np.exp(logA)'
+  DHBBN:
+    derived: 'lambda DH: 10**5*DH'
+    latex: 10^5 \mathrm{D}/\mathrm{H}
+  H0:
+    latex: H_0
+  H0rdrag:
+    derived: 'lambda H0, rdrag: H0 * rdrag'
+    latex: H_0 r_\mathrm{d}
+  YHe:
+    latex: Y_\mathrm{P}
+  Y_p:
+    latex: Y_P^\mathrm{BBN}
+  age:
+    latex: \mathrm{Age}/\mathrm{Gyr}
+  clamp:
+    derived: 'lambda As, tau: 1e9*As*np.exp(-2*tau)'
+    latex: 10^9 A_\mathrm{s} e^{-2\tau}
+  cosmomc_theta:
+    derived: false
+    value: 'lambda theta_MC_100: 1.e-2*theta_MC_100'
+  logA:
+    drop: true
+    latex: \ln(10^{10} A_\mathrm{s})
+    prior:
+      max: 3.91
+      min: 1.61
+    proposal: 0.001
+    ref:
+      dist: norm
+      loc: 3.036
+      scale: 0.001
+  mnu:
+    latex: \sum m_\nu
+    value: 0.06
+  nnu:
+    latex: N_\mathrm{eff}
+    value: 3.044
+  ns:
+    latex: n_\mathrm{s}
+    prior:
+      max: 1.2
+      min: 0.8
+    proposal: 0.002
+    ref:
+      dist: norm
+      loc: 0.9649
+      scale: 0.004
+  ombh2:
+    latex: \Omega_\mathrm{b} h^2
+    prior:
+      max: 0.1
+      min: 0.005
+    proposal: 0.0001
+    ref:
+      dist: norm
+      loc: 0.02237
+      scale: 0.0001
+  omch2:
+    latex: \Omega_\mathrm{c} h^2
+    prior:
+      max: 0.99
+      min: 0.001
+    proposal: 0.0005
+    ref:
+      dist: norm
+      loc: 0.12
+      scale: 0.001
+  omegal:
+    latex: \Omega_\Lambda
+  omegam:
+    latex: \Omega_\mathrm{m}
+  omegamh2:
+    derived: 'lambda omegam, H0: omegam*(H0/100)**2'
+    latex: \Omega_\mathrm{m} h^2
+  omk:
+    latex: \Omega_\mathrm{k}
+    value: 0.0
+  rdrag:
+    latex: r_\mathrm{d}
+  s8h5:
+    derived: 'lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)'
+    latex: \sigma_8/h^{0.5}
+  s8omegamp25:
+    derived: 'lambda sigma8, omegam: sigma8*omegam**0.25'
+    latex: \sigma_8 \Omega_\mathrm{m}^{0.25}
+  s8omegamp5:
+    derived: 'lambda sigma8, omegam: sigma8*omegam**0.5'
+    latex: \sigma_8 \Omega_\mathrm{m}^{0.5}
+  sigma8:
+    latex: \sigma_8
+  tau:
+    latex: \tau_\mathrm{reio}
+    prior:
+      max: 0.8
+      min: 0.01
+    proposal: 0.003
+    ref:
+      dist: norm
+      loc: 0.0544
+      scale: 0.006
+  theta_MC_100:
+    drop: true
+    latex: 100\theta_\mathrm{MC}
+    prior:
+      max: 10.0
+      min: 0.5
+    proposal: 0.0002
+    ref:
+      dist: norm
+      loc: 1.04109
+      scale: 0.0004
+    renames: theta
+  w:
+    latex: w_{0}
+    prior:
+      max: 1.0
+      min: -3.0
+    proposal: 0.02
+    ref:
+      dist: norm
+      loc: -1.0
+      scale: 0.02
+  wa:
+    latex: w_{a}
+    prior:
+      max: 2.0
+      min: -3.0
+    proposal: 0.05
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.05
+  zdrag:
+    latex: z_\mathrm{d}
+  zrei:
+    latex: z_\mathrm{reio}
+sampler:
+  mcmc:
+    Rminus1_cl_stop: 0.2
+    Rminus1_stop: 0.005
+    covmat: null
+    drag: true
+    learn_proposal: true
+    max_tries: 1000000
+    oversample_power: 0.4
+    proposal_scale: 1.9
+    seed: null
+    temperature: 1
+output: chain_U31_18
+packages_path: /Users/drubin/cobaya_packages
