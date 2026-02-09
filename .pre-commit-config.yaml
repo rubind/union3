@@ -1,0 +1,15 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=50000"]
+      - id: check-toml
+      - id: check-json
+      - id: check-symlinks
+      - id: debug-statements
+      - id: detect-private-key
+      - id: check-yaml
+        args:
+          - --unsafe
+

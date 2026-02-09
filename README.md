@@ -1,3 +1,47 @@
+# UNITY
+
+A package for performing supernova cosmology using Bayesian Hierarchical Models
+
+## Installation
+
+
+For convenience, many of the top-level administrative functions are collected into a Makefile. To install this repository, simply run `make install`. 
+
+Please note that Stan 3 does not make it super easy to install on anything other than Linux. I've enabled the no-binary flag 
+on the pystan dependency in the pyproject.toml file to try and force a rebuild, but I'm not sure if it will work.
+
+Please see [the Apple specific instructions](https://pystan.readthedocs.io/en/latest/faq.html#how-can-i-run-pystan-on-macos-with-apple-silicon-chips-apple-m1-m2-etc) if it fails.
+
+Alternatively, there is a way to build an image of the repository which may be easier to run. Simply `make image` and hopefully an image will be built and then there's an example of running it in the Makefile, accessible via `make run_image`.
+
+
+## Running Unity
+
+To kick off a run with the default configuration, try `make run`, which is just a shortcut for `uv run union3`. 
+
+You can customise what runs in a few ways.
+
+1. If you have a config file with overrides in `src/union3/configs`, you can pass in the filename, like `uv run union3 base=union3.0.yml`
+2. If you want temporary overrides, you can pass them in, like `uv run union3 --filters.max_redshift 0.3` (see `config.py` for all the options)
+3. You can also configure what's run via environment variables, which is especially useful when running via an image.
+
+```bash
+export FILTERS__MAX_REDSHIFT=0.3
+uv run union3
+```
+
+Finally, the default log level is probably `INFO`. If you want to see more detail, you can control loguru's level with the `LOGURU_LEVEL` env var, so you could run `export LOGURU_LEVEL=DEBUG` to see more logs.
+
+
+
+
+
+
+*****
+
+# OLD README BELOW
+
+
 # union3
 Union3/UNITY1.5 repo
 

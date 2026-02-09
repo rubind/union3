@@ -1,0 +1,49 @@
+[project]
+name = "unity"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "David Rubin", email = "drubin@hawaii.edu" },
+    { name = "Samuel Hinton", email = "samuelreay@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "astropy>=6.0.1",
+    "chainconsumer>=1.2.5",
+    "cmdstanpy>=1.3.0",
+    "fastparquet>=2024.11.0",
+    "loguru>=0.7.3",
+    "matplotlib>=3.9.4",
+    "numpy>=1.26.4",
+    "pandas>=2.3.2",
+    "polars>=1.34.0",
+    "pyarrow>=22.0.0",
+    "pydantic-settings>=2.11.0",
+    "pyyaml>=6.0.3",
+    "rich>=14.2.0",
+    "scipy>=1.13.1",
+]
+
+[project.scripts]
+unity = "unity.main:fit_cosmology"
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+no-binary-package = ["pystan"]
+
+[tool.uv_build]
+package-data = { "unity" = ["data/resources/**/*"]}
+
+[tool.ruff]
+line-length = 120
+include = ["pyproject.toml", "src/**/*.py"]
+exclude = ["scripts", "paramfiles", "simulated","other_cosmology","DES_testing"]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.0",
+]
