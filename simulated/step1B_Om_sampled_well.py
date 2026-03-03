@@ -33,7 +33,9 @@ def check_calibs(logfl, leave_running_jobs_alone, threshold):
 def check_sampling(logfl):
     # distutils.errors.DistutilsExecError: command '/usr/bin/gcc' failed with exit code 1
     errfls = glob.glob(logfl.replace("log.txt", "*.err"))
-
+    if len(errfls) > 1:
+        print("Weird! More than one errfl! Not Checking!")
+        return 1
     
     for errfl in errfls:
         print("Checking", errfl)

@@ -11,6 +11,6 @@ source ~/.bash_profile
 source activate cobaya_w0wa
 
 cd /home/drubin/union3/cobaya
-cobaya-run ACT_just_CMB.input.yaml -p ~/cobaya_packages -o chain_ACT_just_CMB
+cobaya-run ACT_just_CMB.input.yaml -p ~/cobaya_packages -o chain_ACT_just_CMB --resume
 
 

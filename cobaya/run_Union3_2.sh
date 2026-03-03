@@ -11,5 +11,5 @@ source ~/.bash_profile
 source activate cobaya_w0wa
 
 cd /home/drubin/union3/cobaya
-cobaya-run cobaya_input_U3_input_generator.yaml -p ~/cobaya_packages -o chains_desi_dr2_Union3_w0wa_input_generator
+cobaya-run cobaya_input_U3_input_generator.yaml -p ~/cobaya_packages -o chains_desi_dr2_Union3_w0wa_input_generator --resume
 

@@ -9,6 +9,8 @@
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
+echo "Are there any old .err or .out files to remove?"
+
 for i in {1..72}
 do
     cd /home/drubin/koa_scratch/sim_data_simplex/
