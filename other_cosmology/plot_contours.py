@@ -392,6 +392,7 @@ for fl in sys.argv[1:]:
         
     if all_grids["model"] == "flatLCDM":
         some_commands += new_command(cmd_name = "\\flatLCDMOmSNe", vals = tuple(all_grids["SNe_minos"]["Om"]), fmt = "%.3f")
+        some_commands += new_command(cmd_name = "\\flatLCDMOmSNe", vals = tuple(all_grids["SNe_minos"]["Om"]), fmt = "%.5f")
 
 
 

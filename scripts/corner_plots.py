@@ -32,18 +32,23 @@ def get_label(key):
                 "MB_slow:0": "$\mathcal{M}_B$ slow",
                 "MB_fast_minus_slow": "$\mathcal{M}_B$ fast - slow",
                 "alpha": "$\\alpha$",
+                "alpha_fast": "$\\alpha^{\mathrm{fast}}$",
+                "alpha_slow": "$\\alpha^{\mathrm{slow}}$",
                 "beta_B": "$\\beta_B$",
                 "beta_R": "$\\beta_R$",
-                "delta_beta_R": "$\Delta \\beta_R(z=0) \equiv \\beta_{RH}(z=0) - \\beta_{RL}(z=0)$",
+                "delta_beta_R": "$\Delta \\beta_R(z=0) \equiv$\n$\\beta_{R}^{\mathrm{high}}(z=0) - \\beta_{R}^{\mathrm{low}}(z=0)$",
                 "Om": "$\Omega_m$",
-                "mean_sigma_int": "$<\sigma^{\mathrm{unexpl.}}>$",
+                "mean_sigma_int": "$<\sigma^{\mathrm{unexplained}}>$",
+                "mean_sigma_int_slow": "$<\sigma^{\mathrm{unexplained,\ slow}}>$",
                 "outl_frac": "$f^{\mathrm{outl}}$",
                 "delta_0": "$\delta(z=0)$",
+                "step_mass": "Low/High Mass\nTransition",
+                "sigma_int_fast": "$\sigma^{\mathrm{unexplained,\ fast}}$",
                 "outl_mBx1c_uncertainties_mB": "$\sigma^{\mathrm{outl}}_{m_B}$",
                 "outl_mBx1c_uncertainties_x1": "$\sigma^{\mathrm{outl}}_{x_1}$",
                 "outl_mBx1c_uncertainties_cB": "$\sigma^{\mathrm{outl}}_{c_B}$",
                 "outl_mBx1c_uncertainties_cR_unit": "$\sigma^{\mathrm{outl}}_{c_R}/\\tau^c$",
-                "delta_h": "$\delta(z=\infty)/\delta(z=0)$\n\Delta \\beta_R(z=\infty)/\Delta \\beta_R(z=0)"}[key]
+                "delta_h": "$\delta(z=\infty)/\delta(z=0)$ or\n$\Delta \\beta_R(z=\infty)/\Delta \\beta_R(z=0)$"}[key]
     except:
         pass
 
@@ -118,7 +123,7 @@ def make_plot(keys, pltname):
     plt.close()
 
 def make_latex_table(fit_params):
-    params = ["alpha", "alpha_fast", "alpha_slow", "delta_alpha", "beta_B", "beta_R", "delta_beta_R", "beta_R_high", "beta_R_low", "MB_slow", "MB_fast_minus_slow"] + ["step_mass", "mass_width"] + ["delta_0", "delta_h"] + ["R_x1_fast", "R_x1_slow", "x1_star_fast", "x1_star_slow"] + ["R_c_fast", "R_c_slow", "c_star_fast", "c_star_slow"] + ["outl_frac", "sigma_int_fast", "mean_sigma_int", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"]
+    params = ["alpha", "alpha_fast", "alpha_slow", "delta_alpha", "beta_B", "beta_R", "delta_beta_R", "beta_R_high", "beta_R_low", "MB_slow", "MB_fast_minus_slow"] + ["step_mass", "mass_width"] + ["delta_0", "delta_h"] + ["R_x1_fast", "R_x1_slow", "x1_star_fast", "x1_star_slow"] + ["R_c_fast", "R_c_slow", "c_star_fast", "c_star_slow"] + ["outl_frac", "sigma_int_fast", "mean_sigma_int", "mean_sigma_int_slow", "mBx1c_int_variance[1]", "mBx1c_int_variance[2]", "mBx1c_int_variance[3]"]
 
     f = open("fit_params.tex", 'w')
     
@@ -186,8 +191,13 @@ for pfl in pfls:
         fit_params["beta_R"] = 0.5*(fit_params["beta_R_slow"] + fit_params["beta_R_fast"])
         fit_params["delta_beta_R"] = fit_params["beta_R_slow"] - fit_params["beta_R_fast"]
 
+
+    if "sigma_int_fast" in fit_params:
+        mean_sigma_int = "mean_sigma_int_slow"
+    else:
+        mean_sigma_int = "mean_sigma_int"
         
-    fit_params["mean_sigma_int"] = np.mean(fit_params["sigma_int"], axis = 1)
+    fit_params[mean_sigma_int] = np.mean(fit_params["sigma_int"], axis = 1)
     
     make_latex_table(fit_params)
 
@@ -197,7 +207,8 @@ for pfl in pfls:
     if "H0" in fit_params:
         if np.std(fit_params["H0"]) < 6:
             has_H0 = 1
-        
+
+        fit_params["H0_blind"] = (fit_params["H0"] - np.median(fit_params["H0"]))*np.random.choice([-1, 1])
 
 
 if "frac_x1_slow" in fit_params:
@@ -212,9 +223,13 @@ if "frac_x1_slow" in fit_params:
 
 fit_params["lp__1000"] = fit_params["lp__"]/1000.
 
+H0_key = "H0_blind"
+
+
 if plt_choice == 0:
     
-    make_plot(["H0"]*has_H0 + ["Om", "alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R", "delta_beta_R", "MB_slow:0", "MB_fast_minus_slow"] + ["step_mass", "mass_width"] + ["delta_0", "delta_h"] + ["lp__1000"]*0, "standardization_coeffs.pdf")
+    make_plot([H0_key]*has_H0 + ["Om", "alpha", "alpha_fast", "alpha_slow", "beta_B", "beta_R", "delta_beta_R", "MB_slow:0", "MB_fast_minus_slow"] + ["step_mass", "mass_width"] + ["delta_0", "delta_h"] + ["lp__1000"]*0, "standardization_coeffs.pdf")
+    
 elif plt_choice == 1:
     try:
         fit_params["outl_mBx1c_uncertainties_mB"]
@@ -222,9 +237,9 @@ elif plt_choice == 1:
     except:
         indiv_labels = 0
 
-    make_plot(["H0"]*has_H0 + ["Om", "mean_sigma_int"] + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac"] + (indiv_labels == 0)*["outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"] + indiv_labels*["outl_mBx1c_uncertainties_mB", "outl_mBx1c_uncertainties_x1", "outl_mBx1c_uncertainties_cB", "outl_mBx1c_uncertainties_cR_unit"], "uncertainty_parameters.pdf")
+    make_plot([H0_key]*has_H0 + ["Om", "mean_sigma_int", "mean_sigma_int_slow"] + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2", "outl_frac"] + (indiv_labels == 0)*["outl_mBx1c_uncertainties:0", "outl_mBx1c_uncertainties:1", "outl_mBx1c_uncertainties:2", "outl_mBx1c_uncertainties:3"] + indiv_labels*["outl_mBx1c_uncertainties_mB", "outl_mBx1c_uncertainties_x1", "outl_mBx1c_uncertainties_cB", "outl_mBx1c_uncertainties_cR_unit"], "uncertainty_parameters.pdf")
 elif plt_choice == 2:
-    make_plot(["H0"]*has_H0 + ["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int", "sigma_int_fast"] + ["delta_0"]*0 + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")
+    make_plot([H0_key]*has_H0 + ["Om", "alpha", "beta_B", "beta_R", "delta_beta_R", "mean_sigma_int", "mean_sigma_int_slow", "sigma_int_fast"] + ["delta_0"]*0 + ["sigma_int_calibrator"]*has_H0 + ["mBx1c_int_variance:0", "mBx1c_int_variance:1", "mBx1c_int_variance:2"], "standardization_unexplained.pdf")
 elif plt_choice == 3:
     find_large_coeff()
     

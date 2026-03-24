@@ -12,6 +12,7 @@ import tqdm
 
 
 prefix = sys.argv[1]
+cut_fraction = float(sys.argv[2])
 
 
 [param_names] = readcol(prefix + ".paramnames", 'a')
@@ -20,6 +21,7 @@ all_samps = np.zeros([len(param_names) + 2, 0], dtype=np.float64)
 
 for fl in glob.glob(prefix + "_?.txt"):
     these_samps = np.loadtxt(fl).T
+    print("these_samps", these_samps.shape)
     all_samps = np.concatenate((all_samps, these_samps), axis = 1)
 
 print("all_samps", all_samps.shape)

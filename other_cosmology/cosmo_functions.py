@@ -19,7 +19,8 @@ def get_colors(key):
                 (250/255., 180/255., 110/255.))
 
     if key == "blueorange":
-        return [(111/255., 0., 255./255.)]*3
+        # return [(111/255., 0., 255./255.)]*3 # Too similar to blue, used in Union3
+        return [(221/255., 0., 255./255.)]*3 # Too similar to blue, used in Union3
     if key == "bluegreen":
         return [(0., 65/255., 201/255.)]*3
     if key == "greenorange":

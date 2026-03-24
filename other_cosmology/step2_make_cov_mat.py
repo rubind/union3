@@ -5,6 +5,21 @@ import tqdm
 import cosmo_functions
 import sys
 
+# Original code had omegam* and H0*. I'm not sure why!
+
+# omegam = "omegam*"
+# H0 = "H0*"
+# ombh2 = "omegabh2"
+# rdrag = "rdrag*"
+# theta = "theta"
+# omegamh2 = "omegamh2*"
+
+omegam = "omegam"
+H0 = "H0"
+ombh2 = "ombh2"
+rdrag = "rdrag"
+theta = "theta_MC_100"
+omegamh2 = "omegamh2"
 
 samps = ascii.read(sys.argv[1])
 
@@ -23,37 +38,46 @@ R_theta_Obhh_smallk = []
 all_samps_for_comparison = {1: [], 2: [], 5: [], 7: []}
 
 
+
 for i in tqdm.trange(1, len(samps)):
     if columns.count("omegak"):
-        this_cosmo = dict(O_m = samps["omegam*"][i], h = samps["H0*"][i]/100., O_bhh = samps["omegabh2"][i], model = "LCDM", O_k = samps["omegak"][i])
+        this_cosmo = dict(O_m = samps[omegam][i], h = samps[H0][i]/100., O_bhh = samps[ombh2][i], model = "LCDM", O_k = samps["omegak"][i])
         this_O_k = samps["omegak"][i]
         this_w = np.random.normal()
     elif columns.count("w"):
-        this_cosmo = dict(O_m = samps["omegam*"][i], h = samps["H0*"][i]/100., O_bhh = samps["omegabh2"][i], model = "flatwCDM", O_k = 0, w = samps["w"][i])
+        this_cosmo = dict(O_m = samps[omegam][i], h = samps[H0][i]/100., O_bhh = samps[ombh2][i], model = "flatwCDM", O_k = 0, w = samps["w"][i])
         this_O_k = np.random.normal()
         this_w = samps["w"][i]
+    else:
+        this_cosmo = dict(O_m = samps[omegam][i], h = samps[H0][i]/100., O_bhh = samps[ombh2][i], model = "flatwCDM", O_k = 0, w = -1.)
+        this_O_k = np.random.normal()
+        this_w = np.random.normal()
 
-    z_star_mine = cosmo_functions.getzstar(O_m = samps["omegam*"][i], hh = (samps["H0*"][i]/100.)**2., O_bhh = samps["omegabh2"][i])
+
+    z_star_mine = cosmo_functions.getzstar(O_m = samps[omegam][i], hh = (samps[H0][i]/100.)**2., O_bhh = samps[ombh2][i])
     r_star_mine = cosmo_functions.get_sound_horizon(cosmo = this_cosmo, CMB_not_BAO = 1)
-    r_star_mine *= cosmo_functions.CosConst.c100_Mpc / (samps["H0*"][i]/100.)
+    r_star_mine *= cosmo_functions.CosConst.c100_Mpc / (samps[H0][i]/100.)
 
     r_drag_mine = cosmo_functions.get_sound_horizon(cosmo = this_cosmo, CMB_not_BAO = 0)
-    r_drag_mine *= cosmo_functions.CosConst.c100_Mpc / (samps["H0*"][i]/100.)
+    r_drag_mine *= cosmo_functions.CosConst.c100_Mpc / (samps[H0][i]/100.)
 
     theta_mine = 100 * r_star_mine/ cosmo_functions.highz_r(cosmo = this_cosmo, zmin = 0., zmax = z_star_mine)
-    theta_mine /= cosmo_functions.CosConst.c100_Mpc / (samps["H0*"][i]/100.)
+    theta_mine /= cosmo_functions.CosConst.c100_Mpc / (samps[H0][i]/100.)
     
-    r_drag_samp = samps["rdrag*"][i]
-    
-    z_star_samp = samps["zstar*"][i]
-    r_star_samp = samps["rstar*"][i]
+    r_drag_samp = samps[rdrag][i]
 
+    try:
+        z_star_samp = samps["zstar*"][i]
+        r_star_samp = samps["rstar*"][i]
+    except:
+        z_star_samp = np.random.random()
+        r_star_samp = np.random.random()
 
 
     all_samps_for_comparison[1].append(np.log(z_star_samp/z_star_mine))
     all_samps_for_comparison[2].append(np.log(r_star_samp/r_star_mine))
     all_samps_for_comparison[5].append(np.log(r_drag_samp/r_drag_mine))
-    all_samps_for_comparison[7].append(np.log(samps["theta"][i]/theta_mine))
+    all_samps_for_comparison[7].append(np.log(samps[theta][i]/theta_mine))
     
     
     
@@ -74,18 +98,18 @@ for i in tqdm.trange(1, len(samps)):
 
         plt.subplot(3,3,3)
         if columns.count("omegak"):
-            plt.plot(samps["omegam*"][i], samps["omegak"][i], '.', color = 'b')
+            plt.plot(samps[omegam][i], samps["omegak"][i], '.', color = 'b')
             plt.xlabel("omegam")
             plt.ylabel("omegak")
-        else:
-            plt.plot(samps["omegam*"][i], samps["w"][i], '.', color = 'b')
+        elif columns.count("w"):
+            plt.plot(samps[omegam][i], samps["w"][i], '.', color = 'b')
             plt.xlabel("omegam")
             plt.ylabel("w")
 
         plt.subplot(3,3,4)
-        plt.plot(z_star_samp, samps["omegabh2"][i], '.', color = 'b')
+        plt.plot(z_star_samp, samps[ombh2][i], '.', color = 'b')
         plt.xlabel("z_star_samp")
-        plt.ylabel("omegabh2")
+        plt.ylabel(ombh2)
 
         plt.subplot(3,3,5)
         pltvals = np.log(r_drag_samp/r_drag_mine)
@@ -95,21 +119,21 @@ for i in tqdm.trange(1, len(samps)):
         plt.axhline(0)
 
         plt.subplot(3,3,6)
-        plt.plot(samps["theta"][i], np.log(samps["theta"][i]/samps["thetastar*"][i]), '.', color = 'b')
-        plt.xlabel("theta")
+        plt.plot(samps[theta][i], np.log(samps[theta][i]/samps[theta][i]), '.', color = 'b')
+        plt.xlabel(theta)
         plt.ylabel("log(theta/thetastar)")
         plt.axhline(0)
 
         plt.subplot(3,3,7)
-        pltvals = np.log(samps["theta"][i]/theta_mine)
-        plt.plot(samps["theta"][i], pltvals, '.', color = 'b')
-        plt.xlabel("theta")
+        pltvals = np.log(samps[theta][i]/theta_mine)
+        plt.plot(samps[theta][i], pltvals, '.', color = 'b')
+        plt.xlabel(theta)
         plt.ylabel("log(theta/theta_mine)")
         plt.axhline(0)
 
     R_mine = cosmo_functions.get_R(this_cosmo)
     
-    R_theta_Obhh.append([R_mine, theta_mine, samps["omegabh2"][i], samps["omegamh2*"][i], r_star_mine, this_O_k, this_w])
+    R_theta_Obhh.append([R_mine, theta_mine, samps[ombh2][i], samps[omegamh2][i], r_star_mine, this_O_k, this_w])
     if np.abs(this_O_k) < 0.01:
         R_theta_Obhh_smallk.append(R_theta_Obhh[-1])
 

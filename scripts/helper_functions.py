@@ -498,7 +498,10 @@ def write_latent_variables(the_data, stan_data, fit_params):
 
     for key in fit_params:
         if len(fit_params[key].shape) == 1:
-            lines = ("# %s %f %f\n" % (key, np.median(fit_params[key]), np.std(fit_params[key], ddof=1))) + lines
+            lines = ("# %s %f ^ +%f _ -%f %f\n" % (key, np.median(fit_params[key]),
+                                                   scoreatpercentile(fit_params[key], 84.1345) - np.median(fit_params[key]),
+                                                   np.median(fit_params[key]) - scoreatpercentile(fit_params[key], 15.8655),
+                                                   np.std(fit_params[key], ddof=1))) + lines
     f = open("latent_table.txt", 'w')
     f.write(lines)
     f.close()
