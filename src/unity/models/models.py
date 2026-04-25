@@ -2,7 +2,7 @@ from pathlib import Path
 import polars as pl
 import numpy as np
 from unity import Config, Data, logger, CosmologyModel
-
+from astropy.cosmology import FlatLambdaCDM, w0waCDM
 
 class Model:
     def initialise(self, data: Data) -> None:
@@ -45,6 +45,12 @@ class StanModel(Model):
             CosmologyModel.OM_W0_WA: 5,
             CosmologyModel.BINNED_MU_COMOVING_INTERPOLATION: 6,
         }
+
+        blinding_mapping = {
+                'none':0,
+                'fiducial':1,
+                'stochastic':2
+                }
         self.data = {
             "cosmo_model": cosmo_model_mapping[self.config.cosmology_model],
             "n_sne": data.num_supernovae,
@@ -71,7 +77,11 @@ class StanModel(Model):
             "unsort_inds": data.redshift_simps["unsort_inds"],
             "obs_mBx1c": data.obs_mBx1c,
             "obs_mBx1c_cov": data.obs_mBx1c_cov,
-            "do_blind": int(self.config.do_blinding),
+            "blinding":blinding_mapping[self.config.blinding],
+            "really_unblind":int(self.config.really_unblind),
+            #"do_blind": int(self.config.do_blinding),
+            #"blinding": str(self.config.blinding),
+            #"really_unblind": str(self.config.really_unblind),
             "do_twoalphabeta": int(self.config.do_two_alpha_beta),
             "outl_frac_prior_lnmean": float(np.log(self.config.outlier_fraction)),
             "outl_frac_prior_lnwidth": 0.5,
@@ -96,6 +106,93 @@ class StanModel(Model):
             "dmu_const_dz": snia["dmu_const_dz"].to_numpy(),
         }
         logger.info("Stan model initialised with data for fitting.")
+
+    def blind(self, kind: str ='fiducial', MB_blind: float = -19.1, alpha_blind: float = 0.14, beta_blind: float = 3.1) -> None:
+        '''
+        TODO: User-defined path to a fiducial cosmology file. Currently hard-coded path points to David's .txt files.
+
+        TODO: kwarg setup for the cosmology model, so I don't have so many redundant if else lines. Uunfinished idea
+              is in the first four lines of the kind == stochastic block.
+
+        Perform calibrator distance and per-sample blinding.
+        '''
+
+        # Load fiducial cosmology function for fiducial blinding (a la original UNITY)
+        if kind == 'fiducial':
+            if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
+                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm_w0wa.txt',unpack=True)
+            elif self.config.cosmology_model is CosmologyModel.OM:
+                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm.txt',unpack=True)
+
+        # CubicSpline interpolate the loaded fine-grid cosmology points
+        from scipy.interpolate import CubicSpline
+        mu_blinding_fiducial = CubicSpline(zblind, mublind)
+
+        if kind == 'stochasic':
+            # Define the astropy.cosmology object corresponding to user-input model for UNITY
+            #if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
+            #    cosmo_obj = w0waCDM
+            #elif self.config.cosmology_model is CosmologyModel.OM:
+            #    cosmo_obj = FlatLambdaCDM
+
+            # Random values for parameters used in all cosmologies
+            H0_stoch = np.random.uniform(low=60, high=80)
+            Om_stoch = np.random.uniform(low=0.25, high=0.35)
+
+            # Now model specific parameter values and model disambiguation
+            if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
+                wa_stoch = np.random.uniform(low=-3, high=1)
+                Om_stoch = np.random.uniform(low=0.25, high=0.35)
+                cosmo_fiducial = w0waCDM(H0=H0_stoch, w0=w0_stoch, wa=wa_stoch, Om=Om_stoch)
+            elif self.config.cosmology_model is CosmologyModel.OM:
+                cosmo_fiducial = FlatLambdaCDM(H0=H0_stoch, Om0=Om_stoch)
+
+            # Initialize the evaluata
+            def mu_blinding_fiducial(z, cosmo_fiducial=cosmo_fiducial):
+                return 5*np.log10(cosmo_fiducial.luminosity_distance(z).to('pc').value/10)
+        
+        # Now carry out blinding on calibrator distances
+        target_distmod = mu_blinding_fiducial(self.data["redshifts"])
+        inds = np.where(self.data["distmod"] > 0)
+        med_offset = np.median(target_distmod[inds] - self.data["distmod"][inds])
+        self.data["distmod"] += med_offset
+
+        # And now the per-sample hubble flow blinding. TJH: Almost faithful replicate of DR code; I just removed the redundant computation of target_distmod in the H_resid line
+        for iter_count in range(2):
+            # Compute real observed moduli (according to whatever mB normalization Union's LC fitting is set to)
+            #print(self.data['obs_mBx1c'])
+            mB, x1, c = np.array(self.data['obs_mBx1c']).T
+            muobs = mB + alpha_blind*x1 - beta_blind*c - MB_blind
+            #muobs = self.data["obs_mBx1c"][:,0] + alpha_blind*self.data["obs_mBx1c"][:,1] - beta_blind*self.data["obs_mBx1c"][:,2] - MB_blind
+
+            # Compute the real hubble residuals relative to the fiducial cosmology
+            H_resid = muobs - target_distmod #mublindfn(self.data["redshifts"])
+
+            # Compute approximate diagonal uncertainties TJH to DR: Is this used anywhere?
+            #dmuobs = np.sqrt(0.15**2. + self.data["obs_mBx1c_cov"][:,0,0] + alpha_blind**2. * self.data["obs_mBx1c_cov"][:, 1,1] + beta_blind**2. * self.data["obs_mBx1c_cov"][:, 2,2]) # Doesn't have to be exact
+
+            for sample_ind in range(self.data["n_samples"]):
+                sel_hubble_flow = self.data['has_distmod']==0
+                inds = np.where((self.data["sample_list"] == sample_ind)*sel_hubble_flow)
+
+                if len(inds[0]) > 0:
+                    med_HR = np.median(H_resid[inds])
+
+                    inds = np.where((self.data["sample_list"] == sample_ind))
+
+                    for SN_ind in inds[0]:
+                        # TJH: Sam has mBx1c stored as a list of len=3 arrays, so can't do slicing. We are already looping so it's easy.
+                        self.data['obs_mBx1c'][SN_ind][0] -= med_HR
+
+                        # TJH: mB_list has been removed as key from the data container. Presumably because of redundancy. 
+                        # Double-check to make sure I don't let unblinded stuff slip through.
+                        #self.data["mB_list"][SN_ind] -= med_HR
+
+                    if iter_count > 0:
+                        assert abs(med_HR) < 1e-3
+
+
+
 
     def get_initial_position(self) -> dict[str, int | float | np.ndarray]:
         assert self.data and self._raw_data, "Model data not initialised. Call initialise() first."

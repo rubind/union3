@@ -162,11 +162,11 @@ def get_filtered_and_augmented_snia(
     return (
         impute_snia(all_supernova, config)
         .pipe(pick_source_of_derivatives)
+        .pipe(determine_calibrators, config)
         .pipe(filter_snia, config)
         .pipe(flag_weird_supernova)
         .pipe(add_sample_index)
         .pipe(add_supernova_index)
-        .pipe(determine_calibrators, config)
         .pipe(add_lensing_bias, config)
         .pipe(add_prob_high_mass)
         .pipe(add_photoz_errors)
@@ -542,7 +542,12 @@ def determine_calibrators(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
         .select(pl.all().name.map(lambda name: name.replace("column", "distmod_err_offdiag")))
     )
     logger.info(f"Loaded distance ladder from {dist_ladder_file}, providing {distance_ladder.height} calibrators.")
-    snia = snia.join(distance_ladder, on="name", how="left").with_columns(
+    print(distance_ladder['name'])
+    print(snia.filter(pl.col('redshift') < 0.023)['name'])
+    #print(snia[snia['redshift'] < 0.01]['name'])
+    olap_names = set(snia['original_name']).intersection(set(distance_ladder['name']))
+    print(olap_names)
+    snia = snia.join(distance_ladder, left_on="original_name", right_on="name", how="left").with_columns(
         is_calibrator=pl.col("distmod").is_not_null(),
         has_distmod=pl.when(pl.col("distmod").is_not_null()).then(1).otherwise(0),
         distmod=pl.col("distmod").fill_null(0),  # TODO: maybe we should do the awkward imputation right before stan?
@@ -757,10 +762,9 @@ def filter_snia(df: pl.DataFrame, config: Config):
         weird_sn_file = config.data_dir / config.weird_sn_file
         weird_sn = [str(x) for x in yaml.safe_load(weird_sn_file.read_text())["weird_sn_names"]]
         logger.info(f"Loaded {len(weird_sn)} weird SN names from {weird_sn_file}.")
-
     df_filtered = df.filter(
         pl.col("lcfit_passed")
-        & pl.col("z_cmb").is_between(config.filters.min_redshift, config.filters.max_redshift)
+        & ( (pl.col("has_distmod") == 1) | pl.col("z_cmb").is_between(config.filters.min_redshift, config.filters.max_redshift) )
         & pl.col("mB").is_between(0, 50)
         & pl.col("color").is_between(config.filters.min_color, config.filters.max_color)
         & pl.col("color_err").is_between(0, config.filters.max_color_uncertainty)
@@ -812,12 +816,18 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
         # cut, which is right now hardcoded to z=0.1.
         .with_columns(mass_err=(pl.col("mass_err_lower").abs() * pl.col("mass_err_upper").abs()).sqrt())
         .with_columns(
+            # TODO (TJH): This doesn't look right. PanSTARRS I think does an =0 if they classify it as 
+            # hostless. But still unsure; this is tied to that same open question I had when cleaning up
+            # the stragglers of U3.1.
             bad_mass=pl.col("mass").is_null()
             | pl.col("mass").lt(1)
             | pl.col("mass_err").is_null()
             | pl.col("mass_err").le(0)
             | pl.col("mass_err").is_infinite()
         )
+        ### TODO (TJH): Need to update to the official U31U18 protocoal for 10 for everything missing. 
+        ### NOTE: Not sure if necessary to make the change here, since David now writes the filler values 
+        ### to all lightfiles. 
         .with_columns(
             mass=pl.when(pl.col("bad_mass"))
             .then(pl.when(pl.col("z_cmb") > 0.1).then(10.0).otherwise(11.0))
