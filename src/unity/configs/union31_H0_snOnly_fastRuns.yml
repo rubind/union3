@@ -1,0 +1,6 @@
+#output_dir: 'output/H0_runs'
+cosmology_model: "om"
+filters:
+  exclude_samples: ['CNIa02', 'LSQ','LSQ+LCO', 'ESSENCE', 'SNLS', 'DES3_Deep', 'DES3_Shallow', 'Riess07', 'Tonry03', 'Knop03','Pan-STARRS', 'CfA1', 'CfA2', 'CfA3', 'CfA4']
+    #  max_redshift: 1.0
+  min_redshift: 0.01

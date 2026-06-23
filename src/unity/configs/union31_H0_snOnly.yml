@@ -1,0 +1,2 @@
+#output_dir: 'output/H0_runs'
+cosmology_model: "om"
