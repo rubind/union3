@@ -92,10 +92,14 @@ def plot_hubble_diagram_from_stanInputData(model: Model,
     # Zero to the cosmo fiducial
     distmod -= np.median(distmod)
 
-    for sample_ind in range(model.data["n_samples"]):
-        #sel_flow = (has_distmod==0).astype(int)
-        flow_inds = np.where((sample_list == sample_ind)*(has_distmod==0))
-        calib_inds = np.where(( sample_list == sample_ind)*(has_distmod==1) )
+    # Map Stan's 1-indexed sample_list back to survey names (sample_index is 0-indexed).
+    sample_names = dict(model._raw_data.samples.select(["sample_index", "survey"]).iter_rows())
+
+    for sample_index in sorted(sample_names):
+        # sample_list is 1-indexed (sample_index + 1; see StanModel.initialise), so match on +1.
+        sel = sample_list == sample_index + 1
+        flow_inds = np.where(sel & (has_distmod == 0))
+        calib_inds = np.where(sel & (has_distmod == 1))
 
         distmod_calib_i, distmod_flow_i = distmod[calib_inds], distmod[flow_inds]
         distunc_calib_i, distunc_flow_i = distunc[calib_inds], distunc[flow_inds]
@@ -112,7 +116,9 @@ def plot_hubble_diagram_from_stanInputData(model: Model,
             color=color,
         )
 
-        # Plot Calibrators
+        # Plot calibrators. Kept cosmo-referenced on purpose: their low-z peculiar-velocity
+        # scatter is a useful extra layer of blinding, so we do NOT re-reference them to
+        # their external distance modulus.
         ax.errorbar(
             zcalib_i,
             distmod_calib_i,
@@ -125,10 +131,7 @@ def plot_hubble_diagram_from_stanInputData(model: Model,
             mec='black',
         )
 
-
-        # TODO: Add a sample_ind:survey map
-        ax.scatter(zflow_i, distmod_flow_i, s=1, label=sample_ind, color=color)
-        #ax.scatter(zcalib_i, distmod_calib_i, s=100, label=sample_ind, color=color)
+        ax.scatter(zflow_i, distmod_flow_i, s=1, label=sample_names[sample_index], color=color)
 
     ax.axhline(0, color="black", linestyle="-", linewidth=1)
     ax.set_xscale("log")
