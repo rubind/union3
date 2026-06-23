@@ -132,17 +132,11 @@ class Config(FileConfig):
         default=True, description="Whether to separate x1 and color standardization by host mass."
     )
 
-    #! NOTE: Blinding not yet implemented.
     blinding: Literal['stochastic', 'fiducial', 'none'] = Field(default='stochastic',
             description="Blinding protocol. stochastic generates a new randomized cosmology upon runtime that is NEVER saved.          "
                          "stochastic WARNING: Your chains will not be unblind-able. Use this just for debugging or SN modeling checks. "
                          "fiducial will blind using a user-defined cosmology. Run this to do relative comparisons with same input data."
                          "none is for a fully unblinded run. WARNING: This will unblind ALL of fiducial runs that used same input data.")
-    #do_blinding: bool = Field(default=True, description="Whether to blind the data relative to a pre-set fiducial cosmology.")
-    #do_debug_blinding: bool = Field(default=False, 
-    #    description="NOT IMPLEMENTED: Whether to do `debug' unblinding, which generates a random cosmology just before 
-    #                                  sampling and does NOT save the fiducial cosmology used to blind. WARNING: Your 
-     #                                 chains will not be unblind-able. Use this just for debugging or pure SN modeling checks.")
     really_unblind: bool = Field(default=False, description='Double check parameter if blinding protocol was set to none.')
     
     #! Data augmentation config

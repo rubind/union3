@@ -21,7 +21,7 @@ def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
     # TODO: Check that blinding was successful. David has assertion blocks for this.
     if config.blinding != 'none':
         print(f'Blinding the cosmology according to {config.blinding} protocol.')
-        model.blind()
+        model.blind(kind=config.blinding)
     else:
         print('INITIATING FULLY UNBLINDED RUN. ARE YOU SURE? Checking the double-check parameter now...')
         if config.really_unblind:
@@ -29,7 +29,7 @@ def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
         else:
             print('Unblinding rejected. If you are sure you want to unblind, set "really_unblind" to True upon runtime.')
             print('Now blinding...')
-            model.blind()
+            model.blind(kind='fiducial')
 
     # Moved this block before sampling, because it's just a sanity check on LC fitting (and now on blinding too).
     # TODO: If a blinded run, scramble the signs and redshifts within each survey, so we can't identify individual SNe

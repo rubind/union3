@@ -107,55 +107,57 @@ class StanModel(Model):
         }
         logger.info("Stan model initialised with data for fitting.")
 
-    def blind(self, kind: str ='fiducial', MB_blind: float = -19.1, alpha_blind: float = 0.14, beta_blind: float = 3.1) -> None:
+    def blind(self, kind: str = 'fiducial', MB_blind: float = -19.1, alpha_blind: float = 0.14, beta_blind: float = 3.1) -> None:
         '''
-        TODO: User-defined path to a fiducial cosmology file. Currently hard-coded path points to David's .txt files.
-
-        TODO: kwarg setup for the cosmology model, so I don't have so many redundant if else lines. Uunfinished idea
-              is in the first four lines of the kind == stochastic block.
-
         Perform calibrator distance and per-sample blinding.
+
+        kind == 'fiducial':   blind against a fixed, known cosmology read from a precomputed
+                              (z, mu) grid file. Reproducible / unblind-able, so runs on the
+                              same data are comparable.
+        kind == 'stochastic': blind against a freshly randomized cosmology generated at runtime
+                              and NEVER saved, so the resulting chains cannot be unblinded.
+                              For debugging / SN-modeling checks only.
+
+        TODO: User-defined path to a fiducial cosmology file. Currently hard-coded path points to David's .txt files.
         '''
 
-        # Load fiducial cosmology function for fiducial blinding (a la original UNITY)
-        if kind == 'fiducial':
-            if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
-                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm_w0wa.txt',unpack=True)
-            elif self.config.cosmology_model is CosmologyModel.OM:
-                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm.txt',unpack=True)
-
-        # CubicSpline interpolate the loaded fine-grid cosmology points
         from scipy.interpolate import CubicSpline
-        mu_blinding_fiducial = CubicSpline(zblind, mublind)
 
-        if kind == 'stochasic':
-            # Define the astropy.cosmology object corresponding to user-input model for UNITY
-            #if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
-            #    cosmo_obj = w0waCDM
-            #elif self.config.cosmology_model is CosmologyModel.OM:
-            #    cosmo_obj = FlatLambdaCDM
+        if kind == 'fiducial':
+            # Load the fine-grid (z, mu) fiducial cosmology and interpolate it (a la original UNITY)
+            if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
+                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm_w0wa.txt', unpack=True)
+            elif self.config.cosmology_model is CosmologyModel.OM:
+                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm.txt', unpack=True)
+            else:
+                raise ValueError(f"Fiducial blinding not supported for cosmology model {self.config.cosmology_model}.")
+            mu_blinding_fiducial = CubicSpline(zblind, mublind)
 
-            # Random values for parameters used in all cosmologies
+        elif kind == 'stochastic':
+            # Draw a random cosmology at runtime; never saved, so chains cannot be unblinded.
             H0_stoch = np.random.uniform(low=60, high=80)
             Om_stoch = np.random.uniform(low=0.25, high=0.35)
-
-            # Now model specific parameter values and model disambiguation
             if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
+                w0_stoch = np.random.uniform(low=-1.5, high=-0.5)
                 wa_stoch = np.random.uniform(low=-3, high=1)
-                Om_stoch = np.random.uniform(low=0.25, high=0.35)
                 cosmo_fiducial = w0waCDM(H0=H0_stoch, w0=w0_stoch, wa=wa_stoch, Om=Om_stoch)
             elif self.config.cosmology_model is CosmologyModel.OM:
                 cosmo_fiducial = FlatLambdaCDM(H0=H0_stoch, Om0=Om_stoch)
+            else:
+                raise ValueError(f"Stochastic blinding not supported for cosmology model {self.config.cosmology_model}.")
 
-            # Initialize the evaluata
             def mu_blinding_fiducial(z, cosmo_fiducial=cosmo_fiducial):
-                return 5*np.log10(cosmo_fiducial.luminosity_distance(z).to('pc').value/10)
-        
-        # Now carry out blinding on calibrator distances
+                return 5 * np.log10(cosmo_fiducial.luminosity_distance(z).to('pc').value / 10)
+
+        else:
+            raise ValueError(f"Unknown blinding kind '{kind}'. Expected 'fiducial' or 'stochastic'.")
+
+        # Now carry out blinding on calibrator distances. Only the calibrators (has_distmod == 1)
+        # carry a real distmod; the rest are 0 and ignored by Stan, so we shift only those.
         target_distmod = mu_blinding_fiducial(self.data["redshifts"])
-        inds = np.where(self.data["distmod"] > 0)
-        med_offset = np.median(target_distmod[inds] - self.data["distmod"][inds])
-        self.data["distmod"] += med_offset
+        calib = self.data["has_distmod"] == 1
+        med_offset = np.median(target_distmod[calib] - self.data["distmod"][calib])
+        self.data["distmod"][calib] += med_offset
 
         # And now the per-sample hubble flow blinding. TJH: Almost faithful replicate of DR code; I just removed the redundant computation of target_distmod in the H_resid line
         for iter_count in range(2):
