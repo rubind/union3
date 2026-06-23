@@ -542,11 +542,8 @@ def determine_calibrators(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
         .select(pl.all().name.map(lambda name: name.replace("column", "distmod_err_offdiag")))
     )
     logger.info(f"Loaded distance ladder from {dist_ladder_file}, providing {distance_ladder.height} calibrators.")
-    print(distance_ladder['name'])
-    print(snia.filter(pl.col('redshift') < 0.023)['name'])
-    #print(snia[snia['redshift'] < 0.01]['name'])
     olap_names = set(snia['original_name']).intersection(set(distance_ladder['name']))
-    print(olap_names)
+    print('Found calibrators:', olap_names)
     snia = snia.join(distance_ladder, left_on="original_name", right_on="name", how="left").with_columns(
         is_calibrator=pl.col("distmod").is_not_null(),
         has_distmod=pl.when(pl.col("distmod").is_not_null()).then(1).otherwise(0),
