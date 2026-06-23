@@ -268,13 +268,20 @@ class StanModel(Model):
         )
 
         logger.info("Stan MCMC sampling complete. Extracting samples.")
-        columns = list(fit.column_names)
         if self.config.extra_single_dimension_parameters_only:
-            columns = [c for c in columns if "[" not in c]
+            # draws_pd(vars=...) accepts method vars (lp__, ...) and *base* Stan variable
+            # names, but NOT indexed columns like "MB_slow[1]". Keeping only bracket-free
+            # names leaves scalar params + diagnostics, which are all valid vars.
+            columns = [c for c in fit.column_names if "[" not in c]
             logger.info(
                 f"Saving only single-dimension parameters: {len(columns)} out of {len(fit.column_names)} total parameters."
             )
-        df = fit.draws_pd(vars=columns)
+            df = fit.draws_pd(vars=columns)
+        else:
+            # Save everything. Passing the full column_names to vars= raises
+            # "Unknown variable: <name>[i]" on indexed columns, so call draws_pd() with
+            # no vars, which returns all draws (chain__/iter__/draw__ + every column).
+            df = fit.draws_pd()
 
         logger.info(
             f"Completed MCMC fitting with {self.config.num_chains} chains, "
