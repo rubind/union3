@@ -42,7 +42,7 @@ def chi2fn(P, passdata, get_n_data_instead = False):
     elif run_settings["model"] == "LCDM" or run_settings["model"] == "flatLCDM":
         cosmo = dict(model = run_settings["model"], O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4])
 
-    elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa") or (run_settings["model"] == "flatw0waEDE") or (run_settings["model"] == "w0waEDE"):
+    elif (run_settings["model"] == "flatw0wa") or (run_settings["model"] == "w0wa") or (run_settings["model"] == "flatw0waEDE") or (run_settings["model"] == "w0waEDE") or (run_settings["model"] == "flatw0waEDEfixOm"):
         cosmo = dict(model = run_settings["model"].replace("EDE", ""), O_bhh = P[1], h = P[2], O_m = P[3], O_k = P[4], w_0 = P[5], w_a = P[6])
 
         if run_settings["model"].count("EDE") == 0:
@@ -104,6 +104,8 @@ def chi2fn(P, passdata, get_n_data_instead = False):
 
         chi2 += np.dot(resid, np.dot(Wmat, resid))
         n_data += 2
+    if run_settings["model"] == "flatw0waEDEfixOm":
+        chi2 += ((cosmo["O_m"] - 0.3)/0.001)**2.
 
     if get_n_data_instead:
         return n_data
@@ -299,7 +301,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         run_SN_only_contours = 0
         run_inverse_ladder = 1
         run_SNeCMB_and_BAOCMB = 1
-    elif (model == "flatw0wa") or (model == "flatw0waEDE"):
+    elif (model == "flatw0wa") or (model == "flatw0waEDE") or (model == "flatw0waEDEfixOm"):
         run_settings = dict(contour_xs = np.linspace(-2., 0.5, 26),
                             contour_ys = np.linspace(-4., 2., 30),
                             ministart_fn = lambda x, y : [0, 0.022, 0.7, 0.3, 0.0, x, y],
@@ -312,6 +314,13 @@ def make_contours(z_list, mu_list, mu_invcov, model):
         run_SN_only_contours = 1
         run_inverse_ladder = 1
         run_SNeCMB_and_BAOCMB = 1
+        
+        if (model == "flatw0waEDEfixOm"):
+            run_separate_contours = 0
+            run_SN_only_contours = 1
+            run_inverse_ladder = 0
+            run_SNeCMB_and_BAOCMB = 0
+        
     elif (model == "w0wa") or (model == "w0waEDE"):
         run_settings = dict(contour_xs = np.linspace(-2., 0., 21),
                             contour_ys = np.linspace(-3., 2., 25),
@@ -482,7 +491,7 @@ def make_contours(z_list, mu_list, mu_invcov, model):
     
     all_combs_to_run_grid = [[dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 0), "SNeBAOCMB"],
                              [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 1), "SNeBAOCMBH0C"],
-                             [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0TRGB = 1, include_H0Ceph = 0), "SNeBAOCMBH0T"]]
+                             [dict(include_SNe = 1, include_CMB = 1, include_BAO = 1, include_O_mh2 = 0, include_H0TRGB = 1, include_H0Ceph = 0), "SNeBAOCMBH0T"]]*(model != "flatw0waEDEfixOm")
 
     if run_separate_contours or run_SN_only_contours:
         all_combs_to_run_grid += [[dict(include_SNe = 1, include_CMB = 0, include_BAO = 0, include_O_mh2 = 0, include_H0TRGB = 0, include_H0Ceph = 0), "SNe"]]

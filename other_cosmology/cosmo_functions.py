@@ -243,7 +243,8 @@ def get_BAO_chi2(BAO_data, cosmo, verbose = False):
 
 ################################## End CMB/ BAO Functions #################################
 
-
+    
+################################## End Beyond Lambda Functions #################################
 
 def n_integrate(x_list, intfn, otherargs, pad_list = np.arange(41, dtype=np.float64)/20.):
 
@@ -304,11 +305,17 @@ def get_Hinv(z_list, cosmo):
             omega_r*(1. + z_list)**4. + cosmo["O_m"]*(1. + z_list)**3. + (1. - cosmo["O_m"] - omega_r)*(1 + z_list)**(3.*(1. + cosmo["w"]))
             )
     
-    elif cosmo["model"] == "flatw0wa" or cosmo["model"] == "w0wa":
+    elif (cosmo["model"] == "flatw0wa") or (cosmo["model"] == "w0wa") or (cosmo["model"] == "flatw0wafixOm"):
         return 1./np.sqrt(
             omega_r*(1. + z_list)**4. + cosmo["O_m"]*(1. + z_list)**3. + cosmo["O_k"]*(1. + z_list)**2.
             + (1. - cosmo["O_m"] - cosmo["O_k"] - omega_r)*np.exp(-3.0*cosmo["w_a"]*z_list/(1. + z_list))*(1. + z_list)**(3.0*(1.0 + cosmo["w_0"] + cosmo["w_a"]))
             )
+
+    elif cosmo["model"] == "vacmet":
+        msquared, zt = get_msquared_zt(Omega_m = cosmo["O_m"], Omega_star = cosmo["O_*"])
+
+        H_squared_lowz = (1. - msquared/12.)(1. + z_list)**4. + msquared/12.
+        H_squared_highz = Omega_m*(1 + z_list)**3. + msquared/3.
 
     elif cosmo["model"] == "binnedrho":
         DE_density = (z_list <= cosmo["zbins"][0])*(1. - cosmo["O_m"] - cosmo["O_k"] - omega_r)
@@ -330,7 +337,7 @@ def get_Hinv(z_list, cosmo):
             omega_r*(1. + z_list)**4. + O_M*(1. + z_list)**3. + O_k*(1. + z_list)**2. + O_x*exp(-3.0*w_a*z_list/(1. + z_list))*(1. + z_list)**(3.0*(1.0 + w_p + w_a/(1. + z_p)))
             )
     else:
-        assert 0, "Unknown model!"
+        assert 0, "Unknown model! " +  cosmo["model"]
 
 
 

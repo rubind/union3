@@ -153,7 +153,7 @@ def bin_by_color(all_processed_data, bin_par, n_bins, standard_alpha, standard_b
     for highz in [0, 1]:
         plt.subplot(1,2,1+highz)
         plt.xlim(xlim)
-        plt.xlabel(dict(x1 = "Light-Curve Shape ($x_1$)", c = "Color ($c$)")[bin_par])
+        plt.xlabel(dict(x1 = "Observed Light-Curve Shape ($x_1^{\mathrm{obs}}$)", c = "Observed Color ($c^{\mathrm{obs}}$)")[bin_par])
 
     
         
@@ -367,6 +367,8 @@ def bin_by_percentile_compute(all_processed_data,
             in_bin = ((all_processed_data[x1cname_to_bin][key_to_bin] >= bin_edges[tmp_ind])
                       * (all_processed_data[x1cname_to_bin][key_to_bin] <
                          bin_edges[tmp_ind + 1]))
+
+            subplot_info["total_in_bin"] = sum(in_bin)
             inds_in_bin = np.where(in_bin)
 
             # choose best-measured subset

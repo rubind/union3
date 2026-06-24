@@ -78,6 +78,10 @@ def make_contours(all_grids, BAO_Omh2 = 0, show_all_four = 0, show_H0s = 0, sigm
     elif all_grids["model"] == "LCDM":
         plt.figure(figsize = (5,7.5))
         plt.axes().set_aspect("equal")
+    elif all_grids["model"] == "flatw0waEDEfixOm":
+        plt.figure(figsize = (5,5))
+        DETF_FoM = get_DETF(all_grids["SNe"])
+        DETF_FoM_txt = "\nDETF FoM SNe: %.2f" % DETF_FoM
 
     else:
         assert 0
@@ -344,6 +348,7 @@ model_labels = dict(flatLCDM = "Flat $\Lambda$CDM",
                     flatw0wa = "Flat $w_0$-$w_a$, No EDE",
                     w0waEDE = "Open $w_0$-$w_a$",
                     flatw0waEDE = "Flat $w_0$-$w_a$",
+                    flatw0waEDEfixOm = "Flat $w_0$-$w_a$, $\Omega_m$ fixed",
                     LCDM = "Open $\Lambda$CDM",
                     flatwCDM = "Flat $w$CDM")
 
