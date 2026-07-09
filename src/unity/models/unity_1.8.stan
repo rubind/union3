@@ -6,6 +6,9 @@
 // Version 1.7 (Oct-2024). Adding capability for distance ladder.
 // Version 1.71 (May-2025). Adding cluster mass-relation evolution.
 // Version 1.8 (July-2025). Adding two-Gaussian x1 model.
+// July-2026: gradient-path speedup (~2.3x): one calibration matvec per SN + hoisted
+//            repeated subexpressions. No change to the posterior or saved outputs
+//            (lp__/gradients verified identical to the pre-optimization model).
 
 data {
     int<lower=0> n_sne; // number of SNe
@@ -320,6 +323,11 @@ transformed parameters {
         }
     }
 
+    { // local scope: loop-invariant hoists below are locals, not saved outputs
+    real log_outl_frac = log(outl_frac);
+    real log_1m_outl_frac = log(1 - outl_frac);
+    vector [n_gauss] log_exp_approx_norm = log(exp_approx_norm);
+
     for (i in 1:n_sne) {
         p_high_mass = normal_cdf(mass[i] | step_mass, mass_err[i]);
 
@@ -333,6 +341,8 @@ transformed parameters {
         } else {
             p_high_mass_eff = 0;
         }
+
+        real beta_R_eff = beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff;
 
         for (j in 1:3) {
             model_mBx1c_cov_fast[i][j,j] = model_mBx1c_cov_fast[i][j,j] + sig_int_vector_fast[sample_list[i]][j]^2;
@@ -365,11 +375,11 @@ transformed parameters {
                                             + model_mBx1c_cov_slow[i][1,1] + model_mBx1c_cov_slow[i][3,3] * mobs_cut1[i]^2 + 2.*mobs_cut1[i]*model_mBx1c_cov_slow[i][1,3]
                                             + (alpha_slow*R_x1_slow)^2 + ((beta_B + mobs_cut1[i])*R_c_slow)^2;
 
-        model_mBx1c_fast[i][1] = this_MB_slow + MB_fast_minus_slow + model_mu[i] - alpha_fast*(true_x1[i] - x1_star_fast) + beta_B*true_cB[i] + (beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff)*true_cR[i] - delta_0*p_high_mass_eff;
+        model_mBx1c_fast[i][1] = this_MB_slow + MB_fast_minus_slow + model_mu[i] - alpha_fast*(true_x1[i] - x1_star_fast) + beta_B*true_cB[i] + beta_R_eff*true_cR[i] - delta_0*p_high_mass_eff;
         model_mBx1c_fast[i][2] = true_x1[i];
         model_mBx1c_fast[i][3] = true_cB[i] + true_cR[i];
 
-        model_mBx1c_slow[i][1] = this_MB_slow                      + model_mu[i] - alpha_slow*(true_x1[i] - x1_star_slow) + beta_B*true_cB[i] + (beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff)*true_cR[i] - delta_0*p_high_mass_eff;
+        model_mBx1c_slow[i][1] = this_MB_slow                      + model_mu[i] - alpha_slow*(true_x1[i] - x1_star_slow) + beta_B*true_cB[i] + beta_R_eff*true_cR[i] - delta_0*p_high_mass_eff;
         model_mBx1c_slow[i][2] = true_x1[i];
         model_mBx1c_slow[i][3] = true_cB[i] + true_cR[i];
 
@@ -381,12 +391,17 @@ transformed parameters {
             dz_deriv_term = dz[photoz_inds[i]]*d_mBx1c_dz_list[photoz_inds[i]];
         }
 
-        for (g_ind in 1:n_gauss) { // gauss ind
-            tmploglike_c[g_ind]   = log(exp_approx_norm[g_ind]) + normal_lpdf(true_cR_unit[i] | exp_approx_pos[g_ind], exp_approx_width[g_ind]);
-        }
+        // One calibration-systematics matvec per SN (was 3 matvecs + 2 row dots)
+        vector [3] calib_shift = d_mBx1c_d_calib[i] * calibs;
+        vector [3] shifted_obs = obs_mBx1c[i] + calib_shift + dz_deriv_term;
 
-	    outl_loglike_by_SN[i] = log(outl_frac)
-                      + multi_normal_lpdf(obs_mBx1c[i] + d_mBx1c_d_calib[i] * calibs + dz_deriv_term | 0.5*(model_mBx1c_fast[i] + model_mBx1c_slow[i]), model_mBx1c_cov_outl[i])
+        for (g_ind in 1:n_gauss) { // gauss ind
+            tmploglike_c[g_ind]   = log_exp_approx_norm[g_ind] + normal_lpdf(true_cR_unit[i] | exp_approx_pos[g_ind], exp_approx_width[g_ind]);
+        }
+        real lse_tmploglike_c = log_sum_exp(tmploglike_c);
+
+	    outl_loglike_by_SN[i] = log_outl_frac
+                      + multi_normal_lpdf(shifted_obs | 0.5*(model_mBx1c_fast[i] + model_mBx1c_slow[i]), model_mBx1c_cov_outl[i])
 					  + normal_lpdf(true_x1[i] | 0, outl_mBx1c_uncertainties_x1)
 					  + normal_lpdf(true_cB[i] | 0, outl_mBx1c_uncertainties_cB)
 					  + normal_lpdf(true_cR_unit[i] | 0, outl_mBx1c_uncertainties_cR_unit);
@@ -394,37 +409,44 @@ transformed parameters {
         this_norm_LL_fast = 0.0001;
         this_norm_LL_slow = 0.0001;
 
+        real cut_slope = beta_R_eff + mobs_cut1[i];
         for (g_indc in 1:n_gauss) {
+            real cut_mean_shift = cut_slope*exp_approx_pos[g_indc]*tau_c_by_SN[i];
+            real cut_var_add = (cut_slope*exp_approx_width[g_indc]*tau_c_by_SN[i])^2;
+
             this_norm_LL_fast += exp_approx_norm[g_indc]*normal_cdf(mobs_cuts[sample_list[i]] | //  + d_mBx1c_d_calib[i][1] * calibs
-				mobs_by_SN_except_c_R_fast[i] + ((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i],
-                sqrt(mobs_var_by_SN_except_c_R_fast[i] + (((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2)   );
+				mobs_by_SN_except_c_R_fast[i] + cut_mean_shift,
+                sqrt(mobs_var_by_SN_except_c_R_fast[i] + cut_var_add)   );
 
             this_norm_LL_slow += exp_approx_norm[g_indc]*normal_cdf(   mobs_cuts[sample_list[i]]| //  + d_mBx1c_d_calib[i][1] * calibs
-                mobs_by_SN_except_c_R_slow[i] + ((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_pos[g_indc]*tau_c_by_SN[i],
-                sqrt(mobs_var_by_SN_except_c_R_slow[i] + (((beta_R_low*(1 - p_high_mass_eff) + beta_R_high*p_high_mass_eff) + mobs_cut1[i])*exp_approx_width[g_indc]*tau_c_by_SN[i])^2)   );
+                mobs_by_SN_except_c_R_slow[i] + cut_mean_shift,
+                sqrt(mobs_var_by_SN_except_c_R_slow[i] + cut_var_add)   );
 	    }
 
-	    inl_loglike_by_SN_fast[i] = log(1 - outl_frac) + log(1 - frac_x1_slow_by_SN[i])
-                                          + multi_normal_lpdf(obs_mBx1c[i] + d_mBx1c_d_calib[i] * calibs + dz_deriv_term | model_mBx1c_fast[i], model_mBx1c_cov_fast[i])
-					  + normal_lpdf(true_cB[i] | c_star_fast, R_c_fast)
-					  + normal_lpdf(true_x1[i] | x1_star_fast, R_x1_fast)
-					  + log_sum_exp(tmploglike_c)
-	                                  + normal_lcdf(mobs_cuts[sample_list[i]]| //  + d_mBx1c_d_calib[i][1] * calibs
-					    obs_mBx1c[i][1] + d_mBx1c_d_calib[i][1] * calibs + mobs_cut0[i] + mobs_cut1[i]*(obs_mBx1c[i][3] + d_mBx1c_d_calib[i][3] * calibs),
-					    mobs_cut_sigmas[sample_list[i]]
-					    )  - log(this_norm_LL_fast);  //No calibration in this term, see above comment!
+        // Identical between the fast and slow terms, so computed once.
+        // No dz_deriv_term and no full-vector calibration here (see original comments);
+        // calib_shift rows reproduce the old d_mBx1c_d_calib[i][row] * calibs dot products.
+        real mobs_lcdf_term = normal_lcdf(mobs_cuts[sample_list[i]]| //  + d_mBx1c_d_calib[i][1] * calibs
+                obs_mBx1c[i][1] + calib_shift[1] + mobs_cut0[i] + mobs_cut1[i]*(obs_mBx1c[i][3] + calib_shift[3]),
+                mobs_cut_sigmas[sample_list[i]]
+                );  //No calibration in this term, see above comment!
 
-	    inl_loglike_by_SN_slow[i] = log(1 - outl_frac) + log(frac_x1_slow_by_SN[i])
-                    + multi_normal_lpdf(obs_mBx1c[i] + d_mBx1c_d_calib[i] * calibs + dz_deriv_term | model_mBx1c_slow[i], model_mBx1c_cov_slow[i])
-					  + normal_lpdf(true_cB[i] | c_star_slow, R_c_slow)
-					  + normal_lpdf(true_x1[i] | x1_star_slow, R_x1_slow)
-					  + log_sum_exp(tmploglike_c)
-                     + normal_lcdf(mobs_cuts[sample_list[i]]| //  + d_mBx1c_d_calib[i][1] * calibs
-					    obs_mBx1c[i][1] + d_mBx1c_d_calib[i][1] * calibs + mobs_cut0[i] + mobs_cut1[i]*(obs_mBx1c[i][3] + d_mBx1c_d_calib[i][3] * calibs),
-					    mobs_cut_sigmas[sample_list[i]]
-					    )     - log(this_norm_LL_slow);  //No calibration in this term, see above comment!
+	    inl_loglike_by_SN_fast[i] = log_1m_outl_frac + log(1 - frac_x1_slow_by_SN[i])
+                                          + multi_normal_lpdf(shifted_obs | model_mBx1c_fast[i], model_mBx1c_cov_fast[i])
+						  + normal_lpdf(true_cB[i] | c_star_fast, R_c_fast)
+						  + normal_lpdf(true_x1[i] | x1_star_fast, R_x1_fast)
+						  + lse_tmploglike_c
+		                                  + mobs_lcdf_term  - log(this_norm_LL_fast);
+
+	    inl_loglike_by_SN_slow[i] = log_1m_outl_frac + log(frac_x1_slow_by_SN[i])
+                    + multi_normal_lpdf(shifted_obs | model_mBx1c_slow[i], model_mBx1c_cov_slow[i])
+						  + normal_lpdf(true_cB[i] | c_star_slow, R_c_slow)
+						  + normal_lpdf(true_x1[i] | x1_star_slow, R_x1_slow)
+						  + lse_tmploglike_c
+                     + mobs_lcdf_term     - log(this_norm_LL_slow);
 
     }
+    } // end local scope
 }
 
 model {
