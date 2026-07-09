@@ -32,13 +32,6 @@ class FilterConfig(BaseSettings):
         default=None, description="List of sample names to exclude. If None, exclude none."
     )
 
-    include_samples: list[str] | None = Field(
-        default=None, description="List of sample names to include. If None, include all."
-    )
-    exclude_samples: list[str] | None = Field(
-        default=None, description="List of sample names to exclude. If None, exclude none."
-    )
-
     @model_validator(mode="after")
     def validate_model(self) -> Self:
         assert (
