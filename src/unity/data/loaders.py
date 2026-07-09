@@ -533,8 +533,10 @@ def determine_calibrators(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
     if config.distance_ladder_file is None:
         return snia.with_columns(is_calibrator=pl.lit(False), distmod=pl.lit(0), has_distmod=pl.lit(0))
 
-    # The calibrators are determined from the distance ladder file, which has N columns, the first two being
-    # the name and the distmod itself. The rest of the columns are the diag variance and then all the offdiag terms
+    # The calibrators are determined from the distance ladder file. Columns are: name, distmod, then the
+    # per-calibrator INDEPENDENT diagonal distance-modulus uncertainty (column 3), followed by the SHARED
+    # eigenvector components of the ladder covariance. See the encoding note below determine_calibrators'
+    # join for why the diagonal must stay independent.
     dist_ladder_file = config.data_dir / config.distance_ladder_file
     distance_ladder = (
         pl.read_csv(dist_ladder_file, has_header=False)
@@ -551,13 +553,44 @@ def determine_calibrators(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
     )
 
     distmod_err_cols = [col for col in snia.columns if col.startswith("distmod_err")]
-    renamed = {
+
+    # The ladder columns become d_mBx1c_d_calib[:, 0, k] entries, used in Stan as
+    # `d_mBx1c_d_calib[:, 0, k] * calibs[k]` with `calibs ~ N(0, 1)`. A SINGLE shared column therefore
+    # makes every calibrator move together with one latent draw.
+    #
+    # Column 3 of the file ("distmod_err") is each calibrator's INDEPENDENT diagonal distance-modulus
+    # uncertainty; the remaining columns are SHARED eigenvector components of the ladder covariance.
+    # Treating the diagonal as a shared column is wrong: its loadings are all positive, so it injects a
+    # coherent ~0.09 mag calibrator-distance shift that is degenerate with H0, inflating the H0 uncertainty
+    # by ~2.7 km/s/Mpc and forcing sigma_int_calibrator up to absorb the lost independent scatter. The
+    # original UNITY (read_and_sample_H0.py, David Rubin's `range(len-2)` / `[dl_ind + 2]` loop) loads only
+    # the eigenvectors into shared modes and gives the diagonal a per-calibrator-unique key
+    # ("DISTMOD_<name>"), i.e. independent diag(sigma_i^2) noise. We replicate that here. (An off-by-one in
+    # that script, `range(len-1)` / `[dl_ind + 1]`, mixed the diagonal into the shared block and is the
+    # regression this fixes.)
+    diag_col = "distmod_err"
+    offdiag_cols = [c for c in distmod_err_cols if c != diag_col]
+
+    # Shared eigenvector systematics: one column each, common to all calibrators.
+    shared = {
         f"uncertainty_mB_distmod_{k.removeprefix('distmod_err_')}": pl.when(pl.col("is_calibrator"))
         .then(pl.col(k))
-        .otherwise(pl.lit(0))
-        for k in distmod_err_cols
+        .otherwise(pl.lit(0.0))
+        for k in offdiag_cols
     }
-    snia = snia.with_columns(**renamed)
+
+    # Independent per-calibrator diagonal: a private column per calibrator, non-zero only on that
+    # calibrator's own row, so condense_systematics expands it to diag(sigma_i^2) rather than a rank-1
+    # coherent mode.
+    calib_names = snia.filter(pl.col("is_calibrator")).get_column("original_name").to_list()
+    independent = {
+        f"uncertainty_mB_distmod_diag_{name}": pl.when(pl.col("original_name") == name)
+        .then(pl.col(diag_col))
+        .otherwise(pl.lit(0.0))
+        for name in calib_names
+    }
+
+    snia = snia.with_columns(**shared, **independent)
 
     return snia
 
@@ -621,7 +654,12 @@ def add_pecv_and_bulk_flow_uncertainties(snia: pl.DataFrame, config: Config) -> 
     d_mBx1c_dcalib: dict[str, dict[str, str | float]] = defaultdict(dict)
     final_pecvs: dict[str, float] = {}
     if config.include_peculiar_velocity_covariance:
-        for row in snia.filter(pl.col("z_cmb") < 0.1).iter_rows(named=True):
+        # Calibrators' distances come from the distance ladder (Cepheids), not the redshift-inferred
+        # Hubble-flow distance, so no peculiar-velocity/bulk-flow correction applies to them. The
+        # diagonal term above already enforces this (`is_calibrator` -> 0.0); read_and_sample_H0.py:392
+        # applies the same `is_calibrator == 0` guard to the bulk-flow eigenvector loop, with an
+        # explicit `assert total_bulk_quad == 0` for calibrators (line 424) confirming this is intentional.
+        for row in snia.filter((pl.col("z_cmb") < 0.1) & ~pl.col("is_calibrator")).iter_rows(named=True):
             # For each supernova, we want to find the closest point in our bulk flow redshift list
             # so that we can find the right set of (top 100) eigenvectors to use for the convariance
             ra: float = row["RA"]  # type: ignore
