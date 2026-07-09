@@ -847,8 +847,7 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
         )
         # Right now, the mass column may be missing from the source files, where
         # generally it would be sourced from the 'lightfile'. If it's not missing
-        # it could also have erronenous values. If so, we impute based upon a redshift
-        # cut, which is right now hardcoded to z=0.1.
+        # it could also have erroneous values. If so, we impute a default.
         .with_columns(mass_err=(pl.col("mass_err_lower").abs() * pl.col("mass_err_upper").abs()).sqrt())
         .with_columns(
             # TODO (TJH): This doesn't look right. PanSTARRS I think does an =0 if they classify it as 
@@ -860,13 +859,11 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
             | pl.col("mass_err").le(0)
             | pl.col("mass_err").is_infinite()
         )
-        ### TODO (TJH): Need to update to the official U31U18 protocoal for 10 for everything missing. 
-        ### NOTE: Not sure if necessary to make the change here, since David now writes the filler values 
-        ### to all lightfiles. 
+        # Official U3.1/UNITY 1.8 protocol: every missing/bad mass defaults to 10.0 dex
+        # (a previous z_cmb <= 0.1 => 11.0 dex branch here was a drift relative to the
+        # published UNITY 1.8 results).
         .with_columns(
-            mass=pl.when(pl.col("bad_mass"))
-            .then(pl.when(pl.col("z_cmb") > 0.1).then(10.0).otherwise(11.0))
-            .otherwise(pl.col("mass")),
+            mass=pl.when(pl.col("bad_mass")).then(10.0).otherwise(pl.col("mass")),
             mass_err=pl.when(pl.col("bad_mass")).then(1).otherwise(pl.col("mass_err")),
         )
         # Add in cov_mBmB from mb_err and the lensing dispersion
