@@ -162,11 +162,11 @@ def get_filtered_and_augmented_snia(
     return (
         impute_snia(all_supernova, config)
         .pipe(pick_source_of_derivatives)
+        .pipe(determine_calibrators, config)
         .pipe(filter_snia, config)
         .pipe(flag_weird_supernova)
         .pipe(add_sample_index)
         .pipe(add_supernova_index)
-        .pipe(determine_calibrators, config)
         .pipe(add_lensing_bias, config)
         .pipe(add_prob_high_mass)
         .pipe(add_photoz_errors)
@@ -533,8 +533,10 @@ def determine_calibrators(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
     if config.distance_ladder_file is None:
         return snia.with_columns(is_calibrator=pl.lit(False), distmod=pl.lit(0), has_distmod=pl.lit(0))
 
-    # The calibrators are determined from the distance ladder file, which has N columns, the first two being
-    # the name and the distmod itself. The rest of the columns are the diag variance and then all the offdiag terms
+    # The calibrators are determined from the distance ladder file. Columns are: name, distmod, then the
+    # per-calibrator INDEPENDENT diagonal distance-modulus uncertainty (column 3), followed by the SHARED
+    # eigenvector components of the ladder covariance. See the encoding note below determine_calibrators'
+    # join for why the diagonal must stay independent.
     dist_ladder_file = config.data_dir / config.distance_ladder_file
     distance_ladder = (
         pl.read_csv(dist_ladder_file, has_header=False)
@@ -542,20 +544,53 @@ def determine_calibrators(snia: pl.DataFrame, config: Config) -> pl.DataFrame:
         .select(pl.all().name.map(lambda name: name.replace("column", "distmod_err_offdiag")))
     )
     logger.info(f"Loaded distance ladder from {dist_ladder_file}, providing {distance_ladder.height} calibrators.")
-    snia = snia.join(distance_ladder, on="name", how="left").with_columns(
+    olap_names = set(snia['original_name']).intersection(set(distance_ladder['name']))
+    print('Found calibrators:', olap_names)
+    snia = snia.join(distance_ladder, left_on="original_name", right_on="name", how="left").with_columns(
         is_calibrator=pl.col("distmod").is_not_null(),
         has_distmod=pl.when(pl.col("distmod").is_not_null()).then(1).otherwise(0),
         distmod=pl.col("distmod").fill_null(0),  # TODO: maybe we should do the awkward imputation right before stan?
     )
 
     distmod_err_cols = [col for col in snia.columns if col.startswith("distmod_err")]
-    renamed = {
+
+    # The ladder columns become d_mBx1c_d_calib[:, 0, k] entries, used in Stan as
+    # `d_mBx1c_d_calib[:, 0, k] * calibs[k]` with `calibs ~ N(0, 1)`. A SINGLE shared column therefore
+    # makes every calibrator move together with one latent draw.
+    #
+    # Column 3 of the file ("distmod_err") is each calibrator's INDEPENDENT diagonal distance-modulus
+    # uncertainty; the remaining columns are SHARED eigenvector components of the ladder covariance.
+    # Treating the diagonal as a shared column is wrong: its loadings are all positive, so it injects a
+    # coherent ~0.09 mag calibrator-distance shift that is degenerate with H0, inflating the H0 uncertainty
+    # by ~2.7 km/s/Mpc and forcing sigma_int_calibrator up to absorb the lost independent scatter. The
+    # original UNITY (read_and_sample_H0.py, David Rubin's `range(len-2)` / `[dl_ind + 2]` loop) loads only
+    # the eigenvectors into shared modes and gives the diagonal a per-calibrator-unique key
+    # ("DISTMOD_<name>"), i.e. independent diag(sigma_i^2) noise. We replicate that here. (An off-by-one in
+    # that script, `range(len-1)` / `[dl_ind + 1]`, mixed the diagonal into the shared block and is the
+    # regression this fixes.)
+    diag_col = "distmod_err"
+    offdiag_cols = [c for c in distmod_err_cols if c != diag_col]
+
+    # Shared eigenvector systematics: one column each, common to all calibrators.
+    shared = {
         f"uncertainty_mB_distmod_{k.removeprefix('distmod_err_')}": pl.when(pl.col("is_calibrator"))
         .then(pl.col(k))
-        .otherwise(pl.lit(0))
-        for k in distmod_err_cols
+        .otherwise(pl.lit(0.0))
+        for k in offdiag_cols
     }
-    snia = snia.with_columns(**renamed)
+
+    # Independent per-calibrator diagonal: a private column per calibrator, non-zero only on that
+    # calibrator's own row, so condense_systematics expands it to diag(sigma_i^2) rather than a rank-1
+    # coherent mode.
+    calib_names = snia.filter(pl.col("is_calibrator")).get_column("original_name").to_list()
+    independent = {
+        f"uncertainty_mB_distmod_diag_{name}": pl.when(pl.col("original_name") == name)
+        .then(pl.col(diag_col))
+        .otherwise(pl.lit(0.0))
+        for name in calib_names
+    }
+
+    snia = snia.with_columns(**shared, **independent)
 
     return snia
 
@@ -619,7 +654,12 @@ def add_pecv_and_bulk_flow_uncertainties(snia: pl.DataFrame, config: Config) -> 
     d_mBx1c_dcalib: dict[str, dict[str, str | float]] = defaultdict(dict)
     final_pecvs: dict[str, float] = {}
     if config.include_peculiar_velocity_covariance:
-        for row in snia.filter(pl.col("z_cmb") < 0.1).iter_rows(named=True):
+        # Calibrators' distances come from the distance ladder (Cepheids), not the redshift-inferred
+        # Hubble-flow distance, so no peculiar-velocity/bulk-flow correction applies to them. The
+        # diagonal term above already enforces this (`is_calibrator` -> 0.0); read_and_sample_H0.py:392
+        # applies the same `is_calibrator == 0` guard to the bulk-flow eigenvector loop, with an
+        # explicit `assert total_bulk_quad == 0` for calibrators (line 424) confirming this is intentional.
+        for row in snia.filter((pl.col("z_cmb") < 0.1) & ~pl.col("is_calibrator")).iter_rows(named=True):
             # For each supernova, we want to find the closest point in our bulk flow redshift list
             # so that we can find the right set of (top 100) eigenvectors to use for the convariance
             ra: float = row["RA"]  # type: ignore
@@ -757,10 +797,9 @@ def filter_snia(df: pl.DataFrame, config: Config):
         weird_sn_file = config.data_dir / config.weird_sn_file
         weird_sn = [str(x) for x in yaml.safe_load(weird_sn_file.read_text())["weird_sn_names"]]
         logger.info(f"Loaded {len(weird_sn)} weird SN names from {weird_sn_file}.")
-
     df_filtered = df.filter(
         pl.col("lcfit_passed")
-        & pl.col("z_cmb").is_between(config.filters.min_redshift, config.filters.max_redshift)
+        & ( (pl.col("has_distmod") == 1) | pl.col("z_cmb").is_between(config.filters.min_redshift, config.filters.max_redshift) )
         & pl.col("mB").is_between(0, 50)
         & pl.col("color").is_between(config.filters.min_color, config.filters.max_color)
         & pl.col("color_err").is_between(0, config.filters.max_color_uncertainty)
@@ -812,12 +851,18 @@ def impute_snia(df: pl.DataFrame, config: Config) -> pl.DataFrame:
         # cut, which is right now hardcoded to z=0.1.
         .with_columns(mass_err=(pl.col("mass_err_lower").abs() * pl.col("mass_err_upper").abs()).sqrt())
         .with_columns(
+            # TODO (TJH): This doesn't look right. PanSTARRS I think does an =0 if they classify it as 
+            # hostless. But still unsure; this is tied to that same open question I had when cleaning up
+            # the stragglers of U3.1.
             bad_mass=pl.col("mass").is_null()
             | pl.col("mass").lt(1)
             | pl.col("mass_err").is_null()
             | pl.col("mass_err").le(0)
             | pl.col("mass_err").is_infinite()
         )
+        ### TODO (TJH): Need to update to the official U31U18 protocoal for 10 for everything missing. 
+        ### NOTE: Not sure if necessary to make the change here, since David now writes the filler values 
+        ### to all lightfiles. 
         .with_columns(
             mass=pl.when(pl.col("bad_mass"))
             .then(pl.when(pl.col("z_cmb") > 0.1).then(10.0).otherwise(11.0))

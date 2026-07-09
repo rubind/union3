@@ -2,7 +2,7 @@ from pathlib import Path
 import polars as pl
 import numpy as np
 from unity import Config, Data, logger, CosmologyModel
-
+from astropy.cosmology import FlatLambdaCDM, w0waCDM
 
 class Model:
     def initialise(self, data: Data) -> None:
@@ -45,6 +45,12 @@ class StanModel(Model):
             CosmologyModel.OM_W0_WA: 5,
             CosmologyModel.BINNED_MU_COMOVING_INTERPOLATION: 6,
         }
+
+        blinding_mapping = {
+                'none':0,
+                'fiducial':1,
+                'stochastic':2
+                }
         self.data = {
             "cosmo_model": cosmo_model_mapping[self.config.cosmology_model],
             "n_sne": data.num_supernovae,
@@ -71,7 +77,11 @@ class StanModel(Model):
             "unsort_inds": data.redshift_simps["unsort_inds"],
             "obs_mBx1c": data.obs_mBx1c,
             "obs_mBx1c_cov": data.obs_mBx1c_cov,
-            "do_blind": int(self.config.do_blinding),
+            "blinding":blinding_mapping[self.config.blinding],
+            "really_unblind":int(self.config.really_unblind),
+            #"do_blind": int(self.config.do_blinding),
+            #"blinding": str(self.config.blinding),
+            #"really_unblind": str(self.config.really_unblind),
             "do_twoalphabeta": int(self.config.do_two_alpha_beta),
             "outl_frac_prior_lnmean": float(np.log(self.config.outlier_fraction)),
             "outl_frac_prior_lnwidth": 0.5,
@@ -96,6 +106,95 @@ class StanModel(Model):
             "dmu_const_dz": snia["dmu_const_dz"].to_numpy(),
         }
         logger.info("Stan model initialised with data for fitting.")
+
+    def blind(self, kind: str = 'fiducial', MB_blind: float = -19.1, alpha_blind: float = 0.14, beta_blind: float = 3.1) -> None:
+        '''
+        Perform calibrator distance and per-sample blinding.
+
+        kind == 'fiducial':   blind against a fixed, known cosmology read from a precomputed
+                              (z, mu) grid file. Reproducible / unblind-able, so runs on the
+                              same data are comparable.
+        kind == 'stochastic': blind against a freshly randomized cosmology generated at runtime
+                              and NEVER saved, so the resulting chains cannot be unblinded.
+                              For debugging / SN-modeling checks only.
+
+        TODO: User-defined path to a fiducial cosmology file. Currently hard-coded path points to David's .txt files.
+        '''
+
+        from scipy.interpolate import CubicSpline
+
+        if kind == 'fiducial':
+            # Load the fine-grid (z, mu) fiducial cosmology and interpolate it (a la original UNITY)
+            if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
+                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm_w0wa.txt', unpack=True)
+            elif self.config.cosmology_model is CosmologyModel.OM:
+                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm.txt', unpack=True)
+            else:
+                raise ValueError(f"Fiducial blinding not supported for cosmology model {self.config.cosmology_model}.")
+            mu_blinding_fiducial = CubicSpline(zblind, mublind)
+
+        elif kind == 'stochastic':
+            # Draw a random cosmology at runtime; never saved, so chains cannot be unblinded.
+            H0_stoch = np.random.uniform(low=60, high=80)
+            Om_stoch = np.random.uniform(low=0.25, high=0.35)
+            if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
+                w0_stoch = np.random.uniform(low=-1.5, high=-0.5)
+                wa_stoch = np.random.uniform(low=-3, high=1)
+                cosmo_fiducial = w0waCDM(H0=H0_stoch, w0=w0_stoch, wa=wa_stoch, Om=Om_stoch)
+            elif self.config.cosmology_model is CosmologyModel.OM:
+                cosmo_fiducial = FlatLambdaCDM(H0=H0_stoch, Om0=Om_stoch)
+            else:
+                raise ValueError(f"Stochastic blinding not supported for cosmology model {self.config.cosmology_model}.")
+
+            def mu_blinding_fiducial(z, cosmo_fiducial=cosmo_fiducial):
+                return 5 * np.log10(cosmo_fiducial.luminosity_distance(z).to('pc').value / 10)
+
+        else:
+            raise ValueError(f"Unknown blinding kind '{kind}'. Expected 'fiducial' or 'stochastic'.")
+
+        # Now carry out blinding on calibrator distances. Only the calibrators (has_distmod == 1)
+        # carry a real distmod; the rest are 0 and ignored by Stan, so we shift only those.
+        target_distmod = mu_blinding_fiducial(self.data["redshifts"])
+        calib = self.data["has_distmod"] == 1
+        med_offset = np.median(target_distmod[calib] - self.data["distmod"][calib])
+        self.data["distmod"][calib] += med_offset
+
+        # And now the per-sample hubble flow blinding. TJH: Almost faithful replicate of DR code; I just removed the redundant computation of target_distmod in the H_resid line
+        for iter_count in range(2):
+            # Compute real observed moduli (according to whatever mB normalization Union's LC fitting is set to)
+            #print(self.data['obs_mBx1c'])
+            mB, x1, c = np.array(self.data['obs_mBx1c']).T
+            muobs = mB + alpha_blind*x1 - beta_blind*c - MB_blind
+            #muobs = self.data["obs_mBx1c"][:,0] + alpha_blind*self.data["obs_mBx1c"][:,1] - beta_blind*self.data["obs_mBx1c"][:,2] - MB_blind
+
+            # Compute the real hubble residuals relative to the fiducial cosmology
+            H_resid = muobs - target_distmod #mublindfn(self.data["redshifts"])
+
+            # Compute approximate diagonal uncertainties TJH to DR: Is this used anywhere?
+            #dmuobs = np.sqrt(0.15**2. + self.data["obs_mBx1c_cov"][:,0,0] + alpha_blind**2. * self.data["obs_mBx1c_cov"][:, 1,1] + beta_blind**2. * self.data["obs_mBx1c_cov"][:, 2,2]) # Doesn't have to be exact
+
+            for sample_ind in range(self.data["n_samples"]):
+                sel_hubble_flow = self.data['has_distmod']==0
+                inds = np.where((self.data["sample_list"] == sample_ind)*sel_hubble_flow)
+
+                if len(inds[0]) > 0:
+                    med_HR = np.median(H_resid[inds])
+
+                    inds = np.where((self.data["sample_list"] == sample_ind))
+
+                    for SN_ind in inds[0]:
+                        # TJH: Sam has mBx1c stored as a list of len=3 arrays, so can't do slicing. We are already looping so it's easy.
+                        self.data['obs_mBx1c'][SN_ind][0] -= med_HR
+
+                        # TJH: mB_list has been removed as key from the data container. Presumably because of redundancy. 
+                        # Double-check to make sure I don't let unblinded stuff slip through.
+                        #self.data["mB_list"][SN_ind] -= med_HR
+
+                    if iter_count > 0:
+                        assert abs(med_HR) < 1e-3
+
+
+
 
     def get_initial_position(self) -> dict[str, int | float | np.ndarray]:
         assert self.data and self._raw_data, "Model data not initialised. Call initialise() first."
@@ -169,13 +268,20 @@ class StanModel(Model):
         )
 
         logger.info("Stan MCMC sampling complete. Extracting samples.")
-        columns = list(fit.column_names)
         if self.config.extra_single_dimension_parameters_only:
-            columns = [c for c in columns if "[" not in c]
+            # draws_pd(vars=...) accepts method vars (lp__, ...) and *base* Stan variable
+            # names, but NOT indexed columns like "MB_slow[1]". Keeping only bracket-free
+            # names leaves scalar params + diagnostics, which are all valid vars.
+            columns = [c for c in fit.column_names if "[" not in c]
             logger.info(
                 f"Saving only single-dimension parameters: {len(columns)} out of {len(fit.column_names)} total parameters."
             )
-        df = fit.draws_pd(vars=columns)
+            df = fit.draws_pd(vars=columns)
+        else:
+            # Save everything. Passing the full column_names to vars= raises
+            # "Unknown variable: <name>[i]" on indexed columns, so call draws_pd() with
+            # no vars, which returns all draws (chain__/iter__/draw__ + every column).
+            df = fit.draws_pd()
 
         logger.info(
             f"Completed MCMC fitting with {self.config.num_chains} chains, "

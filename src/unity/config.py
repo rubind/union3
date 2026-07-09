@@ -49,7 +49,6 @@ class FilterConfig(BaseSettings):
 
         return self
 
-
 class Config(FileConfig):
     base: str | None = Field(
         default=None,
@@ -65,7 +64,7 @@ class Config(FileConfig):
         default="mapping/mag_cut.csv", description="Mag cut mapping file relative to data directory."
     )
     distance_ladder_file: str | None = Field(
-        default=None,  # "distance_ladder/dist_ladder_R22.csv",
+        default="distance_ladder/dist_ladder_R22.csv",
         description="Distance ladder file relative to data directory, used to determine calibrators.",
         examples=["distance_ladder/dist_ladder_R22.csv"],
     )
@@ -99,12 +98,19 @@ class Config(FileConfig):
         default=CosmologyModel.OM_W0_WA, description="Cosmology model to use for fitting."
     )
     fit_model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
-    iterations: int = Field(default=250, ge=1, description="Number of iterations for MCMC.")
-    warmup_iterations: int = Field(default=250, ge=1, description="Number of warmup iterations for MCMC.")
+    iterations: int = Field(default=1000, ge=1, description="Number of iterations for MCMC.")
+    warmup_iterations: int = Field(default=200, ge=1, description="Number of warmup iterations for MCMC.")
     refresh_iterations: int = Field(
         default=5, ge=0, description="Number of iterations between progress updates for MCMC. 0 to turn off."
     )
-    num_chains: int = Field(default=6, ge=1, description="Number of chains for MCMC.")
+    num_chains: int = Field(default=4, ge=1, description="Number of chains for MCMC.")
+    ### TODO (TJH): This feature is broken. Only runs when set to true. If False, the draws cannot be saved.
+    ### File "/Users/taylorhoyt/code/unity_sam/union3/src/union3/models/models.py", line 275, in fit
+    ### df = fit.draws_pd(vars=columns)
+    ###     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ###  File "/Users/taylorhoyt/code/unity_sam/union3/.venv/lib/python3.12/site-packages/cmdstanpy/stanfit/mcmc.py", line 637, in draws_pd
+    ### raise ValueError(f'Unknown variable: {var}')
+
     extra_single_dimension_parameters_only: bool = Field(
         default=True, description="Whether to only save extra single-dimension parameters."
     )
@@ -119,9 +125,13 @@ class Config(FileConfig):
         default=True, description="Whether to separate x1 and color standardization by host mass."
     )
 
-    #! Data processing config
-    do_blinding: bool = Field(default=True, description="Whether to blind the data.")
-
+    blinding: Literal['stochastic', 'fiducial', 'none'] = Field(default='stochastic',
+            description="Blinding protocol. stochastic generates a new randomized cosmology upon runtime that is NEVER saved.          "
+                         "stochastic WARNING: Your chains will not be unblind-able. Use this just for debugging or SN modeling checks. "
+                         "fiducial will blind using a user-defined cosmology. Run this to do relative comparisons with same input data."
+                         "none is for a fully unblinded run. WARNING: This will unblind ALL of fiducial runs that used same input data.")
+    really_unblind: bool = Field(default=False, description='Double check parameter if blinding protocol was set to none.')
+    
     #! Data augmentation config
     peculiar_velocity_dispersion: float = Field(
         default=0.001, ge=0.0, description="Peculiar velocity dispersion in units of c."
@@ -155,8 +165,8 @@ class Config(FileConfig):
     redshift_coefficient_steps: int = Field(
         default=1, ge=1, description="Number of steps for redshift coefficients when using 'a' type."
     )
-    threeD_unexplained: bool = Field(default=False, description="TODO: ask david")
-    do_two_alpha_beta: bool = Field(default=False, description="Whether to fit for two alpha and beta values.")
+    threeD_unexplained: bool = Field(default=True, description="TODO: ask david")
+    do_two_alpha_beta: bool = Field(default=True, description="Whether to fit for two alpha and beta values.")
 
     @property
     def model_path(self) -> Path:
