@@ -342,6 +342,7 @@ class NumpyroModel(StanModel):
             # gives the CPU backend one XLA device per chain; no-op on GPU
             numpyro.set_host_device_count(config.num_chains)
         import jax
+        import jax.numpy as jnp
 
         jax.config.update("jax_enable_x64", True)  # model is float64-only
         from numpyro.infer import MCMC, NUTS
@@ -358,13 +359,24 @@ class NumpyroModel(StanModel):
         seed = config.sampling_seed
         if seed is None:
             seed = int.from_bytes(os.urandom(4), "little")
+        # mirror StanModel: start chains from get_initial_position() (essential for
+        # om_w0_wa, whose tight BAO+CMB prior sits far from a random init); sites
+        # not covered fall back to NumPyro's default init
+        from numpyro.infer import init_to_value
+
+        site_names = {s[0] for s in module.param_spec(self.data)}
+        init_values = {
+            k: jnp.asarray(v, dtype=jnp.float64)
+            for k, v in self.get_initial_position().items()
+            if k in site_names and np.size(v) > 0
+        }
         logger.info(
             f"Starting NumPyro NUTS: {config.num_chains} chains ({config.chain_method}), "
             f"warmup {config.warmup_iterations}, {config.iterations} iterations, "
             f"seed {seed}, devices {jax.devices()}."
         )
         mcmc = MCMC(
-            NUTS(model),
+            NUTS(model, init_strategy=init_to_value(values=init_values)),
             num_warmup=config.warmup_iterations,
             num_samples=config.iterations,
             num_chains=config.num_chains,

@@ -7,8 +7,10 @@ jacobian=False). Bounded parameters with no sampling statement contribute nothin
 (Stan's implicit uniform is improper); bounds become real priors only at the
 NumPyro-model layer, not here.
 
-Scope (handoff §4 phase 2): cosmo_model 1 (Om) and 2 (binned mu), no photo-z.
+Scope: cosmo_model 1 (Om), 2 (binned mu), 3 (Om-w), 4 (q0-j0), 5 (Om-w0-wa incl.
+the BAO+CMB multi_normal prior); 6 is deprecated upstream. No photo-z.
 float64 is mandatory and enabled on import.
+Per-cosmology parity vs BridgeStan: scripts/numpyro_port/check_cosmo_parity.py.
 
 Validate against the frozen BridgeStan reference (harness in scripts/numpyro_port):
     uv run python -m unity.models.jax_unity
@@ -96,8 +98,9 @@ def make_logdensity(data):
 
     if int(d["n_photoz"]) != 0:
         raise NotImplementedError("photo-z terms not ported (n_photoz > 0)")
-    if cosmo_model not in (1, 2):
-        raise NotImplementedError(f"cosmo_model {cosmo_model} not ported (only 1, 2)")
+    if cosmo_model not in (1, 2, 3, 4, 5):
+        # 6 (binned comoving interpolation) is deprecated upstream (Config rejects it)
+        raise NotImplementedError(f"cosmo_model {cosmo_model} not ported (only 1-5)")
 
     # static data, 0-indexed where Stan is 1-indexed
     sample_idx = np.asarray(d["sample_list"], dtype=int) - 1
@@ -123,6 +126,9 @@ def make_logdensity(data):
     if cosmo_model == 2:
         dmu_dbin = jnp.asarray(np.asarray(d["dmu_dbin"], dtype=float))
         mu_const = jnp.asarray(np.asarray(d["mu_const"], dtype=float))
+    if cosmo_model == 5:
+        baocmb_mean = jnp.asarray(np.asarray(d["BAOCMB_Om_w0_wa_mean"], dtype=float))
+        baocmb_cov = jnp.asarray(np.asarray(d["BAOCMB_Om_w0_wa_covmatrix"], dtype=float))
     outl_ln_mean = float(d["outl_frac_prior_lnmean"])
     outl_ln_width = float(d["outl_frac_prior_lnwidth"])
 
@@ -160,14 +166,34 @@ def make_logdensity(data):
         outl_cR = sca("outl_mBx1c_uncertainties_cR_unit")
 
         # ---- distance modulus ----
-        if cosmo_model == 1:
-            Hinv = 1.0 / jnp.sqrt(Om * (1.0 + z_fill) ** 3 + (1.0 - Om))
+        if cosmo_model in (1, 3, 5):
+            # 1/E(z); the three models differ only in the dark-energy term
+            if cosmo_model == 1:
+                de = 1.0 - Om
+            elif cosmo_model == 3:
+                wDE = sca("wDE")
+                de = (1.0 - Om) * (1.0 + z_fill) ** (3.0 * (1.0 + wDE))
+            else:  # cosmo_model == 5 (CPL w0-wa)
+                wDE, waDE = sca("wDE"), sca("waDE")
+                de = (
+                    (1.0 - Om)
+                    * (1.0 + z_fill) ** (3.0 * (1.0 + wDE + waDE))
+                    * jnp.exp(-3.0 * waDE * z_fill / (1.0 + z_fill))
+                )
+            Hinv = 1.0 / jnp.sqrt(Om * (1.0 + z_fill) ** 3 + de)
             seg = (
                 (Hinv[0:-2:2] + 4.0 * Hinv[1:-1:2] + Hinv[2::2])
                 * (z_fill[2::2] - z_fill[0:-2:2]) / 6.0
             )
             r_com_sort = jnp.concatenate([jnp.zeros(1), jnp.cumsum(seg)])
             model_mu = 5.0 * jnp.log10((1.0 + zhelio) * r_com_sort[unsort]) + MU_OFFSET
+        elif cosmo_model == 4:  # kinematic q0-j0, Visser eq. 19
+            q0, j0 = sca("q0"), sca("j0")
+            model_mu = 5.0 * jnp.log10(
+                (1.0 + zhelio) * redshifts / (1.0 + redshifts)
+                * (1.0 + 0.5 * (1.0 - q0) * redshifts
+                   - (1.0 / 6.0) * (1.0 - q0 - 3.0 * q0 * q0 + j0) * redshifts ** 2)
+            ) + MU_OFFSET
         else:  # cosmo_model == 2
             model_mu = dmu_dbin @ mu_zbins + mu_const
         model_mu = jnp.where(
@@ -360,6 +386,8 @@ def make_logdensity(data):
         lp += jnp.sum(norm_lpdf(mobs_cut_sigmas, est_mobs_sigmas, 0.25))
         if fix_Om > 0:
             lp += norm_lpdf(Om, fix_Om, 0.001)
+        if cosmo_model == 5:
+            lp += mvn3_lpdf(jnp.stack([Om, wDE, waDE]), baocmb_mean, baocmb_cov)
         lp += norm_lpdf(x1_star_fast, -1.0, 2.0)
         lp += norm_lpdf(x1_star_slow, 1.0, 2.0)
         lp += norm_lpdf(R_x1_fast, 1.0, 2.0)

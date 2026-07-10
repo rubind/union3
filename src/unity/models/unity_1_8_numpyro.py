@@ -15,8 +15,10 @@ re-derived. NumPyro's transforms (sigmoid for intervals, exp for lower bounds,
 stick-breaking for the simplex) may parameterize the unconstrained space
 differently than Stan's — that changes sampler geometry, not the posterior.
 
-Scope: cosmo_model 1 (Om) and 2 (binned mu), no photo-z (n_photoz must be 0);
-float64 mandatory (enabled by jax_unity on import).
+Scope: all supported cosmologies — cosmo_model 1 (Om), 2 (binned mu), 3 (Om-w),
+4 (q0-j0), 5 (Om-w0-wa incl. the BAO+CMB prior); 6 is deprecated upstream.
+No photo-z (n_photoz must be 0); float64 mandatory (enabled by jax_unity on
+import). Per-cosmology parity: scripts/numpyro_port/check_cosmo_parity.py.
 
 Validation/smoke harness: scripts/numpyro_port/numpyro_model.py.
 """
