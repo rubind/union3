@@ -183,10 +183,23 @@ def compare():
         worst.append((abs(z), p))
         print(f"{p:38s} {xa.mean():11.4f} {xb.mean():11.4f} {z:6.2f} {ra:8.3f} {rb:8.3f}")
     worst.sort(reverse=True)
-    n_bad = sum(1 for w in worst if w[0] > 3)
-    print(f"\nWORST |z|: {worst[0][0]:.2f} ({worst[0][1]}); params |z|>3: {n_bad}/{len(worst)}")
-    print("VERDICT:", "PASS — posteriors statistically indistinguishable" if n_bad == 0
-          else "ATTENTION — check flagged parameters / chain health above")
+    # A hard |z|>3 cutoff is miscalibrated for the max of ~76 tests (expected max
+    # ~2.5 under the null): use the Bonferroni-corrected threshold and report the
+    # null probability of the observed max. A real discrepancy is stable across
+    # seeds; a null excursion changes identity each run.
+    from scipy import stats
+
+    zmax, pname = worst[0]
+    n = len(worst)
+    p_max = 1 - (2 * stats.norm.cdf(zmax) - 1) ** n
+    thresh = stats.norm.ppf(1 - 0.025 / n)
+    zs = np.array([w[0] for w in worst])
+    print(f"\nWORST |z|: {zmax:.2f} ({pname}); P(max >= this | null, {n} tests) = {p_max:.2f}; "
+          f"Bonferroni threshold {thresh:.2f}")
+    print(f"|z|>2: {(zs > 2).sum()} (expect ~{0.0455 * n:.1f})")
+    print("VERDICT:", "PASS — posteriors statistically indistinguishable" if zmax < thresh
+          else "ATTENTION — check flagged parameters / chain health above; "
+               "rerun with a fresh seed to test stability before concluding")
 
 
 if __name__ == "__main__":
