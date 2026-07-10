@@ -10,8 +10,8 @@ NumPyro-model layer, not here.
 Scope (handoff §4 phase 2): cosmo_model 1 (Om) and 2 (binned mu), no photo-z.
 float64 is mandatory and enabled on import.
 
-Validate against the frozen BridgeStan reference:
-    uv run python scripts/numpyro_port/jax_unity.py
+Validate against the frozen BridgeStan reference (harness in scripts/numpyro_port):
+    uv run python -m unity.models.jax_unity
 """
 
 import json
@@ -382,7 +382,7 @@ def make_logdensity(data):
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, str(Path(__file__).parent))
+    sys.path.insert(0, str(Path(__file__).parents[3] / "scripts" / "numpyro_port"))
     from check_parity import ART, check
 
     data = json.loads((ART / "data.json").read_text())

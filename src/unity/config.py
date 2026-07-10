@@ -104,6 +104,22 @@ class Config(FileConfig):
         default=5, ge=0, description="Number of iterations between progress updates for MCMC. 0 to turn off."
     )
     num_chains: int = Field(default=4, ge=1, description="Number of chains for MCMC.")
+
+    #! NumPyro sampler config (only used when fit_model is a NumPyro model, e.g. "unity_1_8_numpyro.py")
+    jax_device: str | None = Field(
+        default=None,
+        description='JAX platform for NumPyro sampling, e.g. "cpu" or "cuda". None uses the JAX '
+        "default (GPU if visible, else CPU). Applied via JAX_PLATFORMS before JAX initializes.",
+    )
+    chain_method: Literal["parallel", "sequential", "vectorized"] = Field(
+        default="parallel",
+        description="NumPyro chain execution. parallel: one XLA device per chain (on CPU the host is "
+        "split into num_chains devices). vectorized: all chains batched on one device — near-free on "
+        "GPU. sequential: chains one after another.",
+    )
+    sampling_seed: int | None = Field(
+        default=None, description="PRNG seed for NumPyro sampling. None draws a fresh random seed."
+    )
     ### TODO (TJH): This feature is broken. Only runs when set to true. If False, the draws cannot be saved.
     ### File "/Users/taylorhoyt/code/unity_sam/union3/src/union3/models/models.py", line 275, in fit
     ### df = fit.draws_pd(vars=columns)

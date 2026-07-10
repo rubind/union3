@@ -17,6 +17,8 @@ class Model:
         model_path = config.model_path
         if model_path.suffix == ".stan":
             return StanModel(model_path, config)
+        elif model_path.suffix == ".py":
+            return NumpyroModel(model_path, config)
         else:
             raise ValueError(f"Unsupported model file extension: {model_path.suffix}")
 
@@ -288,3 +290,150 @@ class StanModel(Model):
             f"warmup {self.config.warmup_iterations}, and {self.config.iterations} iterations."
         )
         return pl.from_pandas(df)
+
+
+class NumpyroModel(StanModel):
+    """Samples a NumPyro port of the model (e.g. unity_1_8_numpyro.py) with NUTS.
+
+    Reuses StanModel's data preparation and blinding wholesale: initialise()
+    builds the identical Stan data dict, which the model file's make_model(data)
+    consumes (the posterior was validated against Stan end-to-end on 2026-07-10:
+    log-density parity ~9e-15 via BridgeStan, full-sample sampling comparison
+    statistically indistinguishable).
+
+    The returned DataFrame matches StanModel.fit()'s mcmc_samples.parquet layout
+    (diagnostic columns, Stan CSV parameter naming, chains concatenated in order,
+    no chain__ column) with two caveats:
+    - lp__ is -potential_energy: it differs from Stan's lp__ by the two engines'
+      different simplex-transform Jacobians (parameter posteriors are invariant;
+      never cross-compare lp__ between engines).
+    - per-SN transformed parameters (model_mu, true_cR, outl/inl_loglike_by_SN,
+      ...) and last-SN loop-leftover scalars (beta_eff, p_high_mass*,
+      this_delta_h, this_norm_LL_*, dz_*) are not computed, so downstream
+      PPD/plot scripts that need them require the Stan model. The cheap
+      transformed scalars (alpha_*, beta_*, this_MB_slow) ARE emitted for
+      layout compatibility.
+
+    Tuning note: NumPyro's unconstraining transforms differ from Stan's, so its
+    warmup requirement is its own number — warmup 1250 sufficed for Stan on the
+    full 2085-SN config but trapped a NumPyro chain; use warmup_iterations >= 2500.
+    """
+
+    def __init__(self, model_path: Path, config: Config):
+        assert model_path.exists(), f"Model file {model_path} does not exist."
+        self.model_path = model_path
+        self.config = config
+        self._raw_data: Data | None = None
+        self.data = {}
+        logger.info(f"Loaded NumPyro model from {model_path}.")
+
+    def fit(self) -> pl.DataFrame:
+        import importlib
+        import os
+
+        config = self.config
+        # Backend selection must happen before JAX initializes, hence the
+        # env var (not jax.config) and the function-local imports.
+        if config.jax_device is not None:
+            os.environ.setdefault("JAX_PLATFORMS", config.jax_device)
+        import numpyro
+
+        if config.chain_method == "parallel":
+            # gives the CPU backend one XLA device per chain; no-op on GPU
+            numpyro.set_host_device_count(config.num_chains)
+        import jax
+
+        jax.config.update("jax_enable_x64", True)  # model is float64-only
+        from numpyro.infer import MCMC, NUTS
+
+        if config.warmup_iterations < 2000:
+            logger.warning(
+                f"warmup_iterations={config.warmup_iterations} is risky for NumPyro on UNITY "
+                "models: 1250 left a chain trapped below the main mode on the full config. "
+                "Use >= 2500 and check per-chain lp__ agreement."
+            )
+
+        module = importlib.import_module(f"unity.models.{self.model_path.stem}")
+        model = module.make_model(self.data)
+        seed = config.sampling_seed
+        if seed is None:
+            seed = int.from_bytes(os.urandom(4), "little")
+        logger.info(
+            f"Starting NumPyro NUTS: {config.num_chains} chains ({config.chain_method}), "
+            f"warmup {config.warmup_iterations}, {config.iterations} iterations, "
+            f"seed {seed}, devices {jax.devices()}."
+        )
+        mcmc = MCMC(
+            NUTS(model),
+            num_warmup=config.warmup_iterations,
+            num_samples=config.iterations,
+            num_chains=config.num_chains,
+            chain_method=config.chain_method,
+            progress_bar=config.refresh_iterations > 0,
+        )
+        mcmc.run(
+            jax.random.PRNGKey(seed),
+            extra_fields=("potential_energy", "energy", "num_steps",
+                          "accept_prob", "diverging", "adapt_state.step_size"),
+        )
+        # pmap dispatch is async; block before touching wall clocks or results
+        samples = jax.block_until_ready(mcmc.get_samples(group_by_chain=True))
+        extra = mcmc.get_extra_fields(group_by_chain=True)
+        logger.info("NumPyro MCMC sampling complete. Extracting samples.")
+
+        flat = lambda x: np.asarray(x, dtype=np.float64).reshape(-1)
+        n_leapfrog = flat(extra["num_steps"])
+        cols: dict[str, np.ndarray] = {
+            "lp__": -flat(extra["potential_energy"]),
+            "accept_stat__": flat(extra["accept_prob"]),
+            "stepsize__": flat(extra["adapt_state.step_size"]),
+            "treedepth__": np.ceil(np.log2(n_leapfrog + 1)),
+            "n_leapfrog__": n_leapfrog,
+            "divergent__": flat(extra["diverging"]),
+            "energy__": flat(extra["energy"]),
+        }
+        divergences = int(cols["divergent__"].sum())
+        lp_chain = np.asarray(extra["potential_energy"]).mean(axis=1) * -1.0
+        logger.info(f"Divergences: {divergences}. Per-chain lp__ means: "
+                    + " ".join(f"{m:.1f}" for m in lp_chain))
+        if np.ptp(lp_chain) > 2.0 * np.asarray(extra["potential_energy"]).std(axis=1).mean():
+            logger.warning("Per-chain lp__ means are far apart relative to the within-chain "
+                           "spread — a chain is likely trapped (increase warmup_iterations).")
+
+        # Stan CSV naming: vector sites get name[i] (1-based) even for length 1,
+        # scalar sites are bracket-free — so the extra_single_dimension filter
+        # below behaves exactly like the StanModel one.
+        params: dict[str, np.ndarray] = {}
+        for name, _, shape in module.param_spec(self.data):
+            if name not in samples:
+                continue
+            x = np.asarray(samples[name], dtype=np.float64)
+            x = x.reshape(x.shape[0] * x.shape[1], -1)
+            if shape == ():
+                params[name] = x[:, 0]
+            else:
+                for j in range(x.shape[1]):
+                    params[f"{name}[{j + 1}]"] = x[:, j]
+
+        # transformed scalars the Stan runs save (cheap, derived from raw draws)
+        derived: dict[str, np.ndarray] = {
+            "alpha_fast": np.tan(params["alpha_angle_fast"]),
+            "alpha_slow": np.tan(params["alpha_angle_slow"]),
+        }
+        beta_blue = "beta_angle_blue" if self.data["do_twoalphabeta"] else "beta_angle_red_low"
+        beta_high = "beta_angle_red_high" if self.data["do_twoalphabeta"] else "beta_angle_red_low"
+        derived["beta_B"] = np.tan(params[beta_blue])
+        derived["beta_R_low"] = np.tan(params["beta_angle_red_low"])
+        derived["beta_R_high"] = np.tan(params[beta_high])
+        if not self.data["MB_by_sample"]:
+            derived["this_MB_slow"] = params["MB_slow[1]"]
+
+        if config.extra_single_dimension_parameters_only:
+            params = {k: v for k, v in params.items() if "[" not in k}
+        cols |= params | derived
+
+        logger.info(
+            f"Completed NumPyro MCMC fitting with {config.num_chains} chains, "
+            f"warmup {config.warmup_iterations}, and {config.iterations} iterations."
+        )
+        return pl.DataFrame(cols)
