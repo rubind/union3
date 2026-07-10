@@ -49,7 +49,9 @@ def flat_columns(samples):
     return cols
 
 
-def run_numpyro():
+def run_numpyro(seed=20260710):
+    """Optional second CLI arg = alternate seed; output goes to numpyro_seed<seed>/
+    so extra evidence chains never overwrite the primary run."""
     import jax
 
     jax.config.update("jax_enable_x64", True)
@@ -70,7 +72,7 @@ def run_numpyro():
         progress_bar=False,
     )
     t0 = time.time()
-    mcmc.run(jax.random.PRNGKey(20260710),
+    mcmc.run(jax.random.PRNGKey(seed),
              extra_fields=("potential_energy", "num_steps", "diverging"))
     wall = time.time() - t0
 
@@ -82,7 +84,7 @@ def run_numpyro():
     cols["n_leapfrog__"] = np.asarray(extra["num_steps"]).reshape(-1).astype(float)
     cols["chain__"] = np.repeat(np.arange(N_CHAINS), N_DRAWS).astype(float)
 
-    out = OUT / "numpyro"
+    out = OUT / ("numpyro" if seed == 20260710 else f"numpyro_seed{seed}")
     out.mkdir(parents=True, exist_ok=True)
     pl.DataFrame(cols).write_parquet(out / "samples.parquet")
     div = int(cols["divergent__"].sum())
@@ -188,4 +190,7 @@ def compare():
 
 
 if __name__ == "__main__":
-    {"numpyro": run_numpyro, "stan": run_stan, "compare": compare}[sys.argv[1]]()
+    if sys.argv[1] == "numpyro" and len(sys.argv) > 2:
+        run_numpyro(seed=int(sys.argv[2]))
+    else:
+        {"numpyro": run_numpyro, "stan": run_stan, "compare": compare}[sys.argv[1]]()
