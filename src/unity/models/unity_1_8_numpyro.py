@@ -1,8 +1,8 @@
 """NumPyro model for unity_1.8 — the sampler-facing counterpart of unity_1.8.stan.
 
-Set `fit_model: "unity_1_8_numpyro.py"` in a config to sample this model with
-NumPyro NUTS instead of CmdStan (see NumpyroModel in models.py; it takes the
-same Stan data dict built by StanModel.initialise).
+Set `fit_model: "unity_1.8"` and `sampler: "numpyro"` in a config to sample
+this model with NumPyro NUTS instead of CmdStan (see NumpyroModel in
+models.py; it takes the same Stan data dict built by StanModel.initialise).
 
 Design: every parameter is a `numpyro.sample` site with an ImproperUniform
 distribution that only defines its support (and hence NumPyro's unconstraining

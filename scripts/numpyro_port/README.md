@@ -8,13 +8,16 @@ full published Union3.1+UNITY1.8 selection (2085 SNe).
 
 ## Using it
 
-Set the model file in any config:
+Set the sampler in any config (the default `fit_model`, `"unity_1.8"`,
+already supports it):
 
 ```yaml
-fit_model: "unity_1_8_numpyro.py"
+sampler: "numpyro"
 ```
 
-`Model.from_config` dispatches `.py` model files to `NumpyroModel`
+or on the CLI: `uv run unity --sampler numpyro`. `Model.from_config` looks up
+`(fit_model, sampler)` in `SUPPORTED_MODELS` (`src/unity/config.py`) to find
+the model file, and dispatches `.py` files to `NumpyroModel`
 (`src/unity/models/models.py`), which reuses `StanModel`'s data preparation
 and blinding wholesale and writes the same `mcmc_samples.parquet` layout.
 Sampler-specific config fields:

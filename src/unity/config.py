@@ -7,6 +7,23 @@ from pydantic_settings import BaseSettings
 from unity.utils.base_config import FileConfig
 
 
+class Sampler(StrEnum):
+    STAN = "stan"
+    NUMPYRO = "numpyro"
+
+
+# Registry of supported model families and, for each, which sampler backends
+# implement it and the corresponding file in the models directory. Add a new
+# model here (e.g. a UNITY 1.5/1.7 likelihood) as a new top-level key; it need
+# not support every sampler.
+SUPPORTED_MODELS: dict[str, dict[Sampler, str]] = {
+    "unity_1.8": {
+        Sampler.STAN: "unity_1.8.stan",
+        Sampler.NUMPYRO: "unity_1_8_numpyro.py",
+    },
+}
+
+
 class CosmologyModel(StrEnum):
     OM = "om"
     BINNED_MU = "binned_mu"
@@ -97,7 +114,17 @@ class Config(FileConfig):
     cosmology_model: CosmologyModel = Field(
         default=CosmologyModel.OM_W0_WA, description="Cosmology model to use for fitting."
     )
-    fit_model: str = Field(default="unity_1.8.stan", description="Stan model file in the models directory.")
+    fit_model: str = Field(
+        default="unity_1.8",
+        description="Model family/likelihood to fit, e.g. 'unity_1.8'. See SUPPORTED_MODELS in config.py "
+        "for the full set of models and which samplers implement each.",
+    )
+    sampler: Sampler = Field(
+        default=Sampler.STAN,
+        description="Sampling backend to use for `fit_model`: 'stan' (CmdStanPy/NUTS) or 'numpyro' "
+        "(JAX/NumPyro port). Not every model supports every sampler; an unsupported combination fails "
+        "at startup with the list of samplers that model does support.",
+    )
     iterations: int = Field(default=1000, ge=1, description="Number of iterations for MCMC.")
     warmup_iterations: int = Field(default=200, ge=1, description="Number of warmup iterations for MCMC.")
     refresh_iterations: int = Field(
@@ -105,7 +132,7 @@ class Config(FileConfig):
     )
     num_chains: int = Field(default=4, ge=1, description="Number of chains for MCMC.")
 
-    #! NumPyro sampler config (only used when fit_model is a NumPyro model, e.g. "unity_1_8_numpyro.py")
+    #! NumPyro sampler config (only used when sampler == "numpyro")
     jax_device: str | None = Field(
         default=None,
         description='JAX platform for NumPyro sampling, e.g. "cpu" or "cuda". None uses the JAX '
@@ -186,16 +213,15 @@ class Config(FileConfig):
 
     @property
     def model_path(self) -> Path:
-        return self.model_dir() / self.fit_model
+        return self.model_dir() / SUPPORTED_MODELS[self.fit_model][self.sampler]
 
     @classmethod
     def model_dir(cls):
         return Path(__file__).parent / "models"
 
     @field_validator("fit_model")
-    def validate_stan_model(cls, v: str) -> str:
-        names = [p.name for p in cls.model_dir().glob("*")]
-        assert v in names, f"Model {v} not found in models directory, options are {names}"
+    def validate_fit_model(cls, v: str) -> str:
+        assert v in SUPPORTED_MODELS, f"Model '{v}' not recognized. Supported models: {list(SUPPORTED_MODELS)}"
         return v
 
     @field_validator("electron_scattering_tau")
@@ -217,6 +243,13 @@ class Config(FileConfig):
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
+        supported_samplers = SUPPORTED_MODELS[self.fit_model]
+        assert self.sampler in supported_samplers, (
+            f"Model '{self.fit_model}' is not supported with sampler '{self.sampler}'. "
+            f"Try rerunning with sampler set to one of: {', '.join(s.value for s in supported_samplers)}."
+        )
+        assert self.model_path.exists(), f"Model file {self.model_path} does not exist."
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         assert self.data_dir.exists(), f"Data directory {self.data_dir} does not exist."
