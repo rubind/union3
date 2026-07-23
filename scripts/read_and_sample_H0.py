@@ -333,7 +333,7 @@ def read_data(params):
                         the_data["mass"].append(10.)
                         the_data["mass_err"].append(1.)
                     else:
-                        the_data["mass"].append(11.)
+                        the_data["mass"].append(10.) # No longer 11
                         the_data["mass_err"].append(1.)
                 else:
                     the_data["mass"].append(this_mass)
