@@ -27,7 +27,7 @@ import numpyro
 import numpyro.distributions as dist
 from numpyro.distributions import constraints
 
-from unity.models.jax_unity import make_logdensity
+from unity.models.jax_unity import make_latents_fn, make_logdensity  # noqa: F401 (make_latents_fn: NumpyroModel dispatches to it by name)
 
 
 def param_spec(data):

@@ -307,12 +307,19 @@ class NumpyroModel(StanModel):
     - lp__ is -potential_energy: it differs from Stan's lp__ by the two engines'
       different simplex-transform Jacobians (parameter posteriors are invariant;
       never cross-compare lp__ between engines).
-    - per-SN transformed parameters (model_mu, true_cR, outl/inl_loglike_by_SN,
-      ...) and last-SN loop-leftover scalars (beta_eff, p_high_mass*,
-      this_delta_h, this_norm_LL_*, dz_*) are not computed, so downstream
-      PPD/plot scripts that need them require the Stan model. The cheap
-      transformed scalars (alpha_*, beta_*, this_MB_slow) ARE emitted for
-      layout compatibility.
+    - per-SN transformed parameters are computed post-hoc (a jax.vmap over
+      draws of the model file's make_latents_fn, mirroring how Stan
+      re-evaluates `transformed parameters` once per saved draw) and emitted
+      under extra_single_dimension_parameters_only: false, same as Stan.
+      Only the ones with a downstream reader are ported: model_mu, true_cR,
+      frac_x1_slow_by_SN, tau_c_by_SN, model_mBx1c_{fast,slow},
+      model_mBx1c_cov_{fast,slow}, outl_loglike_by_SN,
+      inl_loglike_by_SN_{fast,slow} (see scripts/population_ppd.py,
+      result_plots.py, plot_PPD.py, helper_functions.py). Stan's last-SN
+      loop-leftover scalars (p_high_mass, p_high_mass_eff, this_delta_h,
+      the mobs_by_SN_except_c_R_*/mobs_var_by_SN_except_c_R_* terms) have no
+      reader and are debugging leftovers in unity_1.8.stan, not intentional
+      outputs -- not ported here either.
 
     Tuning note: NumPyro's unconstraining transforms differ from Stan's, so its
     warmup requirement is its own number — warmup 1250 sufficed for Stan on the
@@ -443,6 +450,26 @@ class NumpyroModel(StanModel):
         if config.extra_single_dimension_parameters_only:
             params = {k: v for k, v in params.items() if "[" not in k}
         cols |= params | derived
+
+        if not config.extra_single_dimension_parameters_only and hasattr(module, "make_latents_fn"):
+            logger.info("Computing per-SN latents (jax.vmap over posterior draws)...")
+            flat_samples = {
+                k: jnp.asarray(v, dtype=jnp.float64).reshape((v.shape[0] * v.shape[1],) + v.shape[2:])
+                for k, v in samples.items()
+            }
+            latents_fn = module.make_latents_fn(self.data)
+            aux = jax.block_until_ready(jax.vmap(latents_fn)(flat_samples))
+            n_latent_cols = 0
+            for name, x in aux.items():
+                # x is (n_draws, n_sne) or (n_draws, n_sne, 3) or (n_draws, n_sne, 3, 3);
+                # Stan CSV naming for array[n_sne] vector/matrix sites is comma-separated
+                # 1-based indices in one bracket group (verified against a toy CmdStan model).
+                x = np.asarray(x, dtype=np.float64)
+                for idx in np.ndindex(x.shape[1:]):
+                    key = f"{name}[{','.join(str(i + 1) for i in idx)}]"
+                    cols[key] = x[(slice(None), *idx)]
+                    n_latent_cols += 1
+            logger.info(f"Added {n_latent_cols} per-SN latent columns from {len(aux)} quantities.")
 
         logger.info(
             f"Completed NumPyro MCMC fitting with {config.num_chains} chains, "

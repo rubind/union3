@@ -83,7 +83,15 @@ def mvn3_lpdf(y, mu, cov):
     return -0.5 * (quad + jnp.log(det) + 3.0 * LOG_2PI)
 
 
-def make_logdensity(data):
+def _build(data):
+    """Builds (jitted logdensity fn, jitted latents fn) sharing one forward pass
+    (_forward below). logdensity(p) -> scalar log density (make_logdensity's
+    contract, unchanged). latents(p) -> dict of the per-SN `transformed
+    parameters` that downstream PPD/plot scripts read from Stan's output
+    (make_latents_fn) — only the ones with a reader: see scripts/population_ppd.py,
+    result_plots.py, plot_PPD.py, helper_functions.py. Loop-leftover Stan scalars
+    with no reader (p_high_mass, p_high_mass_eff, this_delta_h, mobs_by_SN_except_c_R_*,
+    mobs_var_by_SN_except_c_R_*) are intentionally not ported — see NumpyroModel docstring."""
     d = {k: (np.asarray(v) if isinstance(v, list) else v) for k, v in data.items()}
 
     n_sne = int(d["n_sne"])
@@ -137,7 +145,12 @@ def make_logdensity(data):
     gwidth = jnp.asarray(EXP_APPROX_WIDTH)
     log_gnorm = jnp.log(gnorm)
 
-    def logdensity(p):
+    def _forward(p):
+        """Shared forward pass: everything Stan computes in `transformed parameters`
+        up to the three per-SN mixture-component log-likelihoods. Returns
+        (outl_ll, inl_fast, inl_slow, aux), where aux holds the per-SN quantities
+        that downstream PPD/plot scripts read from the Stan output (see
+        make_latents_fn) — used by both logdensity() and latents()."""
         arr = lambda k: jnp.atleast_1d(jnp.asarray(p[k], dtype=jnp.float64))
         sca = lambda k: jnp.asarray(p[k], dtype=jnp.float64)
 
@@ -404,9 +417,45 @@ def make_logdensity(data):
         lp += norm_lpdf(outl_cB, 0.5, 0.5)
         lp += norm_lpdf(outl_cR, 10.0, 3.0)
         lp += lognormal_lpdf(outl_frac, outl_ln_mean, outl_ln_width)
+
+        aux = {
+            "model_mu": model_mu,
+            "true_cR": true_cR,
+            "frac_x1_slow_by_SN": frac_x1_slow_by_SN,
+            "tau_c_by_SN": tau_c_by_SN,
+            "model_mBx1c_fast": mean_fast,
+            "model_mBx1c_slow": mean_slow,
+            "model_mBx1c_cov_fast": cov_fast,
+            "model_mBx1c_cov_slow": cov_slow,
+            "outl_loglike_by_SN": outl_ll,
+            "inl_loglike_by_SN_fast": inl_fast,
+            "inl_loglike_by_SN_slow": inl_slow,
+        }
+        return lp, aux
+
+    def logdensity(p):
+        lp, _aux = _forward(p)
         return lp
 
-    return jax.jit(logdensity)
+    def latents(p):
+        _lp, aux = _forward(p)
+        return aux
+
+    return jax.jit(logdensity), jax.jit(latents)
+
+
+def make_logdensity(data):
+    density_fn, _latents_fn = _build(data)
+    return density_fn
+
+
+def make_latents_fn(data):
+    """Jitted p -> dict of per-SN transformed parameters (see _build's docstring
+    for exactly which ones and why). Intended for a post-hoc jax.vmap over
+    posterior draws, mirroring how Stan re-evaluates `transformed parameters`
+    once per saved draw -- not meant to run inside the NUTS hot loop."""
+    _density_fn, latents_fn = _build(data)
+    return latents_fn
 
 
 if __name__ == "__main__":
