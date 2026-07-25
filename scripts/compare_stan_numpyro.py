@@ -34,6 +34,12 @@ load them whole) and using a vectorized implementation of the same Geyer-ESS
 z-test. Full per-latent results are written to
 output/unity_1_8_comparison/latents_comparison.parquet.
 
+Two shift metrics per parameter: z (mean difference over MC/sampling error —
+"is it statistically detectable?") and dsig (mean difference over the pooled
+POSTERIOR std — "is it practically important?"). The PASS/ATTENTION verdict
+is driven by z; dsig is reported descriptively (no fixed threshold — under
+the null it scales like z/sqrt(pooled ESS)).
+
 Reuses the z-test/Bonferroni-calibrated verdict from
 scripts/numpyro_port/run_comparison.py (MC error via per-chain Geyer ESS).
 lp__ is NOT cross-compared: NumPyro's differs from Stan's by dropped
@@ -141,6 +147,18 @@ def z_batch(xa: np.ndarray, xb: np.ndarray) -> np.ndarray:
     return (fa.mean(axis=0) - fb.mean(axis=0)) / (se + 1e-300)
 
 
+def dsigma_batch(xa: np.ndarray, xb: np.ndarray) -> np.ndarray:
+    """Mean shift in units of the pooled POSTERIOR width (not MC error):
+    (mean_a - mean_b) / sqrt((var_a + var_b)/2). z asks "is the difference
+    detectable above sampling noise?"; this asks "would it matter?" — a huge
+    ESS can make z large while the shift is a negligible fraction of the
+    posterior. Under the null this scales like z/sqrt(pooled ESS), so there
+    is no fixed pass threshold; it is reported descriptively."""
+    fa, fb = (x.reshape(-1, x.shape[2]) for x in (xa, xb))
+    pooled = np.sqrt(0.5 * (fa.var(axis=0, ddof=1) + fb.var(axis=0, ddof=1)))
+    return (fa.mean(axis=0) - fb.mean(axis=0)) / (pooled + 1e-300)
+
+
 def verdict(abs_z: np.ndarray, label: str) -> bool:
     """Bonferroni-corrected max-|z| test, as in run_comparison.py: a hard
     |z|>3 cutoff is miscalibrated for the max of N tests (expected max grows
@@ -179,13 +197,16 @@ def compare_scalars() -> np.ndarray:
     a, b, params = a[:, :, nz], b[:, :, nz], [p for p, keep in zip(params, nz) if keep]
 
     z = z_batch(a, b)
+    ds = dsigma_batch(a, b)
     ra, rb = split_rhat_batch(a), split_rhat_batch(b)
     ma = a.reshape(-1, len(params)).mean(axis=0)
     mb = b.reshape(-1, len(params)).mean(axis=0)
-    print(f"\n{'param':38s} {'mean_np':>11s} {'mean_stan':>11s} {'z':>6s} {'rhat_np':>8s} {'rhat_st':>8s}")
+    print(f"\n{'param':38s} {'mean_np':>11s} {'mean_stan':>11s} {'z':>6s} {'dsig':>7s} {'rhat_np':>8s} {'rhat_st':>8s}")
     for i, p in enumerate(params):
-        print(f"{p:38s} {ma[i]:11.4f} {mb[i]:11.4f} {z[i]:6.2f} {ra[i]:8.3f} {rb[i]:8.3f}")
+        print(f"{p:38s} {ma[i]:11.4f} {mb[i]:11.4f} {z[i]:6.2f} {ds[i]:7.3f} {ra[i]:8.3f} {rb[i]:8.3f}")
     print()
+    print(f"[scalars] worst shift vs posterior width: {np.abs(ds).max():.4f} sigma "
+          f"({params[int(np.abs(ds).argmax())]}); median {np.median(np.abs(ds)):.4f}")
     verdict(np.abs(z), "scalars")
     return z
 
@@ -200,7 +221,8 @@ def compare_latents() -> None:
           f"{only_b} stan-only (Stan's unported debugging leftovers / any "
           f"un-ported transformed params -- see NumpyroModel docstring)")
 
-    names, zs, rhats_a, rhats_b, means_a, means_b, const = [], [], [], [], [], [], []
+    names, zs, dsigs, rhats_a, rhats_b, means_a, means_b, stds_a, stds_b, const = \
+        [], [], [], [], [], [], [], [], [], []
     for i0 in range(0, len(latents), CHUNK):
         cols = latents[i0:i0 + CHUNK]
         a = read_chains(NUMPYRO_OUT, cols)
@@ -211,18 +233,23 @@ def compare_latents() -> None:
             a, b = a[:, :, nz], b[:, :, nz]
             names += [c for c, keep in zip(cols, nz) if keep]
             zs.append(z_batch(a, b))
+            dsigs.append(dsigma_batch(a, b))
             rhats_a.append(split_rhat_batch(a))
             rhats_b.append(split_rhat_batch(b))
             means_a.append(a.reshape(-1, a.shape[2]).mean(axis=0))
             means_b.append(b.reshape(-1, b.shape[2]).mean(axis=0))
+            stds_a.append(a.reshape(-1, a.shape[2]).std(axis=0, ddof=1))
+            stds_b.append(b.reshape(-1, b.shape[2]).std(axis=0, ddof=1))
         done = min(i0 + CHUNK, len(latents))
         print(f"  ... {done}/{len(latents)} latent columns", end="\r", flush=True)
     print()
 
     z = np.concatenate(zs)
+    ds = np.concatenate(dsigs)
     out = pl.DataFrame({
-        "param": names, "z": z,
+        "param": names, "z": z, "dsigma": ds,
         "mean_numpyro": np.concatenate(means_a), "mean_stan": np.concatenate(means_b),
+        "std_numpyro": np.concatenate(stds_a), "std_stan": np.concatenate(stds_b),
         "rhat_numpyro": np.concatenate(rhats_a), "rhat_stan": np.concatenate(rhats_b),
     })
     out.write_parquet(LATENTS_RESULT)
@@ -231,11 +258,15 @@ def compare_latents() -> None:
         print(f"skipped {len(const)} constant column(s), e.g. {const[:5]}")
 
     order = np.argsort(-np.abs(z))[:20]
-    print(f"\nworst 20 of {len(names)} latents:")
-    print(f"{'param':38s} {'mean_np':>11s} {'mean_stan':>11s} {'z':>6s} {'rhat_np':>8s} {'rhat_st':>8s}")
+    print(f"\nworst 20 of {len(names)} latents by |z|:")
+    print(f"{'param':38s} {'mean_np':>11s} {'mean_stan':>11s} {'z':>6s} {'dsig':>7s} {'rhat_np':>8s} {'rhat_st':>8s}")
     for i in order:
         print(f"{names[i]:38s} {out['mean_numpyro'][int(i)]:11.4f} {out['mean_stan'][int(i)]:11.4f} "
-              f"{z[i]:6.2f} {out['rhat_numpyro'][int(i)]:8.3f} {out['rhat_stan'][int(i)]:8.3f}")
+              f"{z[i]:6.2f} {ds[i]:7.3f} {out['rhat_numpyro'][int(i)]:8.3f} {out['rhat_stan'][int(i)]:8.3f}")
+    ads = np.abs(ds)
+    print(f"\n[latents] worst shift vs posterior width: {ads.max():.4f} sigma "
+          f"({names[int(ads.argmax())]}); median {np.median(ads):.4f}; "
+          f"|dsigma|>0.1: {(ads > 0.1).sum()}, >0.05: {(ads > 0.05).sum()}")
     print()
     verdict(np.abs(z), "latents")
 
