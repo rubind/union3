@@ -1,0 +1,33 @@
+# Stan-vs-NumPyro parity + speed comparison, Stan side.
+# Companion file: unity_1_8_comparison_numpyro.yml (identical data/model, other sampler).
+#
+# Full public Union3.1+UNITY1.8 selection (2085 SNe), no proprietary data.
+# No distance ladder -> has_distmod is all 0 -> H0 is structurally unconstrained,
+# which is what makes an UNBLINDED run of this config safe. NEVER add a
+# distance_ladder_file here, and NEVER add blinding/really_unblind to this or
+# any file (policy: unblind flags are runtime-only, typed fresh each run) --
+# pass them on the command line instead. See RUNBOOK / PR description for the
+# exact invocation.
+#
+# 1250 warmup matches the previously-validated Stan-speedup replication and
+# full-2085 3-way comparison protocol (that protocol used 2 chains; num_chains
+# is bumped to 4 here to match the NumPyro companion config 1:1, so wall-clock
+# is directly comparable -- parallel_chains=num_chains, and this 8-core box
+# comfortably fits 4 parallel Stan chains). Draws bumped to 5000 (from that
+# protocol's 750) to shrink Monte Carlo error on the posterior z-test
+# comparison as far as is practical (est. ~12.8h wall at optimized-Stan speed;
+# NumPyro's companion config finishes in ~2.6h -- see
+# unity_1_8_comparison_numpyro.yml).
+
+cosmology_model: "om"
+distance_ladder_file: null
+fit_model: "unity_1.8"
+sampler: "stan"
+
+do_plotting: false
+warmup_iterations: 1250
+iterations: 5000
+num_chains: 4
+refresh_iterations: 100
+
+output_dir: "output/unity_1_8_comparison/stan"

@@ -1,0 +1,42 @@
+# Stan-vs-NumPyro parity + speed comparison, NumPyro side.
+# Companion file: unity_1_8_comparison_stan.yml (identical data/model, other sampler).
+#
+# Full public Union3.1+UNITY1.8 selection (2085 SNe), no proprietary data.
+# No distance ladder -> has_distmod is all 0 -> H0 is structurally unconstrained,
+# which is what makes an UNBLINDED run of this config safe. NEVER add a
+# distance_ladder_file here, and NEVER add blinding/really_unblind to this or
+# any file (policy: unblind flags are runtime-only, typed fresh each run) --
+# pass them on the command line instead. See RUNBOOK / PR description for the
+# exact invocation.
+#
+# 4 parallel chains x 2500 warmup matches the previously-validated full-2085
+# 3-way comparison protocol (1250 warmup left a chain trapped on this config;
+# NumPyro's unconstraining transform needs its own, larger, warmup budget).
+# num_chains=4 also matches the Stan companion config 1:1 (that protocol used
+# 2 Stan chains; bumped to 4 there too) so wall-clock is directly comparable
+# at equal parallelism. Draws bumped to 5000 (from that protocol's 750) to
+# shrink Monte Carlo error on the posterior z-test comparison as far as is
+# practical (est. ~2.6h wall on this box; Stan's companion config takes
+# ~12.8h -- see unity_1_8_comparison_stan.yml).
+#
+# chain_method is set explicitly (matches the Config default, but pinned here
+# so it can't silently drift): "parallel" uses jax.pmap over
+# numpyro.set_host_device_count(4) emulated CPU devices -- one chain per
+# device, XLA-managed threads -- the closest NumPyro analog to Stan's N
+# separate OS processes. "vectorized" (NOT used here) batches all chains into
+# one XLA computation and isn't a fair speed comparison to Stan's per-chain
+# parallelism at all.
+
+cosmology_model: "om"
+distance_ladder_file: null
+fit_model: "unity_1.8"
+sampler: "numpyro"
+chain_method: "parallel"
+
+do_plotting: false
+warmup_iterations: 2500
+iterations: 5000
+num_chains: 4
+refresh_iterations: 100
+
+output_dir: "output/unity_1_8_comparison/numpyro"

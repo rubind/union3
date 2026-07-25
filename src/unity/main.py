@@ -44,7 +44,12 @@ def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
     # TODO: make this path configurable and part of the config
     samples.write_parquet(config.output_dir / "mcmc_samples.parquet")
 
-    print(samples.describe())
+    # describe() materializes per-column stats; on all-latents outputs (100k+ columns)
+    # it pegs a core for over an hour at ~35GB RSS, so only summarize narrow outputs.
+    if samples.width <= 1000:
+        print(samples.describe())
+    else:
+        print(f"Samples: {samples.height} rows x {samples.width} columns (describe() skipped for wide output)")
     if config.do_plotting:
         plot_cosmology_constraints(config, samples)
     return samples
