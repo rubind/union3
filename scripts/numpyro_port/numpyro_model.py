@@ -39,9 +39,9 @@ def _with_raw_beta_sites(data, params):
     """Substitution dict for the model wrapper: the ordered red-beta angles are driven
     by raw sites (see unity_1_8_numpyro.ORDERED_BETA_ANGLES), so invert the transform
     to hit the reference angles exactly. Returns (params, expected_jacobian_sum)."""
-    from unity.models.unity_1_8_numpyro import ORDERED_BETA_ANGLES, ordered_beta_transform
+    from unity.models.unity_1_8_numpyro import ORDERED_BETA_ANGLES, ordered_beta_transform, use_ordered_beta
 
-    if int(data["do_twoalphabeta"]) != 1:
+    if not use_ordered_beta(data):
         return params, 0.0
     params = dict(params)
     lo = jnp.maximum(0.0, params["beta_angle_blue"])
@@ -68,10 +68,12 @@ def validate(data):
     model = make_model(data)
     ref = np.load(ART / "reference.npz", allow_pickle=True)
     lp_ref = ref["lp_nojac"]
+    from unity.models.unity_1_8_numpyro import use_ordered_beta
+
     errs, n_skipped = [], 0
     for k in range(len(lp_ref)):
         params = _reference_params(data, k)
-        if int(data["do_twoalphabeta"]) == 1:
+        if use_ordered_beta(data):
             lo = max(0.0, float(params["beta_angle_blue"]))
             if not all(float(params[n]) > lo for n in ("beta_angle_red_low", "beta_angle_red_high")):
                 # Reference point predates the beta_B < beta_R constraint and lies

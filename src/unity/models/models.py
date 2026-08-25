@@ -85,6 +85,7 @@ class StanModel(Model):
             #"blinding": str(self.config.blinding),
             #"really_unblind": str(self.config.really_unblind),
             "do_twoalphabeta": int(self.config.do_two_alpha_beta),
+            "ordered_beta": int(self.config.ordered_beta),
             "outl_frac_prior_lnmean": float(np.log(self.config.outlier_fraction)),
             "outl_frac_prior_lnwidth": 0.5,
             "n_photoz": int(snia.filter(pl.col("photo_z0").is_not_null()).height),

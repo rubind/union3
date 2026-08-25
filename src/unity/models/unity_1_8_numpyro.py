@@ -120,18 +120,24 @@ def ordered_beta_transform(raw, blue_angle):
     return value, log_jac
 
 
+def use_ordered_beta(data):
+    """The constraint applies in two-beta mode when the ordered_beta flag is on.
+    Frozen pre-flag data dicts lack the key; default mirrors Config.ordered_beta."""
+    return int(data["do_twoalphabeta"]) == 1 and int(data.get("ordered_beta", 1)) == 1
+
+
 def make_model(data):
     core = make_logdensity(data)
     spec = param_spec(data)
-    two_ab = int(data["do_twoalphabeta"]) == 1
+    ordered = use_ordered_beta(data)
 
     def model():
         p = {}
         for name, con, shape in spec:
-            if two_ab and name in ORDERED_BETA_ANGLES:
+            if ordered and name in ORDERED_BETA_ANGLES:
                 continue
             p[name] = numpyro.sample(name, dist.ImproperUniform(con, (), shape))
-        if two_ab:
+        if ordered:
             for name in ORDERED_BETA_ANGLES:
                 raw = numpyro.sample(f"{name}_raw", dist.Normal(0.0, 1.0).mask(False))
                 value, log_jac = ordered_beta_transform(raw, p["beta_angle_blue"])
