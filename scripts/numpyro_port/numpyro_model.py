@@ -35,9 +35,32 @@ def _reference_params(data, k=0):
     return {k_: jnp.asarray(v, dtype=jnp.float64) for k_, v in raw.items() if k_ in names}
 
 
+def _with_raw_beta_sites(data, params):
+    """Substitution dict for the model wrapper: the ordered red-beta angles are driven
+    by raw sites (see unity_1_8_numpyro.ORDERED_BETA_ANGLES), so invert the transform
+    to hit the reference angles exactly. Returns (params, expected_jacobian_sum)."""
+    from unity.models.unity_1_8_numpyro import ORDERED_BETA_ANGLES, ordered_beta_transform
+
+    if int(data["do_twoalphabeta"]) != 1:
+        return params, 0.0
+    params = dict(params)
+    lo = jnp.maximum(0.0, params["beta_angle_blue"])
+    width = 1.4 - lo
+    expected_jac = 0.0
+    for name in ORDERED_BETA_ANGLES:
+        u = (params.pop(name) - lo) / width
+        raw = jnp.log(u) - jnp.log1p(-u)  # logit
+        params[f"{name}_raw"] = raw
+        _, log_jac = ordered_beta_transform(raw, params["beta_angle_blue"])
+        expected_jac += float(log_jac)
+    return params, expected_jac
+
+
 def validate(data):
-    """numpyro.infer.util.log_density (sites contribute 0 + our factor) must
-    reproduce the BridgeStan jacobian=False reference at every parity point."""
+    """Two checks per parity point: (1) the model wrapper's log_density minus its
+    known ordered-beta Jacobian must reproduce the BridgeStan jacobian=False
+    reference; (2) the Jacobian itself must match the closed form, so the wrapper
+    adds exactly the truncated-flat measure and nothing else."""
     from numpyro.infer.util import log_density
 
     from check_parity import ART
@@ -45,13 +68,24 @@ def validate(data):
     model = make_model(data)
     ref = np.load(ART / "reference.npz", allow_pickle=True)
     lp_ref = ref["lp_nojac"]
-    errs = []
+    errs, n_skipped = [], 0
     for k in range(len(lp_ref)):
-        lp, _ = log_density(model, (), {}, _reference_params(data, k))
-        errs.append(abs(float(lp) - lp_ref[k]) / abs(lp_ref[k]))
+        params = _reference_params(data, k)
+        if int(data["do_twoalphabeta"]) == 1:
+            lo = max(0.0, float(params["beta_angle_blue"]))
+            if not all(float(params[n]) > lo for n in ("beta_angle_red_low", "beta_angle_red_high")):
+                # Reference point predates the beta_B < beta_R constraint and lies
+                # outside the ordered wedge — not in the constrained model's support.
+                n_skipped += 1
+                continue
+        params, expected_jac = _with_raw_beta_sites(data, params)
+        lp, _ = log_density(model, (), {}, params)
+        errs.append(abs(float(lp) - expected_jac - lp_ref[k]) / abs(lp_ref[k]))
     errs = np.array(errs)
-    print(f"numpyro log_density vs BridgeStan: max rel err {errs.max():.3e} over {len(errs)} points")
-    ok = errs.max() < 1e-8
+    print(f"numpyro log_density (minus ordered-beta Jacobian) vs BridgeStan: "
+          f"max rel err {errs.max():.3e} over {len(errs)} in-wedge points "
+          f"({n_skipped} pre-constraint points outside the ordered wedge skipped)")
+    ok = errs.max() < 1e-8 and len(errs) > 0
     print("PASS" if ok else "FAIL")
     return ok
 

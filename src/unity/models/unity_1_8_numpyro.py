@@ -23,6 +23,7 @@ import). Per-cosmology parity: scripts/numpyro_port/check_cosmo_parity.py.
 Validation/smoke harness: scripts/numpyro_port/numpyro_model.py.
 """
 
+import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
@@ -31,12 +32,18 @@ from numpyro.distributions import constraints
 from unity.models.jax_unity import make_latents_fn, make_logdensity  # noqa: F401 (make_latents_fn: NumpyroModel dispatches to it by name)
 
 # beta_B < beta_R identifiability constraint (mirrors the Stan varying lower bound
-# fmax(0, beta_angle_blue) on both red angles in two-beta mode): the red-angle sites
-# keep their names and ImproperUniform form, but their interval support's lower bound
-# becomes the (traced) blue angle. NumPyro applies the constraining transform and its
-# Jacobian only in the sampler's unconstrained representation — same division of
-# labor as Stan's declared bounds — so log_density at constrained points (and hence
-# the check_parity reference comparison) is unchanged.
+# fmax(0, beta_angle_blue) on both red angles in two-beta mode). IMPORTANT: this
+# cannot be expressed as a parameter-dependent ImproperUniform support — NumPyro
+# freezes each site's constraining transform from the initial trace, so a dynamic
+# interval silently stops tracking the blue angle during HMC and (with log_prob == 0)
+# nothing rejects the resulting out-of-wedge draws (verified empirically: a 2-site
+# toy model leaks support violations, and the real model produced draws with
+# beta_R < beta_B). Instead the transform lives in the model body, re-executed with
+# the current blue angle at every density evaluation: each red angle is driven by an
+# unconstrained raw site (Normal(0,1).mask(False): sampleable for tracing/init,
+# contributes zero density) mapped through Stan's lower/upper transform with its
+# exact log-Jacobian added via numpyro.factor. The implied measure is the original
+# flat one truncated to the ordered wedge — identical to Stan's declared bounds.
 ORDERED_BETA_ANGLES = ("beta_angle_red_low", "beta_angle_red_high")
 
 
@@ -104,6 +111,15 @@ def param_spec(data):
     return spec
 
 
+def ordered_beta_transform(raw, blue_angle):
+    """Stan lower/upper transform onto (fmax(0, blue_angle), 1.4); returns (value, log_jacobian)."""
+    lo = jnp.maximum(0.0, blue_angle)
+    width = 1.4 - lo
+    value = lo + width * jax.nn.sigmoid(raw)
+    log_jac = jnp.log(width) + jax.nn.log_sigmoid(raw) + jax.nn.log_sigmoid(-raw)
+    return value, log_jac
+
+
 def make_model(data):
     core = make_logdensity(data)
     spec = param_spec(data)
@@ -113,8 +129,14 @@ def make_model(data):
         p = {}
         for name, con, shape in spec:
             if two_ab and name in ORDERED_BETA_ANGLES:
-                con = constraints.interval(jnp.maximum(0.0, p["beta_angle_blue"]), 1.4)
+                continue
             p[name] = numpyro.sample(name, dist.ImproperUniform(con, (), shape))
+        if two_ab:
+            for name in ORDERED_BETA_ANGLES:
+                raw = numpyro.sample(f"{name}_raw", dist.Normal(0.0, 1.0).mask(False))
+                value, log_jac = ordered_beta_transform(raw, p["beta_angle_blue"])
+                numpyro.factor(f"{name}_jacobian", log_jac)
+                p[name] = numpyro.deterministic(name, value)
         numpyro.factor("stan_target", core(p))
 
     return model
