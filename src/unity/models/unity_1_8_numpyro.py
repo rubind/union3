@@ -23,11 +23,21 @@ import). Per-cosmology parity: scripts/numpyro_port/check_cosmo_parity.py.
 Validation/smoke harness: scripts/numpyro_port/numpyro_model.py.
 """
 
+import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from numpyro.distributions import constraints
 
 from unity.models.jax_unity import make_latents_fn, make_logdensity  # noqa: F401 (make_latents_fn: NumpyroModel dispatches to it by name)
+
+# beta_B < beta_R identifiability constraint (mirrors the Stan varying lower bound
+# fmax(0, beta_angle_blue) on both red angles in two-beta mode): the red-angle sites
+# keep their names and ImproperUniform form, but their interval support's lower bound
+# becomes the (traced) blue angle. NumPyro applies the constraining transform and its
+# Jacobian only in the sampler's unconstrained representation — same division of
+# labor as Stan's declared bounds — so log_density at constrained points (and hence
+# the check_parity reference comparison) is unchanged.
+ORDERED_BETA_ANGLES = ("beta_angle_red_low", "beta_angle_red_high")
 
 
 def param_spec(data):
@@ -97,12 +107,14 @@ def param_spec(data):
 def make_model(data):
     core = make_logdensity(data)
     spec = param_spec(data)
+    two_ab = int(data["do_twoalphabeta"]) == 1
 
     def model():
-        p = {
-            name: numpyro.sample(name, dist.ImproperUniform(con, (), shape))
-            for name, con, shape in spec
-        }
+        p = {}
+        for name, con, shape in spec:
+            if two_ab and name in ORDERED_BETA_ANGLES:
+                con = constraints.interval(jnp.maximum(0.0, p["beta_angle_blue"]), 1.4)
+            p[name] = numpyro.sample(name, dist.ImproperUniform(con, (), shape))
         numpyro.factor("stan_target", core(p))
 
     return model

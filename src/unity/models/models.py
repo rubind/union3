@@ -217,11 +217,15 @@ class StanModel(Model):
             "alpha_angle": np.arctan(rng.random() * 0.2),
             "alpha_angle_fast": np.arctan(rng.random() * 0.2),
             "alpha_angle_slow": np.arctan(rng.random() * 0.2),
-            "beta_angle_blue": np.arctan(rng.random() * 0.5 + 2.5),
+            # blue init must sit below both red inits: the two-beta models constrain
+            # beta_B < beta_R (identifiability), and Stan rejects inits outside bounds.
+            "beta_angle_blue": np.arctan(rng.random() * 0.5 + 1.8),
             "beta_angle_blue_fast": np.arctan(rng.random() * 0.5 + 2.5),
             "beta_angle_blue_slow": np.arctan(rng.random() * 0.5 + 2.5),
-            "beta_angle_red_low": np.arctan(rng.random() * 0.5 + 2.5),
-            "beta_angle_red_high": np.arctan(rng.random() * 0.5 + 2.5),
+            "beta_angle_red_low": np.arctan(
+                rng.random() * 0.5 + (3.8 if config.do_two_alpha_beta else 2.5)
+            ),
+            "beta_angle_red_high": np.arctan(rng.random() * 0.5 + 3.0),
             "beta_angle_red_fast": np.arctan(rng.random() * 0.5 + 2.5),
             "beta_angle_red_slow": np.arctan(rng.random() * 0.5 + 2.5),
             "mBx1c_int_variance": np.array([0.9, 0.05, 0.05]),
