@@ -23,11 +23,28 @@ import). Per-cosmology parity: scripts/numpyro_port/check_cosmo_parity.py.
 Validation/smoke harness: scripts/numpyro_port/numpyro_model.py.
 """
 
+import jax
+import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from numpyro.distributions import constraints
 
 from unity.models.jax_unity import make_latents_fn, make_logdensity  # noqa: F401 (make_latents_fn: NumpyroModel dispatches to it by name)
+
+# beta_B < beta_R identifiability constraint (mirrors the Stan varying lower bound
+# fmax(0, beta_angle_blue) on both red angles in two-beta mode). IMPORTANT: this
+# cannot be expressed as a parameter-dependent ImproperUniform support — NumPyro
+# freezes each site's constraining transform from the initial trace, so a dynamic
+# interval silently stops tracking the blue angle during HMC and (with log_prob == 0)
+# nothing rejects the resulting out-of-wedge draws (verified empirically: a 2-site
+# toy model leaks support violations, and the real model produced draws with
+# beta_R < beta_B). Instead the transform lives in the model body, re-executed with
+# the current blue angle at every density evaluation: each red angle is driven by an
+# unconstrained raw site (Normal(0,1).mask(False): sampleable for tracing/init,
+# contributes zero density) mapped through Stan's lower/upper transform with its
+# exact log-Jacobian added via numpyro.factor. The implied measure is the original
+# flat one truncated to the ordered wedge — identical to Stan's declared bounds.
+ORDERED_BETA_ANGLES = ("beta_angle_red_low", "beta_angle_red_high")
 
 
 def param_spec(data):
@@ -94,15 +111,38 @@ def param_spec(data):
     return spec
 
 
+def ordered_beta_transform(raw, blue_angle):
+    """Stan lower/upper transform onto (fmax(0, blue_angle), 1.4); returns (value, log_jacobian)."""
+    lo = jnp.maximum(0.0, blue_angle)
+    width = 1.4 - lo
+    value = lo + width * jax.nn.sigmoid(raw)
+    log_jac = jnp.log(width) + jax.nn.log_sigmoid(raw) + jax.nn.log_sigmoid(-raw)
+    return value, log_jac
+
+
+def use_ordered_beta(data):
+    """The constraint applies in two-beta mode when the ordered_beta flag is on.
+    Frozen pre-flag data dicts lack the key; default mirrors Config.ordered_beta."""
+    return int(data["do_twoalphabeta"]) == 1 and int(data.get("ordered_beta", 1)) == 1
+
+
 def make_model(data):
     core = make_logdensity(data)
     spec = param_spec(data)
+    ordered = use_ordered_beta(data)
 
     def model():
-        p = {
-            name: numpyro.sample(name, dist.ImproperUniform(con, (), shape))
-            for name, con, shape in spec
-        }
+        p = {}
+        for name, con, shape in spec:
+            if ordered and name in ORDERED_BETA_ANGLES:
+                continue
+            p[name] = numpyro.sample(name, dist.ImproperUniform(con, (), shape))
+        if ordered:
+            for name in ORDERED_BETA_ANGLES:
+                raw = numpyro.sample(f"{name}_raw", dist.Normal(0.0, 1.0).mask(False))
+                value, log_jac = ordered_beta_transform(raw, p["beta_angle_blue"])
+                numpyro.factor(f"{name}_jacobian", log_jac)
+                p[name] = numpyro.deterministic(name, value)
         numpyro.factor("stan_target", core(p))
 
     return model

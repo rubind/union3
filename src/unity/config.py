@@ -210,6 +210,13 @@ class Config(FileConfig):
     )
     threeD_unexplained: bool = Field(default=True, description="TODO: ask david")
     do_two_alpha_beta: bool = Field(default=True, description="Whether to fit for two alpha and beta values.")
+    ordered_beta: bool = Field(
+        default=True,
+        description="Enforce the beta_B < beta_R identifiability constraint (two-beta mode only). The blue/red "
+        "color decomposition admits a spurious label-swapped mode (beta_R ~ 0, beta_B ~ 3.45, fake ~0.11 mag "
+        "mass step) that traps ~1/4 of chains; ordering the slopes excludes it structurally without changing "
+        "the main-mode posterior. Set false to reproduce the unconstrained published parameter space exactly.",
+    )
 
     @property
     def model_path(self) -> Path:

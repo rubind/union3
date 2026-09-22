@@ -85,6 +85,7 @@ class StanModel(Model):
             #"blinding": str(self.config.blinding),
             #"really_unblind": str(self.config.really_unblind),
             "do_twoalphabeta": int(self.config.do_two_alpha_beta),
+            "ordered_beta": int(self.config.ordered_beta),
             "outl_frac_prior_lnmean": float(np.log(self.config.outlier_fraction)),
             "outl_frac_prior_lnwidth": 0.5,
             "n_photoz": int(snia.filter(pl.col("photo_z0").is_not_null()).height),
@@ -217,11 +218,15 @@ class StanModel(Model):
             "alpha_angle": np.arctan(rng.random() * 0.2),
             "alpha_angle_fast": np.arctan(rng.random() * 0.2),
             "alpha_angle_slow": np.arctan(rng.random() * 0.2),
-            "beta_angle_blue": np.arctan(rng.random() * 0.5 + 2.5),
+            # blue init must sit below both red inits: the two-beta models constrain
+            # beta_B < beta_R (identifiability), and Stan rejects inits outside bounds.
+            "beta_angle_blue": np.arctan(rng.random() * 0.5 + 1.8),
             "beta_angle_blue_fast": np.arctan(rng.random() * 0.5 + 2.5),
             "beta_angle_blue_slow": np.arctan(rng.random() * 0.5 + 2.5),
-            "beta_angle_red_low": np.arctan(rng.random() * 0.5 + 2.5),
-            "beta_angle_red_high": np.arctan(rng.random() * 0.5 + 2.5),
+            "beta_angle_red_low": np.arctan(
+                rng.random() * 0.5 + (3.8 if config.do_two_alpha_beta else 2.5)
+            ),
+            "beta_angle_red_high": np.arctan(rng.random() * 0.5 + 3.0),
             "beta_angle_red_fast": np.arctan(rng.random() * 0.5 + 2.5),
             "beta_angle_red_slow": np.arctan(rng.random() * 0.5 + 2.5),
             "mBx1c_int_variance": np.array([0.9, 0.05, 0.05]),

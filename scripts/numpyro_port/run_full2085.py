@@ -76,7 +76,7 @@ def run_numpyro(seed=20260710, num_warmup=N_WARMUP, num_chains=N_CHAINS):
         num_samples=N_DRAWS,
         num_chains=num_chains,
         chain_method="parallel",
-        progress_bar=False,
+        progress_bar=True,  # never disable progress bars on long runs (TJH rule)
     )
     t0 = time.time()
     mcmc.run(jax.random.PRNGKey(seed),

@@ -62,15 +62,23 @@ def random_params(data, rng):
     n_MB = n_samples if data["MB_by_sample"] else 1
     obs = np.array(data["obs_mBx1c"])  # (n_sne, 3)
     u = lambda lo, hi, size=None: rng.uniform(lo, hi, size)
+    # With the ordered_beta constraint active, points must satisfy beta_B < beta_R
+    # (both reds) or they fall outside the model's support and BridgeStan's
+    # param_unconstrain rejects them — rejection-sample the angles into the wedge.
+    ordered = int(data.get("ordered_beta", 0)) == 1 and int(data["do_twoalphabeta"]) == 1
+    while True:
+        beta_blue, beta_rl, beta_rh = u(1.1, 1.3), u(1.1, 1.3), u(1.1, 1.3)
+        if not ordered or max(0.0, beta_blue) < min(beta_rl, beta_rh):
+            break
     return {
         "MB_slow": u(-19.2, -19.0, n_MB),
         "MB_fast_minus_slow": u(-0.05, 0.05),
         "H0": u(65, 75),
         "alpha_angle_fast": u(0.1, 0.2),
         "alpha_angle_slow": u(0.1, 0.2),
-        "beta_angle_blue": u(1.1, 1.3),
-        "beta_angle_red_low": u(1.1, 1.3),
-        "beta_angle_red_high": u(1.1, 1.3),
+        "beta_angle_blue": beta_blue,
+        "beta_angle_red_low": beta_rl,
+        "beta_angle_red_high": beta_rh,
         "step_mass": u(9.9, 10.1),
         "delta_0": u(-0.02, 0.02),
         "delta_h": u(0.4, 0.6),

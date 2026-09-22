@@ -49,6 +49,7 @@ data {
     array[n_sne + nzadd] int unsort_inds;
 
     int do_twoalphabeta;
+    int ordered_beta; // enforce beta_B < beta_R (two-beta mode); 0 reproduces the unconstrained model exactly
     int do_host_mass;
 
     real outl_frac_prior_lnmean;
@@ -88,8 +89,16 @@ parameters {
     real <lower = 0, upper = 0.35> alpha_angle_fast;
     real <lower = 0, upper = 0.35> alpha_angle_slow;
     real <lower = -1.4, upper = 1.4> beta_angle_blue;
-    real <lower = 0, upper = 1.4> beta_angle_red_low;
-    real <lower = 0, upper = 1.4> beta_angle_red_high;
+    // beta_B < beta_R identifiability constraint (ordered_beta flag, two-beta mode
+    // only): the red/dust slope must exceed the blue/intrinsic slope, otherwise a
+    // spurious label-swapped mode exists (beta_B ~ 3.45, beta_R ~ 0, delta_0 ~ 0.11)
+    // that traps ~1/4 of chains ~900 lp__ below the main mode. tan() is monotonic
+    // here, so ordering the angles orders the betas; the implied prior is the
+    // original one truncated to the ordered wedge (no new numerical prior content).
+    // With ordered_beta == 0 or do_twoalphabeta == 0 the bound reduces to the
+    // original lower = 0 and the model is bit-identical to the unconstrained one.
+    real <lower = fmax(0, ordered_beta * do_twoalphabeta * beta_angle_blue), upper = 1.4> beta_angle_red_low;
+    real <lower = fmax(0, ordered_beta * do_twoalphabeta * beta_angle_blue), upper = 1.4> beta_angle_red_high;
     real <lower = 9.5, upper = 10.5> step_mass;
     // real <lower = 0.02, upper = 0.5> step_width;
     real delta_0;
