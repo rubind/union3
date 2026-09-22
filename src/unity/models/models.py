@@ -382,6 +382,7 @@ class NumpyroModel(StanModel):
         seed = config.sampling_seed
         if seed is None:
             seed = int.from_bytes(os.urandom(4), "little")
+        self.sampling_seed_used = seed
         # mirror StanModel: start chains from get_initial_position() (essential for
         # om_w0_wa, whose tight BAO+CMB prior sits far from a random init); sites
         # not covered fall back to NumPyro's default init

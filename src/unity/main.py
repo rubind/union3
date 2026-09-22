@@ -21,7 +21,7 @@ def _release_provenance(config: Config, model: Model, samples: pl.DataFrame) -> 
         "fit_model": config.fit_model,
         "sampler": str(config.sampler),
         "cosmology_model": str(config.cosmology_model),
-        "sampling_seed": config.sampling_seed if config.sampling_seed is not None else "(fresh random)",
+        "sampling_seed": getattr(model, "sampling_seed_used", None) or config.sampling_seed or "(fresh random)",
         "num_chains": config.num_chains,
         "warmup_iterations": config.warmup_iterations,
         "iterations": config.iterations,
