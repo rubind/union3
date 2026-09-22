@@ -58,15 +58,42 @@ uv run unity --base union31_unity18_published_binnedMu.yml
 
 Two files land in the run's `output_dir` alongside the chains:
 
-- **`mu_mat.fits`** — a single `(n_bins + 1) x (n_bins + 1)` float64 image in the historical packed
-  layout, so existing consumers keep working. Row and column zero are metadata, not part of the
-  matrix: `[0, 1:]` holds the bin redshifts, `[1:, 0]` the binned distance moduli, and `[1:, 1:]`
-  the **inverse** covariance. The FITS header records which run produced it.
-- **`mu_binned.ecsv`** — the same content in plain text, with the **plain** covariance rather than
-  its inverse, for anyone who would rather not reverse-engineer the packing.
+- `mu_mat.fits` — one `(n_bins + 1) x (n_bins + 1)` float64 image in the packed layout used by past
+  Union releases. Row and column zero are metadata, not part of the matrix: `[0, 1:]` holds the bin
+  redshifts, `[1:, 0]` the binned distance moduli, and `[1:, 1:]` the inverse covariance. The header
+  records which run produced it, including the sampling seed.
+- `mu_binned.ecsv` — the same content as a table, with the covariance rather than its inverse.
 
-In both, the distance moduli are **residuals** relative to `FlatLambdaCDM(H0=70, Om0=0.3)`. Add
-that fiducial back to recover absolute distance moduli.
+### Conventions
+
+The distance moduli are residuals relative to `FlatLambdaCDM(H0=70, Om0=0.3)`. Add that fiducial
+back to recover absolute distance moduli. That step is exact at the bin redshifts, since each
+interpolation basis function is 1 at its own node and 0 at the others.
+
+The same fiducial also sets the shape within a bin: a supernova between two nodes is modelled as
+the fiducial plus the interpolated residual, and adding the fiducial back does not remove that. The
+effect stays under the statistical error. Swapping the fiducial for `Om0=0.35` leaves a difference
+the basis cannot absorb of 0.004 mag rms below z = 0.8, against a per-bin sigma of 0.029 mag, and
+0.12-0.15 sigma in the bins at z = 0.996-1.232, 0.37 sigma at z = 1.391, and 0.60 sigma in the top
+bin at z = 2.2623, which holds two supernovae and carries sigma = 0.34 mag. The bins where the
+fiducial shape matters most are the ones whose statistical errors are largest. Doubling the swap to
+`Om0=0.4` roughly doubles each ratio.
+
+Cosmology fits against these bins should carry a free magnitude offset (scriptM). The bins are free
+parameters with no cosmological relation imposed between them, and `Om`, `wDE` and `waDE` are not
+fit in a `binned_mu` run, but their overall normalisation is not free. Each interpolation basis function in
+`_get_redshift_bins` takes the value -1 at z = 0, so below the first bin (z = 0.05) a uniform shift
+of every bin is not a rigid shift of the model: the response reaches about -15 at z = 0.01, where
+574 of the 2085 supernovae sit. That anchor holds the mean of the bins near zero (-0.0048 +/- 0.0042
+mag in the published run) and is why the overall-offset mode of the covariance is narrow. It is a
+normalisation, not a measurement of absolute scale, which would require calibrator distances or a
+sound-horizon prior.
+
+This differs from UNITY 1.5, which anchored at 0 rather than -1 (`scripts/read_and_sample.py:668`).
+There the offset direction was nearly degenerate with `MB` and ran away, leaving the 1.5-era
+matrices about 0.093 mag wide in it against 0.0042 mag here. The shapes are unaffected: dropping
+the common mode moves the median per-bin sigma by 0.0001 mag, and the published Union3.1 / UNITY 1.8
+bins differ from the 1.5 product by a pure constant.
 
 Runs are blinded by default. The flags that disable blinding are deliberately never written into
 any committed config; they are typed on the command line for each run, so that no file in this

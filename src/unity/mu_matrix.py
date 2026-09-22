@@ -1,30 +1,27 @@
 """Binned distance-modulus data-release products.
 
-The historical Union3 release artefact is a single packed FITS image, e.g.
-`other_cosmology/mu_mat_union3_cosmo=2.fits`, written by the retired pystan script
-`scripts/read_and_sample.py` (lines 960-966) via an external `DavidsNM.save_img` helper that is
-not part of this repository. This module reproduces that product from the modern NumPyro chains
-using astropy, and adds two friendlier companions.
+`write_release_products` writes two files side by side.
 
-Packing, byte-compatible with the legacy file so existing consumers keep working
-(`other_cosmology/compute_chi2s.py` reads only `hdu.data`):
+`mu_mat.fits` is one (n_bins + 1) x (n_bins + 1) float64 image in the packed layout used by past
+Union releases:
 
     whole[0, 0]   = 0
     whole[0, 1:]  = zbins                       bin redshifts
     whole[1:, 0]  = median(mu_zbins, axis=0)    binned distance modulus per bin
-    whole[1:, 1:] = inv(cov(mu_zbins))          INVERSE covariance, not the covariance
+    whole[1:, 1:] = inv(cov(mu_zbins))          inverse covariance
 
-Two conventions catch people out and are worth stating plainly:
+Row and column zero are metadata, not part of the matrix. `mu_binned.ecsv` holds the same content
+as a table, with the covariance rather than its inverse, plus the run provenance.
 
-1. The inner block is the **inverse** covariance (a precision matrix). Row and column zero are
-   metadata, not part of it.
-2. The distance moduli are **residuals** relative to FlatLambdaCDM(H0=70, Om0=0.3), which is the
-   fiducial the model subtracts when building the bins (`unity.data.loaders._get_redshift_bins`).
-   Add that fiducial back to recover absolute distance moduli.
+The distance moduli are residuals relative to FlatLambdaCDM(H0=70, Om0=0.3), the fiducial
+subtracted when the bins are built (`unity.data.loaders._get_redshift_bins`). The bin mean is
+pinned near zero by the z=0 anchor of that interpolation basis, so cosmology fits should carry a
+free magnitude offset (scriptM). The data-release section of README.md covers both points.
 
-`write_release_products` also emits `mu_binned.ecsv` carrying the bin redshifts, the binned
-distance moduli and the plain covariance, so external users need not reverse-engineer the packing
-or invert a matrix to get an uncertainty.
+The layout is byte-compatible with `other_cosmology/mu_mat_union3_cosmo=2.fits`, written by the
+retired pystan script `scripts/read_and_sample.py` (lines 960-966) via an external
+`DavidsNM.save_img` helper that is not part of this repository. Existing consumers keep working:
+`other_cosmology/compute_chi2s.py` reads only `hdu.data`.
 """
 
 from __future__ import annotations
@@ -116,10 +113,13 @@ def _header(provenance: dict[str, Any] | None) -> fits.Header:
     for line in (
         "Union3 / UNITY 1.8 binned distance-modulus release matrix.",
         "Layout: [0,0]=0; [0,1:]=bin redshifts; [1:,0]=binned distance modulus;",
-        "        [1:,1:]=INVERSE covariance (precision) of the binned distance moduli.",
+        "        [1:,1:]=INVERSE covariance, for backward compatibility with",
+        "        past Union releases.",
         f"Distance moduli are RESIDUALS w.r.t. FlatLambdaCDM(H0={FIDUCIAL_H0:g}, Om0={FIDUCIAL_OM0:g});",
         "add that fiducial back to recover absolute distance moduli.",
-        "Covariance (not inverted) is shipped alongside as mu_binned.ecsv.",
+        "mu_binned.ecsv ships the covariance.",
+        "Fit with a free magnitude offset (scriptM). The bin mean is a",
+        "normalisation, not a measurement of absolute scale.",
     ):
         header.add_comment(line)
     for key, value in (provenance or {}).items():
@@ -153,8 +153,10 @@ def write_release_products(
     table.meta["description"] = (
         f"Union3/UNITY 1.8 binned distance moduli. mu_residual is relative to "
         f"FlatLambdaCDM(H0={FIDUCIAL_H0:g}, Om0={FIDUCIAL_OM0:g}); add that fiducial back for absolute "
-        f"distance moduli. 'covariance' is the full {zbins.size}x{zbins.size} covariance (NOT inverted); "
-        f"mu_err is the square root of its diagonal."
+        f"distance moduli. 'covariance' is the full {zbins.size}x{zbins.size} covariance; mu_mat.fits "
+        f"ships its inverse for backward compatibility with past Union releases. "
+        f"mu_err is the square root of its diagonal. Fit with a free magnitude offset (scriptM). "
+        f"The bin mean is a normalisation, not a measurement of absolute scale."
     )
     for key, value in (provenance or {}).items():
         table.meta[key] = str(value)
