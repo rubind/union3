@@ -23,6 +23,14 @@
 # fresh on the command line each run, so that no committed file is ever a paste-able unblinding
 # template.
 #
+# NOTE, and it is structural rather than a choice: binned_mu supports NEITHER blinding mode.
+# Model.blind implements stochastic and fiducial blinding for the om and om_w0_wa cosmologies
+# only, and raises for anything else, so a binned_mu run reaches the sampler only when both
+# unblinding flags are supplied at runtime. That is consistent with what this product is -- the
+# release IS the unblinded binned distance moduli -- and it is safe for the reason above, but it
+# does mean there is no blinded dry run of this config. Sanity-check the plumbing with a small
+# number of iterations before committing to the full run.
+#
 # Budget: per-chain rate measured 2026-09-14 is ~3.5-4.5 s/it for the first ~375 warmup
 # iterations (adaptation) and a flat ~1.2 s/it from ~750 onward, so 1000 warmup covers adaptation
 # with margin and 2500 would buy nothing. Warmup length does not affect the label-swap trap in

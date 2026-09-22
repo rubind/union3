@@ -42,7 +42,8 @@ Not everything here is part of the current pipeline. In short:
 | `src/unity/configs/` | Committed run configs, selected with `--base`. |
 | `src/legacy/lcfit_extraction/` | **Still live**, despite the directory name: turns raw per-survey light-curve fits into the parquet files the loader reads. |
 | `scripts/numpyro_port/` | **Still live**: the Stan-vs-NumPyro parity harness, imported at runtime by `src/unity/models/jax_unity.py`. |
-| `scripts/`, `other_cosmology/` | UNITY 1.5-era, kept for reference and for reproducing published products. Not driven by `uv run unity`. |
+| `scripts/` | Mostly UNITY 1.5-era and kept for reference, plus a few standalone tools for the current pipeline such as `check_mu_matrix.py`. Nothing here is driven by `uv run unity`. |
+| `other_cosmology/` | UNITY 1.5-era, kept for reference and for reproducing published products. |
 
 ## Data release
 
