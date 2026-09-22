@@ -157,7 +157,20 @@ class Config(FileConfig):
     extra_single_dimension_parameters_only: bool = Field(
         default=True, description="Whether to only save extra single-dimension parameters."
     )
+    extra_vector_parameters_to_save: list[str] = Field(
+        default_factory=list,
+        description="Vector parameters kept in the saved draws even when extra_single_dimension_parameters_only "
+        "is True, e.g. ['mu_zbins'] for a binned-mu distance release. An empty list (the default) leaves the "
+        "saved columns byte-identical to before this option existed. This does NOT enable the per-SN latents "
+        "dump, which is still gated on extra_single_dimension_parameters_only being False.",
+    )
     max_params_to_save: int = Field(default=1000, ge=1, description="Maximum number of parameters to save from MCMC.")
+    write_mu_matrix: bool = Field(
+        default=False,
+        description="Write the packed binned-distance-modulus data-release products next to the chains: "
+        "mu_mat.fits (legacy layout, see unity.mu_matrix), mu_binned.ecsv, and the covariance. Requires "
+        "cosmology_model='binned_mu' and 'mu_zbins' in extra_vector_parameters_to_save.",
+    )
     do_host_mass: bool = Field(default=True, description="Whether to include host mass step correction.")
     fix_omega_m: bool = Field(default=False, description="Whether to fix Omega_m during fitting to 0.3.")
     MB_by_sample: bool = Field(default=False, description="Whether to fit for different absolute magnitude by sample.")
@@ -271,4 +284,16 @@ class Config(FileConfig):
         assert (
             self.cosmology_model != CosmologyModel.BINNED_MU_COMOVING_INTERPOLATION
         ), "BINNED_MU_COMOVING_INTERPOLATION is deprecated for now."
+
+        if self.write_mu_matrix:
+            # Any other cosmology model makes _get_redshift_bins return the trivial single-bin
+            # fallback, which would silently emit a 2x2 matrix instead of failing.
+            assert self.cosmology_model == CosmologyModel.BINNED_MU, (
+                "write_mu_matrix requires cosmology_model='binned_mu'; "
+                f"got '{self.cosmology_model}', which produces a single trivial redshift bin."
+            )
+            assert "mu_zbins" in self.extra_vector_parameters_to_save, (
+                "write_mu_matrix needs the binned distance moduli in the saved draws: add "
+                "'mu_zbins' to extra_vector_parameters_to_save."
+            )
         return self

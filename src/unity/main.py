@@ -4,6 +4,35 @@ import polars as pl
 from unity.plotting import plot_hubble_diagram_from_stanInputData, plot_cosmology_constraints
 
 
+def _release_provenance(config: Config, model: Model, samples: pl.DataFrame) -> dict[str, object]:
+    """Which run produced a data-release product, recorded into the product itself."""
+    import subprocess
+
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5, check=True
+        ).stdout.strip()
+    except Exception:  # noqa: BLE001 - provenance is best-effort, never fatal to a finished run
+        commit = "unknown"
+
+    return {
+        "config": config.base or "(defaults)",
+        "git_commit": commit,
+        "fit_model": config.fit_model,
+        "sampler": str(config.sampler),
+        "cosmology_model": str(config.cosmology_model),
+        "sampling_seed": getattr(model, "sampling_seed_used", None) or config.sampling_seed or "(fresh random)",
+        "num_chains": config.num_chains,
+        "warmup_iterations": config.warmup_iterations,
+        "iterations": config.iterations,
+        "n_draws_total": samples.height,
+        "n_sne": int(model.data["n_sne"]),
+        "ordered_beta": config.ordered_beta,
+        "blinding": config.blinding,
+        "distance_ladder_file": str(config.distance_ladder_file),
+    }
+
+
 def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
     if config is None:
         config = Config()
@@ -43,6 +72,27 @@ def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
 
     # TODO: make this path configurable and part of the config
     samples.write_parquet(config.output_dir / "mcmc_samples.parquet")
+
+    if config.write_mu_matrix:
+        # Written here rather than from a standalone CLI because zbins is never persisted and
+        # depends on the exact filtered SN set, so it cannot be re-derived safely after the fact.
+        from unity.mu_matrix import write_release_products
+
+        # Never let a product-writing failure discard a finished run: the chains are already on
+        # disk above, and a multi-hour sample is far more expensive than a rebuildable product.
+        try:
+            write_release_products(
+                samples,
+                model.data["zbins"],
+                config.output_dir,
+                provenance=_release_provenance(config, model, samples),
+            )
+        except Exception:
+            logger.exception(
+                "Failed to write the binned-mu release products. The chains are safe in "
+                f"{config.output_dir / 'mcmc_samples.parquet'}; rebuild the products from them "
+                "with unity.mu_matrix.write_release_products once the cause is fixed."
+            )
 
     # describe() materializes per-column stats; on all-latents outputs (100k+ columns)
     # it pegs a core for over an hour at ~35GB RSS, so only summarize narrow outputs.

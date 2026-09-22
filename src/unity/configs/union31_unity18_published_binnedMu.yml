@@ -1,0 +1,63 @@
+# Published Union3.1 / UNITY 1.8 binned distance-modulus DATA RELEASE run.
+#
+# Produces the modern equivalent of the legacy release artefact
+# other_cosmology/mu_mat_union3_cosmo=2.fits, which was written by the retired pystan script
+# scripts/read_and_sample.py. Outputs land in output_dir: mu_mat.fits (legacy packed layout),
+# mu_binned.ecsv (bin redshifts, binned distance moduli, plain covariance) and the chains.
+#
+# THE PUBLISHED BASELINE. The host masses are the Union3.1 catalogue AS SUBMITTED, and the mass
+# step is fit as published (do_host_mass defaults to true). Host masses that the catalogue does
+# not provide keep the published treatment: imputed at 10.0 +/- 1.0 dex.
+#
+# Every revision made to the mass table after submission is deliberately absent, and absent by
+# OMISSION rather than by being switched off -- the defaults ARE the published protocol, so this
+# file simply does not reach for anything newer. If you are reading this while a revised mass
+# table exists, that is the point: this config is pinned to the submitted catalogue and must not
+# be "updated" to track later work. Produce a separate config for that instead.
+#
+# Full public Union3.1+UNITY1.8 selection (2085 SNe), no proprietary data.
+#
+# No distance ladder -> has_distmod is all 0 -> H0 is structurally unconstrained, which is what
+# makes an UNBLINDED run of this config safe. NEVER add a distance_ladder_file here, and NEVER
+# add the two unblinding flags to this or any file: policy is that they are runtime-only, typed
+# fresh on the command line each run, so that no committed file is ever a paste-able unblinding
+# template.
+#
+# The release itself IS the unblinded binned distance moduli, so the real run is unblinded. A
+# blinded dry run of this config is possible and is the sensible way to check the plumbing before
+# committing to a multi-hour job: leave the default blinding in place and use a small number of
+# iterations. (Until 2026-09-22 it was not possible -- Model.blind gated on cosmology_model and
+# raised for binned_mu, a deviation from UNITY 1.5, since fixed.)
+#
+# Budget: per-chain rate measured 2026-09-14 is ~3.5-4.5 s/it for the first ~375 warmup
+# iterations (adaptation) and a flat ~1.2 s/it from ~750 onward, so 1000 warmup covers adaptation
+# with margin. Warmup length does change how often a chain settles into the single-beta (Tripp)
+# solution -- about half of chains at 100-200 warmup, ~10% above 500 -- but a chain already there
+# never recovers however long the burn-in runs, and ordered_beta removes that solution from the
+# parameter space outright. So with the flag on, warmup past adaptation buys nothing here.
+# Estimated wall clock ~2.3 h.
+
+cosmology_model: "binned_mu"
+distance_ladder_file: null
+fit_model: "unity_1.8"
+sampler: "numpyro"
+chain_method: "parallel"
+
+# A chain stuck in the single-beta (Tripp) solution poisons mu_zbins. Per-chain lp__ and split-Rhat
+# do catch it upstream -- Rhat ran 1.5-1.6 in the known cases -- but the released product carries no
+# diagnostic of its own, so that check has to happen before it ships. Set false to reproduce the
+# unconstrained published parameter space exactly; the main-mode posterior is unchanged either way.
+ordered_beta: true
+
+# Keep the binned distance moduli in the saved draws. This does NOT enable the per-SN latents
+# dump, which is gated on extra_single_dimension_parameters_only being False.
+extra_vector_parameters_to_save: ["mu_zbins"]
+write_mu_matrix: true
+
+do_plotting: false
+warmup_iterations: 1000
+iterations: 5000
+num_chains: 4
+refresh_iterations: 100
+
+output_dir: "output/union31_unity18_published/binned_mu"

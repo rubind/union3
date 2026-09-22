@@ -17,30 +17,105 @@ Alternatively, there is a way to build an image of the repository which may be e
 
 ## Running Unity
 
-To kick off a run with the default configuration, try `make run`, which is just a shortcut for `uv run union3`. 
+To kick off a run with the default configuration, try `make run`, which is just a shortcut for `uv run unity`.
 
 You can customise what runs in a few ways.
 
-1. If you have a config file with overrides in `src/union3/configs`, you can pass in the filename, like `uv run union3 base=union3.0.yml`
-2. If you want temporary overrides, you can pass them in, like `uv run union3 --filters.max_redshift 0.3` (see `config.py` for all the options)
+1. If you have a config file with overrides in `src/unity/configs`, you can pass in the filename, like `uv run unity --base union31_H0_snOnly.yml`
+2. If you want temporary overrides, you can pass them in, like `uv run unity --filters.max_redshift 0.3` (see `config.py` for all the options)
 3. You can also configure what's run via environment variables, which is especially useful when running via an image.
 
 ```bash
 export FILTERS__MAX_REDSHIFT=0.3
-uv run union3
+uv run unity
 ```
 
 Finally, the default log level is probably `INFO`. If you want to see more detail, you can control loguru's level with the `LOGURU_LEVEL` env var, so you could run `export LOGURU_LEVEL=DEBUG` to see more logs.
 
+## Repository layout
+
+Not everything here is part of the current pipeline. In short:
+
+| Path | Status |
+| --- | --- |
+| `src/unity/` | The pipeline. Config, data loading, models, sampling. |
+| `src/unity/configs/` | Committed run configs, selected with `--base`. |
+| `src/legacy/lcfit_extraction/` | **Still live**, despite the directory name: turns raw per-survey light-curve fits into the parquet files the loader reads. |
+| `scripts/numpyro_port/` | **Still live**: the Stan-vs-NumPyro parity harness, imported at runtime by `src/unity/models/jax_unity.py`. |
+| `scripts/` | Mostly UNITY 1.5-era and kept for reference, plus a few standalone tools for the current pipeline such as `check_mu_matrix.py`. Nothing here is driven by `uv run unity`. |
+| `other_cosmology/` | UNITY 1.5-era, kept for reference and for reproducing published products. |
+
+## Data release
+
+A binned distance-modulus release is produced directly by a run, by setting `write_mu_matrix: true`
+together with `cosmology_model: "binned_mu"` and `extra_vector_parameters_to_save: ["mu_zbins"]`.
+The committed config `union31_unity18_published_binnedMu.yml` does this for the published
+Union3.1 / UNITY 1.8 result, so it can be regenerated with:
+
+```bash
+uv run unity --base union31_unity18_published_binnedMu.yml
+```
+
+Two files land in the run's `output_dir` alongside the chains:
+
+- `mu_mat.fits` — one `(n_bins + 1) x (n_bins + 1)` float64 image in the packed layout used by past
+  Union releases. Row and column zero are metadata, not part of the matrix: `[0, 1:]` holds the bin
+  redshifts, `[1:, 0]` the binned distance moduli, and `[1:, 1:]` the inverse covariance. The header
+  records which run produced it, including the sampling seed.
+- `mu_binned.ecsv` — the same content as a table, with the covariance rather than its inverse.
+
+### Conventions
+
+The distance moduli are residuals relative to `FlatLambdaCDM(H0=70, Om0=0.3)`. Add that fiducial
+back to recover absolute distance moduli. That step is exact at the bin redshifts, since each
+interpolation basis function is 1 at its own node and 0 at the others.
+
+The same fiducial also sets the shape within a bin: a supernova between two nodes is modelled as
+the fiducial plus the interpolated residual, and adding the fiducial back does not remove that. The
+effect stays under the statistical error. Swapping the fiducial for `Om0=0.35` leaves a difference
+the basis cannot absorb of 0.004 mag rms below z = 0.8, against a per-bin sigma of 0.029 mag, and
+0.12-0.15 sigma in the bins at z = 0.996-1.232, 0.37 sigma at z = 1.391, and 0.60 sigma in the top
+bin at z = 2.2623, which holds two supernovae and carries sigma = 0.34 mag. The bins where the
+fiducial shape matters most are the ones whose statistical errors are largest. Doubling the swap to
+`Om0=0.4` roughly doubles each ratio.
+
+Cosmology fits against these bins should carry a free magnitude offset (scriptM). The bins are free
+parameters with no cosmological relation imposed between them, and `Om`, `wDE` and `waDE` are not
+fit in a `binned_mu` run, but their overall normalisation is not free. Each interpolation basis function in
+`_get_redshift_bins` takes the value -1 at z = 0, so below the first bin (z = 0.05) a uniform shift
+of every bin is not a rigid shift of the model: the response reaches about -15 at z = 0.01, where
+574 of the 2085 supernovae sit. That anchor holds the mean of the bins near zero (-0.0048 +/- 0.0042
+mag in the published run) and is why the overall-offset mode of the covariance is narrow. It is a
+normalisation, not a measurement of absolute scale, which would require calibrator distances or a
+sound-horizon prior.
+
+This differs from UNITY 1.5, which anchored at 0 rather than -1 (`scripts/read_and_sample.py:668`).
+There the offset direction was nearly degenerate with `MB` and ran away, leaving the 1.5-era
+matrices about 0.093 mag wide in it against 0.0042 mag here. The shapes are unaffected: dropping
+the common mode moves the median per-bin sigma by 0.0001 mag, and the published Union3.1 / UNITY 1.8
+bins differ from the 1.5 product by a pure constant.
+
+Runs are blinded by default. The flags that disable blinding are deliberately never written into
+any committed config; they are typed on the command line for each run, so that no file in this
+repository is a paste-able unblinding template.
 
 
 
 
 
-*****
 
-# OLD README BELOW
+---
 
+# Retired: the UNITY 1.5 pystan flow
+
+Everything below this line describes the **retired** UNITY 1.5 analysis: a pystan 2.19 pipeline
+driven by `read_and_sample.py` and paramfiles, superseded by the `uv run unity` flow documented
+above. None of it applies to the installed package, and the scripts it names live under `scripts/`
+and `other_cosmology/` rather than in `src/unity/`.
+
+It is kept because it is the only written record of several one-off regeneration procedures that
+are still occasionally needed: the bulk-flow eigenvectors, the CMB compression, and the fiducial
+sound horizon used when updating BAO. Read it as history, not as instructions.
 
 # union3
 Union3/UNITY1.5 repo
