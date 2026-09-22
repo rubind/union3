@@ -2,7 +2,7 @@ from pathlib import Path
 import polars as pl
 import numpy as np
 from unity import Config, Data, logger, CosmologyModel
-from astropy.cosmology import FlatLambdaCDM, w0waCDM
+from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
 
 class Model:
     def initialise(self, data: Data) -> None:
@@ -127,27 +127,38 @@ class StanModel(Model):
         from scipy.interpolate import CubicSpline
 
         if kind == 'fiducial':
-            # Load the fine-grid (z, mu) fiducial cosmology and interpolate it (a la original UNITY)
+            # Load the fine-grid (z, mu) fiducial cosmology and interpolate it (a la original UNITY).
+            #
+            # The fiducial only defines the (z, mu) curve that residuals are measured against before
+            # they are shifted; it is NOT required to match the cosmology being fit, and the shift
+            # applied below never consults the fit model. The original UNITY blinding block in
+            # scripts/read_and_sample.py did not branch on cosmo_model at all -- it always used the
+            # Om grid, including for the binned run that produced the published
+            # mu_mat_union3_cosmo=2.fits. So the w0wa grid is a convenience for w0wa fits, not a
+            # requirement, and every cosmology falls back to the Om grid as it always did.
             if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
-                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm_w0wa.txt', unpack=True)
-            elif self.config.cosmology_model is CosmologyModel.OM:
-                zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/z_mu_dmudOm.txt', unpack=True)
+                grid = 'z_mu_dmudOm_w0wa.txt'
             else:
-                raise ValueError(f"Fiducial blinding not supported for cosmology model {self.config.cosmology_model}.")
+                grid = 'z_mu_dmudOm.txt'
+            zblind, mublind, NA = np.genfromtxt(f'{self.config.data_dir}/blinding_cosmologies/{grid}', unpack=True)
             mu_blinding_fiducial = CubicSpline(zblind, mublind)
 
         elif kind == 'stochastic':
             # Draw a random cosmology at runtime; never saved, so chains cannot be unblinded.
             H0_stoch = np.random.uniform(low=60, high=80)
             Om_stoch = np.random.uniform(low=0.25, high=0.35)
+            # As above: the randomized cosmology only supplies the curve residuals are measured
+            # against, so it need not match the fit model. w0wa fits get a randomized dark-energy
+            # equation of state so the blinding can move w0/wa; every other cosmology gets a
+            # randomized flat LCDM, which is what the original blinding used throughout.
             if self.config.cosmology_model is CosmologyModel.OM_W0_WA:
                 w0_stoch = np.random.uniform(low=-1.5, high=-0.5)
                 wa_stoch = np.random.uniform(low=-3, high=1)
-                cosmo_fiducial = w0waCDM(H0=H0_stoch, w0=w0_stoch, wa=wa_stoch, Om=Om_stoch)
-            elif self.config.cosmology_model is CosmologyModel.OM:
-                cosmo_fiducial = FlatLambdaCDM(H0=H0_stoch, Om0=Om_stoch)
+                # Flatw0waCDM, not w0waCDM: the latter takes Om0 (not Om) and additionally
+                # requires Ode0, so the previous call raised TypeError on every attempt.
+                cosmo_fiducial = Flatw0waCDM(H0=H0_stoch, Om0=Om_stoch, w0=w0_stoch, wa=wa_stoch)
             else:
-                raise ValueError(f"Stochastic blinding not supported for cosmology model {self.config.cosmology_model}.")
+                cosmo_fiducial = FlatLambdaCDM(H0=H0_stoch, Om0=Om_stoch)
 
             def mu_blinding_fiducial(z, cosmo_fiducial=cosmo_fiducial):
                 return 5 * np.log10(cosmo_fiducial.luminosity_distance(z).to('pc').value / 10)
