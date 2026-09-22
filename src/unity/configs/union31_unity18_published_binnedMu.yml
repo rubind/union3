@@ -31,9 +31,11 @@
 #
 # Budget: per-chain rate measured 2026-09-14 is ~3.5-4.5 s/it for the first ~375 warmup
 # iterations (adaptation) and a flat ~1.2 s/it from ~750 onward, so 1000 warmup covers adaptation
-# with margin and 2500 would buy nothing. Warmup length does not affect the label-swap trap in
-# either direction -- a trapped chain never recovers however long the burn-in -- and ordered_beta
-# removes that mode outright. Estimated wall clock ~2.3 h.
+# with margin. Warmup length does change how often a chain settles into the single-beta (Tripp)
+# solution -- about half of chains at 100-200 warmup, ~10% above 500 -- but a chain already there
+# never recovers however long the burn-in runs, and ordered_beta removes that solution from the
+# parameter space outright. So with the flag on, warmup past adaptation buys nothing here.
+# Estimated wall clock ~2.3 h.
 
 cosmology_model: "binned_mu"
 distance_ladder_file: null
@@ -41,9 +43,10 @@ fit_model: "unity_1.8"
 sampler: "numpyro"
 chain_method: "parallel"
 
-# A chain trapped in the label-swapped colour mode silently poisons mu_zbins, and this product has
-# no downstream diagnostic that would catch it. Set false to reproduce the unconstrained published
-# parameter space exactly; the main-mode posterior is unchanged either way.
+# A chain stuck in the single-beta (Tripp) solution poisons mu_zbins. Per-chain lp__ and split-Rhat
+# do catch it upstream -- Rhat ran 1.5-1.6 in the known cases -- but the released product carries no
+# diagnostic of its own, so that check has to happen before it ships. Set false to reproduce the
+# unconstrained published parameter space exactly; the main-mode posterior is unchanged either way.
 ordered_beta: true
 
 # Keep the binned distance moduli in the saved draws. This does NOT enable the per-SN latents
