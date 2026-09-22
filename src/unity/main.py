@@ -78,12 +78,21 @@ def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
         # depends on the exact filtered SN set, so it cannot be re-derived safely after the fact.
         from unity.mu_matrix import write_release_products
 
-        write_release_products(
-            samples,
-            model.data["zbins"],
-            config.output_dir,
-            provenance=_release_provenance(config, model, samples),
-        )
+        # Never let a product-writing failure discard a finished run: the chains are already on
+        # disk above, and a multi-hour sample is far more expensive than a rebuildable product.
+        try:
+            write_release_products(
+                samples,
+                model.data["zbins"],
+                config.output_dir,
+                provenance=_release_provenance(config, model, samples),
+            )
+        except Exception:
+            logger.exception(
+                "Failed to write the binned-mu release products. The chains are safe in "
+                f"{config.output_dir / 'mcmc_samples.parquet'}; rebuild the products from them "
+                "with unity.mu_matrix.write_release_products once the cause is fixed."
+            )
 
     # describe() materializes per-column stats; on all-latents outputs (100k+ columns)
     # it pegs a core for over an hour at ~35GB RSS, so only summarize narrow outputs.

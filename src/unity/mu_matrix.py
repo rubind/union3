@@ -136,13 +136,12 @@ def write_release_products(
     """Write mu_mat.fits and mu_binned.ecsv into `output_dir`; return the paths written."""
     zbins = np.asarray(zbins, dtype=np.float64)
     mu_zbins = extract_mu_zbins(samples, zbins.size)
-
-    whole = build_mu_matrix(mu_zbins, zbins)
-    fits_path = output_dir / "mu_mat.fits"
-    fits.PrimaryHDU(data=whole, header=_header(provenance)).writeto(fits_path, overwrite=True)
-    logger.info(f"Wrote {whole.shape[0]}x{whole.shape[1]} binned-mu release matrix to {fits_path}.")
-
     mu_cov = np.cov(mu_zbins.T)
+
+    # The ECSV is written FIRST, deliberately. It needs no matrix inversion, so it cannot fail the
+    # way the packed matrix can, and it is the only place the bin redshifts are persisted -- they
+    # are derived from the filtered supernova set at load time and never saved with the chains. If
+    # the inversion below fails, this file still lets the product be rebuilt without re-running.
     table = Table(
         {
             "z": zbins,
@@ -163,4 +162,9 @@ def write_release_products(
     table.write(ecsv_path, format="ascii.ecsv", overwrite=True)
     logger.info(f"Wrote binned distance moduli and covariance to {ecsv_path}.")
 
-    return {"mu_mat": fits_path, "mu_binned": ecsv_path}
+    whole = build_mu_matrix(mu_zbins, zbins)
+    fits_path = output_dir / "mu_mat.fits"
+    fits.PrimaryHDU(data=whole, header=_header(provenance)).writeto(fits_path, overwrite=True)
+    logger.info(f"Wrote {whole.shape[0]}x{whole.shape[1]} binned-mu release matrix to {fits_path}.")
+
+    return {"mu_binned": ecsv_path, "mu_mat": fits_path}
