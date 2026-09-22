@@ -17,30 +17,77 @@ Alternatively, there is a way to build an image of the repository which may be e
 
 ## Running Unity
 
-To kick off a run with the default configuration, try `make run`, which is just a shortcut for `uv run union3`. 
+To kick off a run with the default configuration, try `make run`, which is just a shortcut for `uv run unity`.
 
 You can customise what runs in a few ways.
 
-1. If you have a config file with overrides in `src/union3/configs`, you can pass in the filename, like `uv run union3 base=union3.0.yml`
-2. If you want temporary overrides, you can pass them in, like `uv run union3 --filters.max_redshift 0.3` (see `config.py` for all the options)
+1. If you have a config file with overrides in `src/unity/configs`, you can pass in the filename, like `uv run unity --base union31_H0_snOnly.yml`
+2. If you want temporary overrides, you can pass them in, like `uv run unity --filters.max_redshift 0.3` (see `config.py` for all the options)
 3. You can also configure what's run via environment variables, which is especially useful when running via an image.
 
 ```bash
 export FILTERS__MAX_REDSHIFT=0.3
-uv run union3
+uv run unity
 ```
 
 Finally, the default log level is probably `INFO`. If you want to see more detail, you can control loguru's level with the `LOGURU_LEVEL` env var, so you could run `export LOGURU_LEVEL=DEBUG` to see more logs.
 
+## Repository layout
+
+Not everything here is part of the current pipeline. In short:
+
+| Path | Status |
+| --- | --- |
+| `src/unity/` | The pipeline. Config, data loading, models, sampling. |
+| `src/unity/configs/` | Committed run configs, selected with `--base`. |
+| `src/legacy/lcfit_extraction/` | **Still live**, despite the directory name: turns raw per-survey light-curve fits into the parquet files the loader reads. |
+| `scripts/numpyro_port/` | **Still live**: the Stan-vs-NumPyro parity harness, imported at runtime by `src/unity/models/jax_unity.py`. |
+| `scripts/`, `other_cosmology/` | UNITY 1.5-era, kept for reference and for reproducing published products. Not driven by `uv run unity`. |
+
+## Data release
+
+A binned distance-modulus release is produced directly by a run, by setting `write_mu_matrix: true`
+together with `cosmology_model: "binned_mu"` and `extra_vector_parameters_to_save: ["mu_zbins"]`.
+The committed config `union31_unity18_published_binnedMu.yml` does this for the published
+Union3.1 / UNITY 1.8 result, so it can be regenerated with:
+
+```bash
+uv run unity --base union31_unity18_published_binnedMu.yml
+```
+
+Two files land in the run's `output_dir` alongside the chains:
+
+- **`mu_mat.fits`** — a single `(n_bins + 1) x (n_bins + 1)` float64 image in the historical packed
+  layout, so existing consumers keep working. Row and column zero are metadata, not part of the
+  matrix: `[0, 1:]` holds the bin redshifts, `[1:, 0]` the binned distance moduli, and `[1:, 1:]`
+  the **inverse** covariance. The FITS header records which run produced it.
+- **`mu_binned.ecsv`** — the same content in plain text, with the **plain** covariance rather than
+  its inverse, for anyone who would rather not reverse-engineer the packing.
+
+In both, the distance moduli are **residuals** relative to `FlatLambdaCDM(H0=70, Om0=0.3)`. Add
+that fiducial back to recover absolute distance moduli.
+
+Runs are blinded by default. The flags that disable blinding are deliberately never written into
+any committed config; they are typed on the command line for each run, so that no file in this
+repository is a paste-able unblinding template.
 
 
 
 
 
-*****
 
-# OLD README BELOW
+---
 
+# Retired: the UNITY 1.5 pystan flow
+
+Everything below this line describes the **retired** UNITY 1.5 analysis: a pystan 2.19 pipeline
+driven by `read_and_sample.py` and paramfiles, superseded by the `uv run unity` flow documented
+above. None of it applies to the installed package, and the scripts it names live under `scripts/`
+and `other_cosmology/` rather than in `src/unity/`.
+
+It is kept because it is the only written record of several one-off regeneration procedures that
+are still occasionally needed: the bulk-flow eigenvectors, the CMB compression, and the fiducial
+sound horizon used when updating BAO. Read it as history, not as instructions.
 
 # union3
 Union3/UNITY1.5 repo
