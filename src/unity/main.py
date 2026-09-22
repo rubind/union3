@@ -4,6 +4,35 @@ import polars as pl
 from unity.plotting import plot_hubble_diagram_from_stanInputData, plot_cosmology_constraints
 
 
+def _release_provenance(config: Config, model: Model, samples: pl.DataFrame) -> dict[str, object]:
+    """Which run produced a data-release product, recorded into the product itself."""
+    import subprocess
+
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5, check=True
+        ).stdout.strip()
+    except Exception:  # noqa: BLE001 - provenance is best-effort, never fatal to a finished run
+        commit = "unknown"
+
+    return {
+        "config": config.base or "(defaults)",
+        "git_commit": commit,
+        "fit_model": config.fit_model,
+        "sampler": str(config.sampler),
+        "cosmology_model": str(config.cosmology_model),
+        "sampling_seed": config.sampling_seed if config.sampling_seed is not None else "(fresh random)",
+        "num_chains": config.num_chains,
+        "warmup_iterations": config.warmup_iterations,
+        "iterations": config.iterations,
+        "n_draws_total": samples.height,
+        "n_sne": int(model.data["n_sne"]),
+        "ordered_beta": config.ordered_beta,
+        "blinding": config.blinding,
+        "distance_ladder_file": str(config.distance_ladder_file),
+    }
+
+
 def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
     if config is None:
         config = Config()
@@ -43,6 +72,18 @@ def fit_cosmology(config: Config | None = None) -> pl.DataFrame | None:
 
     # TODO: make this path configurable and part of the config
     samples.write_parquet(config.output_dir / "mcmc_samples.parquet")
+
+    if config.write_mu_matrix:
+        # Written here rather than from a standalone CLI because zbins is never persisted and
+        # depends on the exact filtered SN set, so it cannot be re-derived safely after the fact.
+        from unity.mu_matrix import write_release_products
+
+        write_release_products(
+            samples,
+            model.data["zbins"],
+            config.output_dir,
+            provenance=_release_provenance(config, model, samples),
+        )
 
     # describe() materializes per-column stats; on all-latents outputs (100k+ columns)
     # it pegs a core for over an hour at ~35GB RSS, so only summarize narrow outputs.

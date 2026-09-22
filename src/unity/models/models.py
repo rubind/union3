@@ -453,7 +453,11 @@ class NumpyroModel(StanModel):
             derived["this_MB_slow"] = params["MB_slow[1]"]
 
         if config.extra_single_dimension_parameters_only:
-            params = {k: v for k, v in params.items() if "[" not in k}
+            # Vector parameters are normally dropped here. extra_vector_parameters_to_save names
+            # the few that must survive (e.g. mu_zbins for a binned-mu distance release) without
+            # turning on the per-SN latents dump below, which is gated on the same flag being False.
+            keep = tuple(f"{name}[" for name in config.extra_vector_parameters_to_save)
+            params = {k: v for k, v in params.items() if "[" not in k or k.startswith(keep)}
         cols |= params | derived
 
         if not config.extra_single_dimension_parameters_only and hasattr(module, "make_latents_fn"):
